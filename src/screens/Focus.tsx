@@ -23,6 +23,13 @@ const SOUNDS: [AmbientKind, string][] = [
 export function FocusScreen() {
   const game = useGame()
   const now = useNow(250)
+  // the countdown in the window title, handy on a Mac while she works in other apps
+  useEffect(() => {
+    const before = document.title
+    return () => {
+      document.title = before
+    }
+  }, [])
   const [confirm, setConfirm] = useState(false)
   const [tips, setTips] = useState(false)
   const parts = useRef<Particle[]>([])
@@ -97,6 +104,10 @@ export function FocusScreen() {
     stepParticles(p, parts.current, t)
   }
 
+  const title = `${formatClock(left)} · ${f}`
+  useEffect(() => {
+    document.title = title
+  }, [title])
   const segs = 20
   const on = Math.floor(progress * segs)
 
@@ -129,7 +140,9 @@ export function FocusScreen() {
         <br />
         {game.settings.leaveMode === 'strict'
           ? `leaving the app for more than ${game.settings.graceSeconds}s will distract ${f}!`
-          : `leaving the app pauses the timer.`}
+          : game.settings.leaveMode === 'free'
+            ? `go study in any app. ${f} will call you when time’s up.`
+            : `leaving the app pauses the timer.`}
       </p>
       {wake === 'unavailable' && game.settings.leaveMode === 'strict' && (
         <p className="focus-warn">
@@ -138,9 +151,11 @@ export function FocusScreen() {
         </p>
       )}
       <div className="focus-actions">
-        <button className="link" onClick={() => setTips(true)}>
-          lock my phone for real
-        </button>
+        {game.settings.leaveMode !== 'free' && (
+          <button className="link" onClick={() => setTips(true)}>
+            lock my phone for real
+          </button>
+        )}
         <button className="link" onClick={() => setConfirm(true)}>
           give up
         </button>

@@ -11,7 +11,7 @@ import { normalizeCode } from './mailcode.ts'
 const SUPABASE_URL = 'https://slaeektmteyxlkebxhan.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_VNBq8VEgE_HWarmCrool1A_5kszWmVU'
 
-export type MailProblem = 'wrong-code' | 'offline' | 'full' | 'server'
+export type MailProblem = 'wrong-code' | 'offline' | 'full' | 'conflict' | 'server'
 
 export class MailError extends Error {
   readonly problem: MailProblem
@@ -21,13 +21,16 @@ export class MailError extends Error {
   }
 }
 
-async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+async function rpc<T>(fn: string, args: Record<string, unknown>, keepalive = false): Promise<T> {
   let res: Response
+  const body = JSON.stringify(args)
   try {
     res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
       method: 'POST',
       headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify(args),
+      body,
+      // lets a save finish as the app goes to the background (browsers cap these at 64 KB)
+      keepalive: keepalive && body.length < 60_000,
       signal: AbortSignal.timeout(12_000),
     })
   } catch {
@@ -37,6 +40,7 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   if (res.ok) return data as T
   const message = String(data?.message ?? res.statusText)
   if (data?.code === '28000') throw new MailError('wrong-code', message)
+  if (res.status === 409) throw new MailError('conflict', message)
   if (/full/.test(message)) throw new MailError('full', message)
   throw new MailError('server', message)
 }
@@ -71,4 +75,27 @@ export function listLetters(key: string): Promise<SentLetter[]> {
 
 export function deleteLetter(key: string, id: string): Promise<boolean> {
   return rpc<boolean>('tl_delete_letter', { p_key: normalizeCode(key), p_id: id })
+}
+
+// ─── cloud save: the same fox on her iPhone and her Mac ─────────────────────
+
+export interface CloudSave {
+  version: number
+  state: Record<string, unknown>
+  updated_at: string
+}
+
+/** 0 when there's no save yet. */
+export function saveVersion(code: string): Promise<number> {
+  return rpc<number>('tl_save_version', { p_code: normalizeCode(code) })
+}
+
+export async function loadSave(code: string): Promise<CloudSave | null> {
+  const rows = await rpc<CloudSave[]>('tl_load_save', { p_code: normalizeCode(code) })
+  return rows[0] ?? null
+}
+
+/** Store a save made from `version` (0 = first save). Throws a 'conflict' MailError if the cloud has moved on. */
+export function storeSave(code: string, state: object, version: number, keepalive = false): Promise<number> {
+  return rpc<number>('tl_store_save', { p_code: normalizeCode(code), p_state: state, p_version: version }, keepalive)
 }

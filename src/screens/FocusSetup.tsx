@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ICON_ART } from '../art/items.ts'
 import { sfx } from '../audio.ts'
 import { acornsFor, startFocus } from '../game/logic.ts'
+import { askToNotify } from '../notify.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { Modal } from '../ui/bits.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
@@ -19,6 +20,8 @@ export function FocusSetup({ onClose }: { onClose: () => void }) {
 
   const start = () => {
     sfx.start()
+    // on the Mac she'll be in other apps, so the fox needs a way to call her back
+    if (game.settings.leaveMode === 'free') askToNotify()
     setGame((s) => startFocus(s, Date.now(), minutes, label))
     onClose()
   }
@@ -66,7 +69,9 @@ export function FocusSetup({ onClose }: { onClose: () => void }) {
         <PixelIcon sprite={ICON_ART.heart} scale={2} />
         {strict
           ? `stay in the app! leaving for more than ${game.settings.graceSeconds}s distracts ${f}, and the session won’t count.`
-          : `leaving the app pauses the timer until you come back.`}
+          : game.settings.leaveMode === 'free'
+            ? `study in any app you like. ${f} keeps time and lets you know when it’s done.`
+            : `leaving the app pauses the timer until you come back.`}
       </p>
       <p className="hint">
         <PixelIcon sprite={ICON_ART.acorn} scale={2} />

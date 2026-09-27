@@ -9,6 +9,7 @@ import type { Settings } from '../game/state.ts'
 import { DEBUG } from '../debug.ts'
 import { BackupSection } from './Backup.tsx'
 import { MailboxSection } from './Mailbox.tsx'
+import { resetSync } from '../sync.ts'
 
 function Choice<T extends string | number>({ value, options, onChange, format }: { value: T; options: T[]; onChange: (v: T) => void; format?: (v: T) => string }) {
   return (
@@ -113,15 +114,18 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         <h2>when I leave the app during focus</h2>
         <Choice
           value={game.settings.leaveMode}
-          options={['strict', 'gentle']}
+          options={['strict', 'gentle', 'free']}
           onChange={(v) => set({ leaveMode: v })}
-          format={(v) => (v === 'strict' ? 'end the session' : 'just pause')}
+          format={(v) => (v === 'strict' ? 'end the session' : v === 'gentle' ? 'just pause' : 'keep going')}
         />
         <p className="muted">
           {game.settings.leaveMode === 'strict'
-            ? `leaving for more than a few seconds ends the session, and ${game.foxName} gets sad.`
-            : 'the timer pauses while you are away. no penalty, but no fox-powered willpower either.'}
+            ? `leaving for more than a few seconds ends the session, and ${game.foxName} gets sad. best on your phone.`
+            : game.settings.leaveMode === 'free'
+              ? `the timer keeps running while you study in other apps, and ${game.foxName} lets you know when it’s done. best on your Mac.`
+              : 'the timer pauses while you are away. no penalty, but no fox-powered willpower either.'}
         </p>
+        <p className="muted">this is set separately on each device.</p>
         {game.settings.leaveMode === 'strict' && (
           <>
             <h3>grace period</h3>
@@ -146,7 +150,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
 
       <section className="px-box card">
         <button className="link" onClick={() => setInstall(true)}>
-          add {GIFT.appName} to your home screen →
+          install {GIFT.appName} on your iPhone or Mac →
         </button>
         <button className="link danger" onClick={() => setReset(1)}>
           start over…
@@ -160,12 +164,20 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
       {tips && <LockTips onClose={() => setTips(false)} />}
       {install && (
         <Modal onClose={() => setInstall(false)}>
-          <h2>add to home screen</h2>
+          <h2>install {GIFT.appName}</h2>
           <h3>iPhone (Safari)</h3>
           <p>tap the Share button → &ldquo;Add to Home Screen&rdquo;.</p>
-          <h3>Android (Chrome)</h3>
-          <p>tap ⋮ → &ldquo;Install app&rdquo; or &ldquo;Add to Home screen&rdquo;.</p>
-          <p className="muted">it opens full-screen like a real app, works offline, and {game.foxName}&rsquo;s memories stay safe.</p>
+          <h3>Mac (Safari)</h3>
+          <p>
+            File → &ldquo;Add to Dock…&rdquo;. it gets its own window and Dock icon, and {game.foxName} can tap you on the shoulder when a
+            focus session ends.
+          </p>
+          <h3>Chrome</h3>
+          <p>click the install icon at the right of the address bar (on a phone: ⋮ → &ldquo;Add to Home screen&rdquo;).</p>
+          <p className="muted">
+            it opens like a real app and works offline. connect your mailbox code on each device (settings → mailbox &amp; sync) and
+            it&rsquo;s the same {game.foxName} on all of them.
+          </p>
           <button className="btn btn-pink" onClick={() => setInstall(false)}>
             okay!
           </button>
@@ -184,6 +196,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
               onClick={() => {
                 if (reset === 1) return setReset(2)
                 clearState()
+                resetSync()
                 setGame(freshState(Date.now()))
                 setReset(0)
                 onBack()

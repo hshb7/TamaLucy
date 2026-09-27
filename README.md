@@ -20,6 +20,8 @@ home screen, works offline, and needs no app store.
 - During focus the fox naps in a dim night-light scene, and the screen is kept awake.
 - **Leaving the app wakes the fox.** Switch apps for more than the grace period (10s by default) and the session fails and the fox gets sad. A quick accidental swipe is forgiven. There's also a "just pause" mode in settings.
 - Built-in guide for locking the phone to the app for real (iPhone Guided Access, Android App Pinning). See [below](#about-you-cant-touch-other-apps).
+- **On her Mac** the timer keeps going while she studies in other apps, and a notification calls her back when it's done. See [Focus on a Mac](#focus-on-a-mac).
+- **One fox on her iPhone and her Mac**: she signs in with her code and it's the same fox, with the same everything. See [One fox, every device](#one-fox-every-device).
 - Optional break timer afterwards.
 
 **Rewards after every session** (pick one; 15+ min gives 3 options to choose from, 45+ min gives two rewards):
@@ -131,20 +133,52 @@ npm run build      # production build in dist/
 URL. That adds a 6-second focus length and a 12-second break/adventure length
 (Settings → break length), so you can see every reward without waiting.
 
-## Put it on a phone
+## Put it on her iPhone and her Mac
 
 1. **Host `dist/`** anywhere static. Paths are relative, so any folder works:
    - **GitHub Pages**: repo Settings → Pages → Source "GitHub Actions", then run the
      *Deploy to GitHub Pages* workflow from the Actions tab. (Pages on a private repo needs a paid GitHub plan.)
    - **Netlify / Vercel / Cloudflare Pages**: build command `npm run build`, output folder `dist`.
-2. **Open the link on the phone and add it to the home screen:**
-   - iPhone (Safari): Share → *Add to Home Screen*
-   - Android (Chrome): ⋮ → *Install app*
+2. **Install it on both:**
+   - **iPhone** (Safari): Share → *Add to Home Screen*. It opens full-screen, works
+     offline, and its data isn't subject to Safari's 7-day storage cleanup.
+   - **Mac** (Safari, macOS Sonoma or later): File → *Add to Dock…*. It gets its own
+     window and Dock icon. (In Chrome: the install icon in the address bar.)
+3. **Sign in on both with her mailbox code** (see below). It's the same fox everywhere.
 
-   Installed, it opens full-screen, works offline, and (on iPhone) its saved data
-   isn't subject to Safari's 7-day storage cleanup.
+### One fox, every device
 
-Progress is saved on the device (localStorage), so nothing leaves the phone (the one exception: if she connects a mailbox, the app asks it for new letters). Settings → *backup* makes a code to move the fox to a new phone.
+Her mailbox code is her login. The fox lives in the cloud (the same small Supabase
+database as the letters), so signing in on a device is like logging into an account:
+her fox, its needs, acorns, clothes, letters, flashcards, exams and stats are the same
+on her iPhone and her Mac.
+
+- **Signing in:** on a brand-new install, tap *"i already have my fox on another
+  device"* on the first screen and type the code, or use *Settings → mailbox & sync*.
+  The link `https://<your-site>/#mail=<code>` signs in too. Signing in on a device
+  that already had a fox replaces it with hers.
+- **Staying in step:** each device saves a few seconds after she does something, and
+  looks for the other device's progress when it opens, when it comes back to the front,
+  and once a minute while it's open. Time spent on one device never counts as "time
+  away" on the other.
+- **Using both at once:** if both devices changed things before they caught up, the
+  changes are merged: earnings add up, collections are combined, and a setting changed
+  on one side wins. Nothing she earned is lost. (Every save is a compare-and-swap, so a
+  device can't overwrite a newer save without merging it first.)
+- **What stays per device:** a focus session runs on the device she started it on, and
+  the leave rule is set per device (see below). Offline, everything keeps working and
+  catches up when she's back online.
+- **Without a code** the fox just lives on that device. Settings → *backup* still makes
+  a code to move it by hand.
+
+### Focus on a Mac
+
+A Mac is where she reads and writes, so leaving the app can't be the thing that ends a
+session there. On a Mac the default is **keep going**: the timer runs while she works
+in Word, Preview or a browser, the window title counts down, and when time's up she
+gets a notification and a chime (she's asked for notification permission the first
+time she starts a session). The iPhone keeps the strict rule. Either device can
+change it in *Settings → when I leave the app during focus*.
 
 ## Letters from far away ✉
 
@@ -156,9 +190,10 @@ There are two secret codes, made with `node scripts/new-mailbox.ts`:
 | **mailbox code** (`five-cute-words-and-123`) | her | reads letters that have arrived |
 | **writer key** (`writer-xxxx-xxxx-…`) | you | writes, schedules and takes back letters |
 
-**Give her the mailbox code** in one of two ways:
-- Send her the link `https://<your-site>/#mail=<mailbox-code>`. Opening it connects the mailbox, and the code disappears from the address bar.
-- Or write the code on the gift card. She types it into *Settings → mailbox*.
+**Give her the mailbox code** (it's also her login, see above) in one of two ways:
+- Send her the link `https://<your-site>/#mail=<mailbox-code>`. Opening it signs her in, and the code disappears from the address bar.
+- Or write the code on the gift card. She types it on the first screen (*"i already
+  have my fox on another device"*) or in *Settings → mailbox & sync*.
   On iPhone, the home-screen app has its own storage, separate from Safari, so
   if she opened the link in Safari first she'll need to type the code in the
   installed app once.
@@ -171,12 +206,12 @@ and every 15 minutes while it's open, but never during a focus session.
 
 **Privacy.** The database stores only sha256 hashes of the two codes, never the
 codes themselves. Its tables are closed to the public API; everything goes through
-five small database functions that each check a code first
+small database functions that each check a code first
 ([`supabase/migrations/`](supabase/migrations/)). The publishable key in
 `src/game/remote.ts` is public by design and can't open anything by itself.
-Anyone who has her mailbox code can read her letters, and anyone who has the
-writer key can write to her, so keep both out of the repository and share them
-only with her.
+Anyone who has her mailbox code can read her letters and sign in as her fox, and
+anyone who has the writer key can write to her (but can't see her fox), so keep both
+out of the repository and share them only with her.
 
 **Good to know**
 - Free Supabase projects pause after about a week with no requests. Her app keeps
@@ -185,8 +220,8 @@ only with her.
 - Letters are up to 2,000 characters. Scheduled times use the writer's time zone.
 - Letters can't be fetched from the Claude artifact preview (it blocks network
   requests). They work on the real site.
-- **Using your own Supabase project instead:** run the two SQL files in
-  `supabase/migrations/` (SQL editor), put your project URL and publishable key in
+- **Using your own Supabase project instead:** run the SQL files in
+  `supabase/migrations/` in order (SQL editor), put your project URL and publishable key in
   `src/game/remote.ts`, then run `node scripts/new-mailbox.ts` and paste the one
   line of SQL it prints.
 
@@ -221,11 +256,13 @@ src/
   screens/           onboarding, home, focus, rewards, break, closet, album, stats, settings
   write/             the post office (#write): writing and scheduling letters
   mail.ts            checks her mailbox and announces new letters
+  sync.ts            one fox on every device: cloud save, sign-in, merging
+  notify.ts          the end-of-session notification (Mac)
 scripts/
   make-icons.ts      renders the app icons from the fox sprite (npm run icons)
   sprite-sheet.ts    renders all sprites to sprites.png for quick art edits (npm run sprites)
   new-mailbox.ts     makes a mailbox code + writer key and prints the SQL to register them
-supabase/migrations/ the letters database: tables, and the functions that guard them
+supabase/migrations/ the database: letters, the cloud save, and the functions that guard them
 ```
 
 The sprites are text grids (one character per pixel, colours in

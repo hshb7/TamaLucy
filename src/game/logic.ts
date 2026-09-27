@@ -151,6 +151,8 @@ export function focusVisible(s: GameState, now: number): { state: GameState; out
   if (since == null) return { state: s, outcome: 'none', awayMs: 0 }
   const awayMs = Math.max(0, Math.min(now, ses.endsAt) - since)
   const grace = s.settings.graceSeconds * 1000
+  // on a Mac she's allowed (expected!) to work in other apps
+  if (s.settings.leaveMode === 'free') return { state: { ...s, session: { ...ses, hiddenAt: null, lastBeat: now } }, outcome: 'none', awayMs }
   if (awayMs <= 1500) {
     return { state: { ...s, session: { ...ses, hiddenAt: null, lastBeat: now } }, outcome: 'fine', awayMs }
   }

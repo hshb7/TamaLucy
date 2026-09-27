@@ -3,7 +3,11 @@ import { loadState, saveState, type GameState } from './state.ts'
 import { arrive } from './logic.ts'
 
 // A tiny external store: one game state, saved to localStorage on every change.
-let state: GameState = arrive(loadState(Date.now()), Date.now())
+// With a cloud save, the clock waits for the other device's progress before
+// catching up (the app does that right after syncing), so time spent on the
+// other device isn't counted as time away.
+const loaded = loadState(Date.now())
+let state: GameState = loaded.mailbox ? loaded : arrive(loaded, Date.now())
 const listeners = new Set<() => void>()
 saveState(state)
 
@@ -27,4 +31,12 @@ export function useGame(): GameState {
     },
     () => state,
   )
+}
+
+/** Be told about every change (the cloud save listens). Returns an unsubscribe function. */
+export function subscribe(fn: () => void) {
+  listeners.add(fn)
+  return () => {
+    listeners.delete(fn)
+  }
 }

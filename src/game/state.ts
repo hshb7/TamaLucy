@@ -3,6 +3,7 @@ import type { RewardKind } from './content.ts'
 import { GIFT } from '../gift.ts'
 import type { Needs } from './needs.ts'
 import { rankOf } from './career.ts'
+import { defaultLeaveMode } from './device.ts'
 
 export interface Note {
   id: string
@@ -59,7 +60,8 @@ export interface Settings {
   breakMinutes: number
   sound: boolean
   graceSeconds: number
-  leaveMode: 'strict' | 'gentle'
+  /** strict: leaving ends the session · gentle: the timer pauses · free: keep going (a Mac, where she studies in other apps). Per device. */
+  leaveMode: 'strict' | 'gentle' | 'free'
   /** classic: can get depressed · gentle: slower, never below sad · paused: exam week, needs frozen */
   care: CareLevel
   /** Background sound during focus sessions. */
@@ -210,7 +212,7 @@ export function freshState(now: number, rng: () => number = Math.random): GameSt
     secretsDelivered: 0,
     pets: { windowStart: now, count: 0 },
     stats: { totalMinutes: 0, sessions: 0, gaveUp: 0, left: 0, days: {}, daySessions: {}, subjects: {}, bestStreak: 0 },
-    settings: { focusMinutes: 25, breakMinutes: 5, sound: true, graceSeconds: 10, leaveMode: 'strict', care: 'classic', ambient: 'off' },
+    settings: { focusMinutes: 25, breakMinutes: 5, sound: true, graceSeconds: 10, leaveMode: defaultLeaveMode(), care: 'classic', ambient: 'off' },
     cards: [],
     exams: [],
     examsWished: [],

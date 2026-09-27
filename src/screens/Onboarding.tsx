@@ -2,13 +2,74 @@ import { useState } from 'react'
 import { ICON_ART } from '../art/items.ts'
 import { sfx } from '../audio.ts'
 import { GIFT } from '../gift.ts'
-import { setGame, useGame } from '../game/store.ts'
+import { getGame, setGame, useGame } from '../game/store.ts'
+import { connectMailbox, mailProblem } from '../mail.ts'
+import { syncNow } from '../sync.ts'
 import { FoxPortrait } from '../ui/FoxPortrait.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
+
+/** "I already have my fox on my phone": bring it to this device with her mailbox code. */
+function Join({ onBack, onNew }: { onBack: () => void; onNew: () => void }) {
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [problem, setProblem] = useState('')
+  const join = async () => {
+    setBusy(true)
+    setProblem('')
+    try {
+      if (!(await connectMailbox(code))) return setProblem('hmm, that code doesn’t open any mailbox. check the spelling?')
+      await syncNow()
+      // if a fox came down from the cloud, onboarding is over and this screen goes away
+      if (!getGame().onboarded) {
+        setProblem('connected! there’s no fox saved there yet, so let’s set one up here. it’ll show up on your other device too.')
+        setTimeout(onNew, 2500)
+      }
+    } catch (e) {
+      setProblem(mailProblem(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <main className="screen onboarding">
+      <FoxPortrait equipped={{}} face="happy" className="portrait-l" />
+      <form
+        className="px-box form"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (code.trim() && !busy) void join()
+        }}
+      >
+        <label>
+          your mailbox code
+          <input
+            id="join-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="word-word-word-word-word-123"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <p className="muted">it&rsquo;s like signing in: your fox comes here with everything, and stays the same on your iPhone and your Mac.</p>
+        <button className="btn btn-big btn-pink" type="submit" disabled={busy || !code.trim()}>
+          {busy ? 'finding your fox…' : 'bring my fox here'}
+        </button>
+        {problem && <p className="error">{problem}</p>}
+        <button type="button" className="link" onClick={onBack}>
+          ← back
+        </button>
+      </form>
+    </main>
+  )
+}
 
 export function Onboarding() {
   const game = useGame()
   const [step, setStep] = useState(0)
+  const [joining, setJoining] = useState(false)
   const [fox, setFox] = useState(game.foxName)
   const [me, setMe] = useState(game.owner)
 
@@ -16,6 +77,8 @@ export function Onboarding() {
     sfx.tap()
     setStep(step + 1)
   }
+
+  if (joining) return <Join onBack={() => setJoining(false)} onNew={() => (setJoining(false), setStep(1))} />
 
   if (step === 0)
     return (
@@ -30,6 +93,9 @@ export function Onboarding() {
         )}
         <button className="btn btn-big btn-pink" onClick={next}>
           hi little fox!
+        </button>
+        <button className="link" onClick={() => setJoining(true)}>
+          i already have my fox on another device →
         </button>
       </main>
     )

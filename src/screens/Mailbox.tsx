@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { setGame, useGame } from '../game/store.ts'
 import { checkMail, connectMailbox, mailProblem } from '../mail.ts'
 import { toast } from '../ui/bits.tsx'
+import { resetSync, syncNow, useSyncStatus } from '../sync.ts'
 
 /** Embedded previews (iframes) usually block network requests, so no mail gets through. */
 const framed = typeof window !== 'undefined' && window.self !== window.top
@@ -22,6 +23,7 @@ export function MailboxSection() {
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState('')
   const [forget, setForget] = useState(false)
+  const sync = useSyncStatus()
 
   const connect = async () => {
     setBusy(true)
@@ -29,8 +31,9 @@ export function MailboxSection() {
     try {
       if (!(await connectMailbox(code))) return setProblem('hmm, that code doesn’t open any mailbox. check the spelling?')
       setCode('')
-      toast('mailbox connected! letters will find you here ♡')
+      toast('mailbox connected! letters (and your fox) will find you here ♡')
       void checkMail(0)
+      void syncNow()
     } catch (e) {
       setProblem(mailProblem(e))
     } finally {
@@ -42,7 +45,7 @@ export function MailboxSection() {
     setBusy(true)
     setProblem('')
     try {
-      const added = await checkMail(0, true)
+      const [added] = await Promise.all([checkMail(0, true), syncNow()])
       if (!added.length) toast('no new letters right now. the fox will keep an eye on the door ✿')
     } catch (e) {
       setProblem(mailProblem(e))
@@ -53,13 +56,27 @@ export function MailboxSection() {
 
   return (
     <section className="px-box card mailbox">
-      <h2>mailbox</h2>
+      <h2>mailbox &amp; sync</h2>
       {game.mailbox ? (
         <>
           <p>
             connected ✓ <span className="muted">· last looked {ago(game.lastMailCheck)}</span>
           </p>
           <p className="muted">letters sent to you show up in your album. {game.foxName} checks whenever you open the app.</p>
+          <p>
+            {sync.state === 'ok'
+              ? `${game.foxName} is in sync with your other devices ✓`
+              : sync.state === 'syncing'
+                ? 'syncing…'
+                : sync.state === 'offline'
+                  ? 'offline right now. it’ll sync when you’re back online.'
+                  : sync.state === 'error'
+                    ? 'couldn’t sync just now. it’ll try again soon.'
+                    : ''}
+          </p>
+          <p className="muted">
+            open the app on your iPhone or Mac and connect the same code there: it&rsquo;s the same {game.foxName} everywhere.
+          </p>
           <div className="row">
             <button className="btn" disabled={busy} onClick={look}>
               {busy ? 'looking…' : 'check now'}
@@ -71,8 +88,14 @@ export function MailboxSection() {
             </button>
           ) : (
             <p className="muted">
-              stop getting letters here? the ones you have stay in your album.{' '}
-              <button className="link inline" onClick={() => setGame((s) => ({ ...s, mailbox: '', lastMailCheck: 0 }))}>
+              stop getting letters and syncing here? {game.foxName} and your letters stay on this device.{' '}
+              <button
+                className="link inline"
+                onClick={() => {
+                  setGame((s) => ({ ...s, mailbox: '', lastMailCheck: 0 }))
+                  resetSync()
+                }}
+              >
                 yes, disconnect
               </button>{' '}
               <button className="link inline" onClick={() => setForget(false)}>
@@ -88,7 +111,10 @@ export function MailboxSection() {
             if (code.trim() && !busy) void connect()
           }}
         >
-          <p className="muted">did someone give you a mailbox code? type it here and letters they send will find their way to {game.foxName}’s door.</p>
+          <p className="muted">
+            your mailbox code is how you sign in: letters find their way to {game.foxName}’s door, and {game.foxName} is the same on your
+            iPhone and your Mac. if your fox already lives on another device, signing in brings it here (replacing this one).
+          </p>
           <label>
             mailbox code
             <input

@@ -17,6 +17,8 @@ import { FailedModal, MailModal, PostcardModal, PromotionModal } from './screens
 import { DecorScreen } from './screens/Decor.tsx'
 import type { Note } from './game/state.ts'
 import { checkMail, connectMailbox, mailProblem, onNewMail, takeMailLink } from './mail.ts'
+import { startSync, syncFor, syncNow } from './sync.ts'
+import { notify } from './notify.ts'
 
 export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'study' | 'career' | 'exams' | 'settings'
 
@@ -41,9 +43,27 @@ export default function App() {
 
   useEffect(() => setSoundEnabled(game.settings.sound), [game.settings.sound])
 
+  // Working in another app (on the Mac): call her back when time's up
+  const endsAt = game.session?.endsAt
+  const free = game.settings.leaveMode === 'free'
+  useEffect(() => {
+    if (!endsAt || !free) return
+    const id = setTimeout(() => {
+      if (document.visibilityState === 'visible' && document.hasFocus()) return // the usual fanfare plays
+      sfx.chime()
+      const f = getGame().foxName
+      notify(`time’s up! ${f} is so proud of you`, `come back to ${f} for your reward ✿`)
+    }, Math.max(0, endsAt - Date.now()))
+    return () => clearTimeout(id)
+  }, [endsAt, free])
+
   // Leaving the app during focus + coming back
   useEffect(() => {
-    const check = () => {
+    const check = async () => {
+      // bring in progress from her other device first, so time spent there
+      // doesn't count as time away (a running session belongs to this device)
+      const g = getGame()
+      if (g.mailbox && !g.session) await syncFor(3500)
       const now = Date.now()
       const r = focusVisible(arrive(getGame(), now), now)
       setGame(r.state)
@@ -57,17 +77,19 @@ export default function App() {
     }
     const onVis = () => {
       if (document.visibilityState === 'hidden') setGame((s) => focusHidden(s, Date.now()))
-      else check()
+      else void check()
     }
     const onHide = () => setGame((s) => focusHidden(s, Date.now()))
-    check() // the page may have been reloaded / killed mid-session
+    startSync()
+    void check() // the page may have been reloaded / killed mid-session
     const link = takeMailLink()
     if (link)
       connectMailbox(link).then(
         (ok) => {
           if (!ok) return toast('hmm, that mailbox link didn’t work. is it the whole thing?')
-          toast('mailbox connected! letters will find you here ♡')
+          toast('mailbox connected! letters (and your fox) will find you here ♡')
           checkMail(0)
+          void syncNow()
         },
         (e) => toast(mailProblem(e)),
       )
