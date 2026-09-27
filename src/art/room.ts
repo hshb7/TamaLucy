@@ -1,6 +1,7 @@
 import { ellipse, type Painter } from './painter.ts'
-import { GIFT_ART, LAW_ART, ROOM_ART } from './items.ts'
-import { sprite } from './sprite.ts'
+import { GIFT_ART, LAW_ART, ROOM_ART, SPECIAL_ART } from './items.ts'
+import { sprite, type Sprite } from './sprite.ts'
+import type { Season } from '../game/time.ts'
 
 /** The whole room is wider than the screen; the camera pans across it. */
 export const ROOM_W = 208
@@ -57,7 +58,15 @@ export interface RoomOptions {
   bowl?: number
   /** Objects the fox is currently holding/playing with (drawn by the scene instead). */
   hide?: readonly string[]
+  season?: Season
+  october?: boolean
+  birthday?: boolean
+  /** Her photo, pixelated, for the frame on the study wall. */
+  photo?: Sprite | null
 }
+
+export const PHOTO_SPOT = { x: 158, y: 13 }
+export const CAKE_SPOT = { x: 84, y: 84 }
 
 type Wallpaper = { name: string; base: string; a: string; b?: string; kind: 'stripes' | 'gingham' | 'hearts' | 'dots' | 'pinstripe' | 'damask'; trim: string }
 type Floor = { name: string; a: string; b: string; c: string; kind: 'planks' | 'checker' | 'carpet' }
@@ -129,11 +138,15 @@ function drawWindow(p: Painter, o: RoomOptions) {
         }
     }
   }
-  // hills far away
+  // hills far away, dressed for the season
+  const night = o.hour >= 19 || o.hour < 6
+  const hill = { winter: night ? '#8e97b0' : '#f3f6fb', spring: night ? '#2f4a4a' : '#a9d39a', summer: night ? '#2f4a4a' : '#8cc47f', autumn: night ? '#4a3f33' : '#d9a066' }[o.season ?? 'summer']
   for (let x = 0; x < W; x++) {
     const hh = Math.round(3 + 2 * Math.sin(x / 5) + Math.sin(x / 2.3))
-    p.rect(X + x, Y + H - hh, 1, hh, o.hour >= 19 || o.hour < 6 ? '#2f4a4a' : '#9cc48f')
+    p.rect(X + x, Y + H - hh, 1, hh, hill)
+    if (o.season === 'spring' && !night && x % 5 === 2) p.rect(X + x, Y + H - hh, 1, 1, '#f7b6c6')
   }
+  drawWeather(p, o, X, Y, W, H)
   // frame
   const F = '#fff7ec'
   const FO = '#c9a58a'
@@ -168,6 +181,31 @@ function drawWindow(p: Painter, o: RoomOptions) {
   p.rect(X - 11, Y - 7, W + 22, 2, '#9b6b4d')
   p.rect(X - 12, Y - 8, 3, 4, '#7b523d')
   p.rect(X + W + 9, Y - 8, 3, 4, '#7b523d')
+}
+
+export /** Snow, blossom petals, falling leaves or fireflies drifting past the window. */
+function drawWeather(p: Painter, o: RoomOptions, X: number, Y: number, W: number, H: number) {
+  const night = isNight(o.hour)
+  const kind = o.season === 'winter' ? 'snow' : o.season === 'spring' ? 'petal' : o.season === 'autumn' ? 'leaf' : night ? 'firefly' : null
+  if (!kind) return
+  const n = kind === 'snow' ? 14 : kind === 'firefly' ? 6 : 7
+  const colours = { snow: ['#ffffff'], petal: ['#f7b6c6', '#fbd3dd'], leaf: ['#e8844f', '#d95b43', '#e5ab3d'], firefly: ['#fff3a0'] }[kind]
+  for (let i = 0; i < n; i++) {
+    let x: number
+    let y: number
+    if (kind === 'firefly') {
+      if (Math.sin(o.t / 400 + i * 2.1) < 0.2) continue
+      x = X + ((i * 9 + Math.sin(o.t / 1700 + i) * 6 + 40) % W)
+      y = Y + H - 6 - ((i * 5 + Math.cos(o.t / 1300 + i) * 3 + 12) % 12)
+    } else {
+      const speed = kind === 'snow' ? 90 : 70
+      y = Y - 2 + ((o.t / speed + i * 13) % (H + 4))
+      x = X + ((i * 11 + Math.sin(o.t / 700 + i) * 2 + (kind === 'snow' ? 0 : o.t / 180)) % W)
+    }
+    x = Math.round(x)
+    y = Math.round(y)
+    if (x >= X && x < X + W && y >= Y && y < Y + H) p.rect(x, y, 1, 1, colours[i % colours.length])
+  }
 }
 
 export function drawWallAndFloor(p: Painter, decor: Decor) {
@@ -291,6 +329,7 @@ export function drawGlows(p: Painter, o: RoomOptions) {
     ellipse(p, 102, 30, 9, 7, '#ffe6b8', 0.15 * dark)
   }
   if (o.gifts.includes('fairyLights')) for (let x = 4; x < ROOM_W; x += 8) ellipse(p, x, 8, 3, 3, '#fff0c0', 0.12 * dark)
+  if (o.october) ellipse(p, 38, 40, 9, 6, '#ffb36b', 0.18 * dark)
   // banker's lamp on the desk
   ellipse(p, DESK.x + 33, DESK.y - 4, 20, 13, '#ffe3a0', 0.11 * dark)
   ellipse(p, DESK.x + 33, DESK.y - 4, 10, 7, '#fff0c0', 0.13 * dark)
@@ -310,6 +349,17 @@ export function drawRoom(p: Painter, o: RoomOptions) {
   if (has('mushroomLamp')) p.sprite(GIFT_ART.mushroomLamp, 97, 26)
   if (has('snowGlobe')) p.sprite(GIFT_ART.snowGlobe, 109, 26)
   if (has('cactus')) p.sprite(GIFT_ART.cactus, 23, 34)
+  if (o.october) p.sprite(SPECIAL_ART.jackOLantern, 33, 36)
+  if (o.photo) {
+    const { x, y } = PHOTO_SPOT
+    const w = o.photo.w + 4
+    const h = o.photo.h + 4
+    p.rect(x, y, w, h, '#4a2a22')
+    p.rect(x + 1, y + 1, w - 2, h - 2, '#c48a58')
+    p.rect(x + 2, y + 2, w - 4, h - 4, '#4a2a22')
+    p.sprite(o.photo, x + 2, y + 2)
+    p.rect(x + w / 2 - 1, y - 3, 2, 3, '#7b523d') // the nail it hangs from
+  }
   if (has('plant')) p.sprite(GIFT_ART.plant, 108, 58)
   // study + bath corner
   if (law('diploma')) p.sprite(LAW_ART.diploma, 140, 18)
@@ -328,6 +378,11 @@ export function drawRoom(p: Painter, o: RoomOptions) {
   if (has('yarn') && !hidden('yarn')) p.sprite(GIFT_ART.yarn, 88, 93)
   if (!hidden('ball')) p.sprite(ROOM_ART.ball, BALL.x, BALL.y)
   p.sprite((o.bowl ?? 0) > 0 ? ROOM_ART.bowlFull : ROOM_ART.bowlEmpty, BOWL.x, BOWL.y)
+  if (o.birthday) {
+    p.sprite(SPECIAL_ART.cake, CAKE_SPOT.x, CAKE_SPOT.y)
+    for (const [i, cx] of [CAKE_SPOT.x + 3, CAKE_SPOT.x + 6, CAKE_SPOT.x + 9].entries())
+      p.rect(cx, CAKE_SPOT.y - (Math.sin(o.t / 120 + i) > 0 ? 1 : 0), 1, 1, '#fff3a0')
+  }
 }
 
 /** Time-of-day tint + gloom. Draw after the fox so everything shares the light. */

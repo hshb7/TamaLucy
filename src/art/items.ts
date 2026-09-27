@@ -719,4 +719,40 @@ export const NEED_ICON_ART: Record<string, Sprite> = {
   ]),
 }
 
+export const SPECIAL_ART: Record<string, Sprite> = {
+  cake: sprite([
+    '...y..y..y...',
+    '...Y..Y..Y...',
+    '...u..m..u...',
+    '...u..m..u...',
+    '.ooooooooooo.',
+    'oiiPiiiPiiiPo',
+    'oPiPPiPPiPPio',
+    'ohhhhhhhhhhho',
+    'orrrrrrrrrrro',
+    'ohhhhhhhhhhho',
+    'ooooooooooooo',
+    '.ozzzzzzzzzo.',
+  ]),
+  jackOLantern: sprite([
+    '....oo....',
+    '...oGo....',
+    '.oooooooo.',
+    'oAaAaaAaAo',
+    'oaNNaaNNao',
+    'oAaNaaNaAo',
+    'oaNaNNaNao',
+    'oAaNNNNaAo',
+    '.oooooooo.',
+  ]),
+  openBook: sprite([
+    '.ooooo.ooooo.',
+    'occccooccccco',
+    'oczzzcoczzzco',
+    'occccooccccco',
+    'oczzccoczzcco',
+    'ooooooooooooo',
+  ]),
+}
+
 export const BRUSH_ART = sprite(['.oooooooo.', 'oPPPPPPPPo', 'ommmmmmmmo', '.oooooooo.', '.t.t.t.t..'])

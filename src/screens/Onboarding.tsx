@@ -68,8 +68,8 @@ export function Onboarding() {
         <li className="px-box">
           <PixelIcon sprite={ICON_ART.acorn} scale={3} />
           <p>
-            <b>study with {name}.</b> set a timer and stay in the app. if you leave for more than a few seconds, {name} wakes up
-            worried and the session doesn&rsquo;t count. every hour you study moves {name} up a law career, from 1L to the Supreme Court.
+            <b>study with {name}.</b> set a timer and stay in the app. if you leave for more than a few seconds, {name} gets
+            distracted and the session doesn&rsquo;t count. every hour you study moves {name} up a law career, from 1L to the Supreme Court.
           </p>
         </li>
         <li className="px-box">

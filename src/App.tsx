@@ -11,12 +11,12 @@ import { RewardScreen } from './screens/Reward.tsx'
 import { BreakScreen } from './screens/Break.tsx'
 import { Wardrobe } from './screens/Wardrobe.tsx'
 import { Album } from './screens/Album.tsx'
-import { StatsScreen } from './screens/Stats.tsx'
+import { StudyScreen } from './screens/Study.tsx'
 import { SettingsScreen } from './screens/Settings.tsx'
 import { FailedModal, PostcardModal, PromotionModal } from './screens/Modals.tsx'
 import { DecorScreen } from './screens/Decor.tsx'
 
-export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'stats' | 'settings'
+export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'study' | 'career' | 'exams' | 'settings'
 
 export default function App() {
   const game = useGame()
@@ -37,7 +37,7 @@ export default function App() {
         setFailedAway(r.awayMs)
         sfx.sad()
         buzz([80, 60, 80])
-      } else if (r.outcome === 'close-call') toast(`phew! ${r.state.foxName} stirred but stayed asleep. stay with ${r.state.foxName}!`)
+      } else if (r.outcome === 'close-call') toast(`phew! ${r.state.foxName} looked up, but you came back in time. keep going!`)
       else if (r.outcome === 'paused') toast(`welcome back! the timer waited for you.`)
     }
     const onVis = () => {
@@ -103,11 +103,12 @@ export default function App() {
         }}
       />
     )
-  else if (view === 'break') screen = <BreakScreen onFocus={openSetup} onHome={() => setView('home')} />
+  else if (view === 'break') screen = <BreakScreen onFocus={openSetup} onHome={() => setView('home')} onStudy={() => setView('study')} />
   else if (view === 'wardrobe') screen = <Wardrobe onBack={() => setView('home')} />
   else if (view === 'decor') screen = <DecorScreen onBack={() => setView('home')} />
   else if (view === 'album') screen = <Album onBack={() => setView('home')} />
-  else if (view === 'stats') screen = <StatsScreen onBack={() => setView('home')} />
+  else if (view === 'study' || view === 'career' || view === 'exams')
+    screen = <StudyScreen onBack={() => setView('home')} initialTab={view === 'study' ? 'cards' : view} />
   else if (view === 'settings') screen = <SettingsScreen onBack={() => setView('home')} />
   else screen = <Home onFocus={openSetup} go={setView} />
 

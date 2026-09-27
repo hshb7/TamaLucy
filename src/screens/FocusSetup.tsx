@@ -65,7 +65,7 @@ export function FocusSetup({ onClose }: { onClose: () => void }) {
       <p className="hint">
         <PixelIcon sprite={ICON_ART.heart} scale={2} />
         {strict
-          ? `stay in the app! leaving for more than ${game.settings.graceSeconds}s wakes ${f} up, and the session won’t count.`
+          ? `stay in the app! leaving for more than ${game.settings.graceSeconds}s distracts ${f}, and the session won’t count.`
           : `leaving the app pauses the timer until you come back.`}
       </p>
       <p className="hint">

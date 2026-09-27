@@ -3,7 +3,7 @@ import { NEED_ICON_ART } from '../art/items.ts'
 import { endBreak } from '../game/logic.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { formatClock, useNow } from '../hooks.ts'
-import { Flashcards } from '../ui/Flashcards.tsx'
+import { QuizChooser } from '../ui/QuizChooser.tsx'
 import { LivingRoom } from '../ui/LivingRoom.tsx'
 import { NeedsPanel } from '../ui/NeedsPanel.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
@@ -17,7 +17,7 @@ const TIPS = [
   'grab a little snack',
 ]
 
-export function BreakScreen({ onFocus, onHome }: { onFocus: () => void; onHome: () => void }) {
+export function BreakScreen({ onFocus, onHome, onStudy }: { onFocus: () => void; onHome: () => void; onStudy: () => void }) {
   const game = useGame()
   const now = useNow(500)
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)])
@@ -33,7 +33,7 @@ export function BreakScreen({ onFocus, onHome }: { onFocus: () => void; onHome: 
       <p className="muted center">break idea: {tip} · or look after {game.foxName}!</p>
       <div className="stack">
         <button className="btn" onClick={() => setQuiz(true)}>
-          <PixelIcon sprite={NEED_ICON_ART.card} scale={2} /> legal latin flashcards
+          <PixelIcon sprite={NEED_ICON_ART.card} scale={2} /> flashcards
         </button>
         <button
           className={`btn btn-big ${running ? '' : 'btn-pink'}`}
@@ -54,7 +54,7 @@ export function BreakScreen({ onFocus, onHome }: { onFocus: () => void; onHome: 
           back home
         </button>
       </div>
-      {quiz && <Flashcards onClose={() => setQuiz(false)} />}
+      {quiz && <QuizChooser onClose={() => setQuiz(false)} onMakeCards={onStudy} />}
     </main>
   )
 }

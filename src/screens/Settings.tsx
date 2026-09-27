@@ -7,6 +7,7 @@ import { Header } from './Header.tsx'
 import { LockTips } from './Modals.tsx'
 import type { Settings } from '../game/state.ts'
 import { DEBUG } from '../debug.ts'
+import { BackupSection } from './Backup.tsx'
 
 function Choice<T extends string | number>({ value, options, onChange, format }: { value: T; options: T[]; onChange: (v: T) => void; format?: (v: T) => string }) {
   return (
@@ -42,6 +43,33 @@ function NameField({ label, value, max, onSave }: { label: string; value: string
   )
 }
 
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+function BirthdayField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [m, d] = value ? value.split('-') : ['', '']
+  const update = (mm: string, dd: string) => onChange(mm && dd ? `${mm}-${dd}` : '')
+  return (
+    <div className="birthday">
+      <select id="bday-month" aria-label="birth month" value={m} onChange={(e) => update(e.target.value, d || '01')}>
+        <option value="">month</option>
+        {MONTHS.map((name, i) => (
+          <option key={name} value={String(i + 1).padStart(2, '0')}>
+            {name}
+          </option>
+        ))}
+      </select>
+      <select id="bday-day" aria-label="birth day" value={d} onChange={(e) => update(m || '01', e.target.value)}>
+        <option value="">day</option>
+        {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map((dd) => (
+          <option key={dd} value={dd}>
+            {Number(dd)}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 export function SettingsScreen({ onBack }: { onBack: () => void }) {
   const game = useGame()
   const [tips, setTips] = useState(false)
@@ -58,12 +86,35 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
       </section>
 
       <section className="px-box card">
+        <h2>how much looking after {game.foxName} needs</h2>
+        <Choice
+          value={game.settings.care}
+          options={['classic', 'gentle', 'paused']}
+          onChange={(v) => set({ care: v, careBefore: v === 'paused' ? (game.settings.care === 'paused' ? game.settings.careBefore : game.settings.care) : undefined })}
+          format={(v) => (v === 'classic' ? 'classic' : v === 'gentle' ? 'gentle' : 'exam week')}
+        />
+        <p className="muted">
+          {game.settings.care === 'classic'
+            ? `a real little pet: ${game.foxName} gets sad after a couple of days alone, and depressed after three.`
+            : game.settings.care === 'gentle'
+              ? `needs drain more slowly, and ${game.foxName} never gets more than a little sad.`
+              : `everything is paused. ${game.foxName} won’t get hungry or lonely until you turn this off.`}
+        </p>
+      </section>
+
+      <section className="px-box card">
+        <h2>your birthday</h2>
+        <BirthdayField value={game.birthday} onChange={(v) => setGame((s) => ({ ...s, birthday: v }))} />
+        <p className="muted">{game.foxName} has a little something planned for the day. (no peeking.)</p>
+      </section>
+
+      <section className="px-box card">
         <h2>when I leave the app during focus</h2>
         <Choice
           value={game.settings.leaveMode}
           options={['strict', 'gentle']}
           onChange={(v) => set({ leaveMode: v })}
-          format={(v) => (v === 'strict' ? 'wake the fox' : 'just pause')}
+          format={(v) => (v === 'strict' ? 'end the session' : 'just pause')}
         />
         <p className="muted">
           {game.settings.leaveMode === 'strict'
@@ -87,6 +138,8 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         <h2>sounds</h2>
         <Choice value={game.settings.sound ? 'on' : 'off'} options={['on', 'off']} onChange={(v) => set({ sound: v === 'on' })} />
       </section>
+
+      <BackupSection />
 
       <section className="px-box card">
         <button className="link" onClick={() => setInstall(true)}>

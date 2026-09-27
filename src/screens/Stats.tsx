@@ -4,9 +4,9 @@ import { dayKey, streak } from '../game/logic.ts'
 import { useGame } from '../game/store.ts'
 import { formatMinutes } from '../hooks.ts'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
-import { Header } from './Header.tsx'
 
-export function StatsScreen({ onBack }: { onBack: () => void }) {
+/** The fox's law career, focus stats and study time per subject. */
+export function CareerPanel() {
   const game = useGame()
   const now = Date.now()
   const s = game.stats
@@ -23,8 +23,7 @@ export function StatsScreen({ onBack }: { onBack: () => void }) {
   const topSubject = subjects[0]?.[1] ?? 1
 
   return (
-    <main className="screen">
-      <Header title="career" onBack={onBack} />
+    <>
       <section className="px-box card">
         <p className="eyebrow">{game.foxName}&rsquo;s law career</p>
         <h2>
@@ -109,6 +108,6 @@ export function StatsScreen({ onBack }: { onBack: () => void }) {
           sessions cut short: {s.left} left the app · {s.gaveUp} gave up
         </p>
       )}
-    </main>
+    </>
   )
 }

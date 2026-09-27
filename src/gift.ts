@@ -25,6 +25,10 @@ export const GIFT = {
    *   ],
    */
   secretNotes: [] as string[],
+  /** Her birthday as 'MM-DD' (e.g. '03-14'), for a surprise on the day. She can also set it in settings. */
+  birthday: '',
+  /** Optional letter delivered on her birthday (the fox writes one if this is empty). */
+  birthdayLetter: '',
   /** One-tap subject chips on the focus screen (study time is tracked per subject). */
   subjects: ['Torts', 'Contracts', 'Civ Pro', 'Crim Law', 'Con Law', 'Property', 'Evidence', 'Legal Writing', 'Reading', 'Outlining', 'Bar Prep'],
 }

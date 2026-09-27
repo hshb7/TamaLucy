@@ -8,6 +8,7 @@ law career from 1L to the Supreme Court. Stay away too long and it gets hungry,
 lonely, and eventually really down.
 
 ![screenshots](docs/screenshots.png)
+![more screenshots](docs/screenshots-2.png)
 
 It's an installable web app (PWA), so it runs on **iPhone and Android** from the
 home screen, works offline, and needs no app store.
@@ -41,7 +42,19 @@ home screen, works offline, and needs no app store.
 - **Career ladder:** every hour of focus moves the fox up: Pre-Law Pup, 1L, 2L, 3L, Law Graduate, Passed the Bar, Associate, Senior Associate, Partner, Judge, Supreme Court Justice. Each promotion gets a celebration and unlocks something (grad cap, tie, judge wig, diploma, gavel, scales of justice, wallpapers).
 - **Subjects:** one-tap chips on the focus screen (Torts, Contracts, Civ Pro, Crim Law, Con Law, Property, Evidence, Legal Writing...), with study time per subject on the career screen. Edit the list in `src/gift.ts`.
 - **Legal Latin flashcards:** the fox quizzes you on 26 terms (mens rea, stare decisis, res ipsa loquitur...). Tap the fox → *quiz me*, the desk → *flashcards*, or use it during breaks.
+- **Her own flashcards:** cards for her classes (cases, rules, elements), sorted by subject and reviewed as flip cards. Spaced repetition brings each card back right before she'd forget it: a card she knows comes back in 1, 3, 7, then 21 days, and a missed one comes back right away.
+- **Exam countdowns:** add exams with a date. Home counts down the last week, and on the morning of an exam the fox leaves a good-luck note.
+- **Studying together:** during focus the fox sits at its little desk in study glasses with a casebook, cocoa and a banker's lamp. Optional background sound (rain, fireplace or library hum) is generated in the app, with no audio files.
 - Law-pun notes from the fox ("IRAC. issue: you're tired..."), a Law Library and Courthouse Steps adventure.
+
+**Kind to a busy student**
+- **Care level** in settings: *classic* (can get depressed), *gentle* (needs drain more slowly and it never gets more than a little sad), or *exam week* (everything pauses, with a one-tap switch on the exams tab).
+- **Backup & restore:** a backup code (about 1 KB) she can copy into Notes or save as a file, then paste back on a new phone.
+
+**Little surprises**
+- **Birthday:** set in `gift.ts` or settings. On the day the fox wears a party hat, there's a cake and confetti, and a birthday letter arrives (yours, if you write one in `gift.ts`). She keeps the party hat afterwards.
+- **Seasons:** snow outside the window in winter, blossom petals in spring, fireflies on summer nights, falling leaves in autumn, and a jack-o'-lantern on the sill in October. The pumpkin hat can only be won in October and the earmuffs only in winter.
+- **A photo on the wall:** she picks any photo in *decor* and it becomes pixel art in a frame in the study corner. It stays on the phone.
 - Streaks, a daily "4 acorns" goal and a weekly chart.
 
 **Look & feel**: everything is hand-made pixel art drawn in code (no image files), in a
@@ -60,6 +73,9 @@ export const GIFT = {
   from: '',                   // your name, signs the secret letters
   welcome: '',                // optional message on the very first screen
   secretNotes: [],            // your own letters, see below
+  birthday: '',               // 'MM-DD' for the birthday surprise
+  birthdayLetter: '',         // your letter for her birthday (optional)
+  subjects: [...],            // subject chips on the focus screen
 }
 ```
 
@@ -94,7 +110,7 @@ URL. That adds a 6-second focus length and a 12-second break/adventure length
    Installed, it opens full-screen, works offline, and (on iPhone) its saved data
    isn't subject to Safari's 7-day storage cleanup.
 
-Progress is saved on the device (localStorage), so nothing leaves the phone.
+Progress is saved on the device (localStorage), so nothing leaves the phone. Settings → *backup* makes a code to move the fox to a new phone.
 
 ## About "you can't touch other apps"
 

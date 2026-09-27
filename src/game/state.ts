@@ -8,7 +8,7 @@ export interface Note {
   id: string
   text: string
   at: number
-  kind: 'fox' | 'secret' | 'missed'
+  kind: 'fox' | 'secret' | 'missed' | 'birthday' | 'exam'
   read: boolean
 }
 
@@ -47,12 +47,47 @@ export interface PendingReward {
   foundLetter?: boolean
 }
 
+export type CareLevel = 'classic' | 'gentle' | 'paused'
+export type Ambient = 'off' | 'rain' | 'fire' | 'hum'
+
 export interface Settings {
   focusMinutes: number
   breakMinutes: number
   sound: boolean
   graceSeconds: number
   leaveMode: 'strict' | 'gentle'
+  /** classic: can get depressed · gentle: slower, never below sad · paused: exam week, needs frozen */
+  care: CareLevel
+  /** Background sound during focus sessions. */
+  ambient: Ambient
+  /** What care was set to before exam week mode, to go back to afterwards. */
+  careBefore?: CareLevel
+}
+
+/** A flashcard she wrote herself, scheduled with Leitner boxes (1-5). */
+export interface StudyCard {
+  id: string
+  front: string
+  back: string
+  subject: string
+  box: number
+  due: number
+  created: number
+}
+
+export interface Exam {
+  id: string
+  name: string
+  /** local YYYY-MM-DD */
+  date: string
+  subject: string
+}
+
+/** A photo, pixelated for the frame on the wall. `data` is w*h 6-digit hex colours. */
+export interface Photo {
+  w: number
+  h: number
+  data: string
 }
 
 export interface Stats {
@@ -114,6 +149,16 @@ export interface GameState {
   pets: { windowStart: number; count: number }
   stats: Stats
   settings: Settings
+  cards: StudyCard[]
+  exams: Exam[]
+  /** Exams the fox already wished good luck for. */
+  examsWished: string[]
+  /** MM-DD, or '' if unknown. */
+  birthday: string
+  /** Year the birthday letter was last delivered. */
+  birthdayYear: number
+  photo: Photo | null
+  lastBackupAt: number
 }
 
 export function freshState(now: number, rng: () => number = Math.random): GameState {
@@ -155,7 +200,14 @@ export function freshState(now: number, rng: () => number = Math.random): GameSt
     secretsDelivered: 0,
     pets: { windowStart: now, count: 0 },
     stats: { totalMinutes: 0, sessions: 0, gaveUp: 0, left: 0, days: {}, daySessions: {}, subjects: {}, bestStreak: 0 },
-    settings: { focusMinutes: 25, breakMinutes: 5, sound: true, graceSeconds: 10, leaveMode: 'strict' },
+    settings: { focusMinutes: 25, breakMinutes: 5, sound: true, graceSeconds: 10, leaveMode: 'strict', care: 'classic', ambient: 'off' },
+    cards: [],
+    exams: [],
+    examsWished: [],
+    birthday: GIFT.birthday,
+    birthdayYear: 0,
+    photo: null,
+    lastBackupAt: 0,
   }
 }
 
@@ -164,24 +216,27 @@ const KEY = 'tamalucy:v1'
 export function loadState(now: number): GameState {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) {
-      const parsed = migrate(JSON.parse(raw))
-      const base = freshState(now)
-      // forward-compatible merge: new fields get defaults
-      return {
-        ...base,
-        ...parsed,
-        needs: { ...base.needs, ...parsed.needs },
-        quiz: { ...base.quiz, ...parsed.quiz },
-        decor: { ...base.decor, ...parsed.decor },
-        settings: { ...base.settings, ...parsed.settings },
-        stats: { ...base.stats, ...parsed.stats },
-      }
-    }
+    if (raw) return hydrate(JSON.parse(raw), now)
   } catch {
     // corrupted or unavailable storage: start fresh
   }
   return freshState(now)
+}
+
+/** Turn any saved object (old or new) into a complete, current GameState. */
+export function hydrate(raw: Record<string, unknown>, now: number): GameState {
+  const parsed = migrate(raw)
+  const base = freshState(now)
+  // forward-compatible merge: new fields get defaults
+  return {
+    ...base,
+    ...parsed,
+    needs: { ...base.needs, ...parsed.needs },
+    quiz: { ...base.quiz, ...parsed.quiz },
+    decor: { ...base.decor, ...parsed.decor },
+    settings: { ...base.settings, ...parsed.settings },
+    stats: { ...base.stats, ...parsed.stats },
+  }
 }
 
 /** Upgrade saves from older versions of the app. */

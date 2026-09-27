@@ -685,6 +685,27 @@ input:focus {
   color: #cdbfe6;
   font-size: 15px;
 }
+.sound-chips {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.sound-chip {
+  border: 0;
+  background: #3b2f55;
+  color: #cdbfe6;
+  box-shadow: 0 0 0 3px #1c1529;
+  margin: 3px;
+  padding: 3px 10px;
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  cursor: pointer;
+}
+.sound-chip.on {
+  background: #f7abbc;
+  color: #2c2340;
+}
 .focus-warn {
   font-size: 13px;
   color: #ffd9a0;
@@ -1367,5 +1388,216 @@ input:focus {
 @media (max-height: 700px) {
   .needs {
     gap: 4px;
+  }
+}
+
+/* ── v3: study hub, backups, photo, notices ───────────────────────────────── */
+.tabs.tabs-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+textarea,
+select {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--ink);
+  border: 0;
+  padding: 10px 12px;
+  background: white;
+  box-shadow: var(--outline), inset 0 3px 0 0 rgba(91, 58, 49, 0.08);
+  margin: var(--b);
+  border-radius: 0;
+  resize: vertical;
+  -webkit-user-select: text;
+  user-select: text;
+}
+select {
+  padding: 8px 10px;
+}
+textarea:focus,
+select:focus {
+  outline: none;
+  background: #fffdf0;
+  box-shadow: var(--outline), 0 0 0 6px var(--pink-light);
+}
+.error {
+  color: #b43d57;
+  font-size: 14px;
+}
+
+.letter-card.tone-butter {
+  background: #fff1c7;
+}
+.letter-card.tone-lav {
+  background: #efe6fb;
+}
+
+.deck-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.deck-head small {
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+.study-card {
+  gap: 2px;
+}
+.study-card .list-sub {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pips {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+}
+.pips span {
+  width: 10px;
+  height: 5px;
+  background: #eadfd6;
+}
+.pips span.on {
+  background: #8fcb7f;
+}
+
+.flip-card {
+  border: 0;
+  min-height: 170px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  background: #fffdf6;
+  background-image: repeating-linear-gradient(transparent 0 27px, #f3dccd 27px 28px);
+  cursor: pointer;
+}
+.flip-card small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.flip-front {
+  font-family: var(--font-pixel);
+  font-size: 21px;
+  font-weight: 600;
+}
+.flip-back {
+  font-size: 16px;
+  line-height: 1.45;
+  padding-top: 8px;
+  border-top: 3px dotted var(--pink);
+  animation: fade 200ms;
+}
+.flip-card.flipped .flip-front {
+  font-size: 17px;
+  color: var(--ink-soft);
+}
+
+.exam {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
+.exam-days {
+  flex: none;
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--font-pixel);
+  line-height: 1.1;
+}
+.exam-days b {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.exam-days small {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.exam-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.icon-x {
+  border: 0;
+  background: none;
+  font-family: var(--font-pixel);
+  font-size: 20px;
+  color: var(--ink-soft);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.exam-mode-on {
+  background: #fff1c7;
+}
+
+.backup-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.3;
+  word-break: break-all;
+  color: var(--ink-soft);
+}
+.file-btn {
+  position: relative;
+  overflow: hidden;
+}
+.file-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.file-btn.busy {
+  opacity: 0.6;
+}
+.birthday {
+  display: flex;
+  gap: 8px;
+}
+.birthday select:first-child {
+  flex: 1;
+}
+
+.photo-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.photo-frame {
+  flex: none;
+  padding: 6px;
+  background: #c48a58;
+  box-shadow: 0 0 0 3px #4a2a22, inset 0 0 0 3px #4a2a22;
+}
+.photo-frame img {
+  display: block;
+}
+.empty-frame {
+  width: 122px;
+  height: 97px;
+  background: #c48a58;
+  background-image: repeating-linear-gradient(45deg, #fff4e3 0 6px, #f3dccd 6px 12px);
+  background-clip: content-box;
+}
+.photo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+@media (max-width: 360px) {
+  .photo-row {
+    flex-direction: column;
+    align-items: center;
   }
 }

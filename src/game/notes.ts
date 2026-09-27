@@ -52,6 +52,15 @@ export const LAW_NOTES = [
   'i tried to read the rule against perpetuities. i am now taking a very long nap.',
 ]
 
+export const BIRTHDAY_NOTE =
+  'happy birthday, {name}!!! i baked you a cake. i only ate a little bit of it (the frosting). you are the best person i know and i hope today is as lovely as you are. — {fox}'
+
+export const EXAM_NOTES = [
+  'good luck on {exam} today, {name}! you know this stuff. read every question twice and trust yourself. i\u2019m so proud of you already.',
+  'it\u2019s {exam} day!! deep breath. you\u2019ve done the work. i\u2019ll be right here with a snack when you\u2019re done.',
+  '{exam} today. objection to nerves: sustained. go get \u2018em, counsellor.',
+]
+
 export const MORNING_NOTES = [
   'good morning, {name}! i woke up early to cheer you on. (then i napped a bit.)',
   'morning focus is the best focus. the birds agree.',

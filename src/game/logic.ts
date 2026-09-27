@@ -14,6 +14,10 @@ import {
 import type { GameState, Note, Postcard } from './state.ts'
 import { EFFECTS, SOCIAL, bump, simulate, type Activity } from './needs.ts'
 import { unlocked, rankOf, type UnlockKind } from './career.ts'
+import { dayKey, isOctober, monthDay, seasonOf } from './time.ts'
+import { examsToday } from './study.ts'
+import { BIRTHDAY_NOTE, EXAM_NOTES } from './notes.ts'
+import type { Clothing } from './content.ts'
 
 type Rng = () => number
 const HOUR = 3_600_000
@@ -33,10 +37,7 @@ function shuffle<T>(arr: readonly T[], rng: Rng): T[] {
 
 // ─── time helpers ───────────────────────────────────────────────────────────
 
-export function dayKey(t: number) {
-  const d = new Date(t)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+export { dayKey } from './time.ts'
 
 export function streak(days: Record<string, number>, now: number) {
   let n = 0
@@ -67,13 +68,51 @@ export function arrive(s: GameState, now: number, rng: Rng = Math.random): GameS
   // longer gaps: the fox looked after itself (bowl, toys, naps) while you were gone
   let next = simulate(s, now, now - s.lastTick > 10 * MIN)
   const away = now - s.lastVisit
-  if (next.onboarded && away > 30 * HOUR) {
+  if (next.onboarded && away > 30 * HOUR && next.settings.care !== 'paused') {
     next = addNote(next, { kind: 'missed', text: pickUnused(MISSED_NOTES, next, rng) }, now)
     next = bump(next, { social: 5 }) // a little reunion joy
   }
   next = resolveAdventure(next, now, rng)
+  if (next.onboarded) next = celebrateDays(next, now, rng)
   return { ...next, lastVisit: now }
 }
+
+export function isBirthday(s: GameState, now: number) {
+  return !!s.birthday && s.birthday === monthDay(now)
+}
+
+/** Birthday surprise + exam-day good luck, once each. */
+export function celebrateDays(s: GameState, now: number, rng: Rng = Math.random): GameState {
+  let next = s
+  const year = new Date(now).getFullYear()
+  if (isBirthday(next, now) && next.birthdayYear !== year) {
+    const text = GIFT.birthdayLetter
+      ? GIFT.birthdayLetter + (GIFT.from ? `\n\n— ${GIFT.from}` : '')
+      : fill(BIRTHDAY_NOTE, { name: next.owner.toLowerCase(), fox: next.foxName.toLowerCase() })
+    next = addNote(next, { kind: 'birthday', text }, now)
+    next = bump(next, { social: 20, fun: 20 })
+    next = {
+      ...next,
+      birthdayYear: year,
+      wardrobe: next.wardrobe.includes('partyHat') ? next.wardrobe : [...next.wardrobe, 'partyHat'],
+      equipped: { ...next.equipped, head: 'partyHat' },
+    }
+  }
+  for (const exam of examsToday(next, now)) {
+    if (next.examsWished.includes(exam.id)) continue
+    const text = fill(pick(EXAM_NOTES, rng), { name: next.owner.toLowerCase(), exam: exam.name })
+    next = { ...addNote(next, { kind: 'exam', text }, now), examsWished: [...next.examsWished, exam.id] }
+  }
+  return next
+}
+
+/** Seasonal outfits only turn up as rewards in their season. */
+export function inSeason(c: Clothing, now: number) {
+  if (!c.season) return true
+  return c.season === 'october' ? isOctober(now) : seasonOf(now) === c.season
+}
+
+const rewardable = (c: Clothing, now: number) => !c.career && !c.special && inSeason(c, now)
 
 // ─── focus sessions ────────────────────────────────────────────────────────
 
@@ -184,20 +223,25 @@ export function completeFocus(s: GameState, now: number, rng: Rng = Math.random)
 
 // ─── rewards ────────────────────────────────────────────────────────────────
 
-export function available(s: GameState, kind: RewardKind): boolean {
+export function available(s: GameState, kind: RewardKind, now = Date.now()): boolean {
   if (kind === 'gift') return GIFTS.some((g) => !s.gifts.includes(g.id))
-  if (kind === 'clothes') return CLOTHES.some((c) => !c.career && !s.wardrobe.includes(c.id))
+  if (kind === 'clothes') return CLOTHES.some((c) => rewardable(c, now) && !s.wardrobe.includes(c.id))
   return true
 }
 
 /** Show the options for one reward kind (e.g. three treats to choose from). */
-export function offer(s: GameState, kind: RewardKind, rng: Rng = Math.random): GameState {
+export function offer(s: GameState, kind: RewardKind, rng: Rng = Math.random, now = Date.now()): GameState {
   if (!s.pending) return s
   const n = s.pending.choices
   let options: string[] = []
   if (kind === 'treat') options = shuffle(TREATS, rng).slice(0, n).map((t) => t.id)
   if (kind === 'gift') options = shuffle(GIFTS.filter((g) => !s.gifts.includes(g.id)), rng).slice(0, n).map((g) => g.id)
-  if (kind === 'clothes') options = shuffle(CLOTHES.filter((c) => !c.career && !s.wardrobe.includes(c.id)), rng).slice(0, n).map((c) => c.id)
+  if (kind === 'clothes') {
+    // an in-season outfit, if there is one, always makes the shortlist
+    const pool = shuffle(CLOTHES.filter((c) => rewardable(c, now) && !s.wardrobe.includes(c.id)), rng)
+    pool.sort((a, b) => Number(!!b.season) - Number(!!a.season))
+    options = pool.slice(0, n).map((c) => c.id)
+  }
   if (kind === 'adventure') {
     // prefer places we haven't sent a postcard from yet
     const fresh = ADVENTURES.filter((a) => !s.postcards.some((p) => p.adventure === a.id))
@@ -246,7 +290,7 @@ export function claim(s: GameState, now: number, kind: RewardKind, choice: strin
     }
     case 'clothes': {
       const item = choice ? byId(CLOTHES, choice) : undefined
-      if (!item || item.career || s.wardrobe.includes(item.id)) return null
+      if (!item || item.career || item.special || s.wardrobe.includes(item.id)) return null
       next = {
         ...bump(s, { fun: 12, social: 4 }),
         wardrobe: [...s.wardrobe, item.id],
@@ -432,6 +476,14 @@ export function pendingPromotion(s: GameState): number | null {
 
 export function celebratePromotion(s: GameState): GameState {
   return { ...s, rankSeen: rankOf(s.stats.totalMinutes) }
+}
+
+/** After reviewing her own cards: the fox loves studying with her. */
+export function finishReview(s: GameState, reviewed: number, knew: number): GameState {
+  if (!reviewed) return s
+  const q = s.quiz
+  const next = bump(s, { fun: Math.min(20, 6 + reviewed), social: 6 })
+  return { ...next, quiz: { ...q, correct: q.correct + knew, answered: q.answered + reviewed } }
 }
 
 export function finishQuiz(s: GameState, correct: number, total: number): GameState {

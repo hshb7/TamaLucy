@@ -69,7 +69,7 @@ export function FailedModal({ awayMs, onClose, onRetry }: { awayMs: number; onCl
   return (
     <Modal onClose={onClose}>
       <FoxPortrait equipped={game.equipped} face="sad" className="portrait-m" />
-      <h2>{f} woke up and you were gone...</h2>
+      <h2>{f} looked up and you were gone...</h2>
       <p>
         you left the app for {formatDuration(awayMs)}, so this session didn&rsquo;t count. {f} is a little sad, but it&rsquo;s
         okay. you can try again!

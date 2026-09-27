@@ -7,10 +7,18 @@ import { formatClock, useNow, useWakeLock } from '../hooks.ts'
 import { Modal } from '../ui/bits.tsx'
 import { PixelCanvas } from '../ui/PixelCanvas.tsx'
 import { drawFox, spawn, stepParticles, type Particle } from '../ui/foxDraw.ts'
+import { ROOM_ART, SPECIAL_ART, TREAT_ART } from '../art/items.ts'
+import { startAmbient, stopAmbient, type AmbientKind } from '../audio.ts'
 import { LockTips } from './Modals.tsx'
 
 const W = 96
 const H = 58
+const SOUNDS: [AmbientKind, string][] = [
+  ['off', 'quiet'],
+  ['rain', 'rain'],
+  ['fire', 'fireplace'],
+  ['hum', 'library'],
+]
 
 export function FocusScreen() {
   const game = useGame()
@@ -18,8 +26,15 @@ export function FocusScreen() {
   const [confirm, setConfirm] = useState(false)
   const [tips, setTips] = useState(false)
   const parts = useRef<Particle[]>([])
-  const lastZ = useRef(0)
+  const lastSpark = useRef(0)
   const wake = useWakeLock(true)
+
+  // background sound for the session
+  const ambient = game.settings.ambient
+  useEffect(() => {
+    startAmbient(ambient)
+  }, [ambient])
+  useEffect(() => () => stopAmbient(), [])
 
   // darker status bar while in night-light mode
   useEffect(() => {
@@ -37,37 +52,47 @@ export function FocusScreen() {
   const f = game.foxName
 
   const draw = (p: Painter, t: number) => {
-    // cozy night-light corner
+    // a cozy night-time study corner
     p.rect(0, 0, W, H, '#35294a')
-    for (let x = 4; x < W; x += 12) p.rect(x, 0, 1, 42, '#3b2e52')
-    p.rect(0, 42, W, H - 42, '#47385c')
-    p.rect(0, 42, W, 1, '#2a2039')
+    for (let x = 4; x < W; x += 12) p.rect(x, 0, 1, 50, '#3b2e52')
+    p.rect(0, 50, W, H - 50, '#47385c')
+    p.rect(0, 50, W, 1, '#2a2039')
     // window with stars
-    p.rect(8, 8, 22, 18, '#1c1f4a')
-    for (const [sx, sy, i] of [[11, 11, 0], [24, 13, 1], [16, 20, 2], [27, 21, 3], [13, 16, 4]])
+    p.rect(6, 6, 20, 16, '#1c1f4a')
+    for (const [sx, sy, i] of [[9, 9, 0], [21, 11, 1], [13, 17, 2], [23, 18, 3], [10, 14, 4]])
       if (Math.sin(t / 500 + i * 2) > -0.4) p.rect(sx, sy, 1, 1, '#fff6d8')
-    p.rect(20, 10, 3, 3, '#fff4c9')
-    p.rect(7, 7, 24, 1, '#6a5a80')
-    p.rect(7, 26, 24, 1, '#6a5a80')
-    p.rect(7, 7, 1, 20, '#6a5a80')
-    p.rect(30, 7, 1, 20, '#6a5a80')
-    p.rect(18, 8, 1, 18, '#6a5a80')
-    // candle glow
-    const flick = Math.sin(t / 90) + Math.sin(t / 37)
-    ellipse(p, 80, 30, 18 + Math.round(flick), 14, '#ffcf8a', 0.08)
-    ellipse(p, 80, 30, 10, 8, '#ffdca0', 0.1)
-    p.rect(76, 38, 9, 6, '#7b523d')
-    p.rect(78, 30, 5, 8, '#fff4e3')
-    p.rect(78, 30, 1, 8, '#efd9bd')
-    p.rect(80, 26 - (flick > 1 ? 1 : 0), 1, 4, '#ffd76e')
-    p.rect(79, 28, 3, 2, '#ffb27f')
-    // cushion + sleeping fox
-    ellipse(p, 46, 50, 24, 5, '#9a7cc4')
-    ellipse(p, 46, 49, 22, 4, '#cbb0ea')
-    drawFox(p, 26, 30, { pose: 'curl', face: 'sleep', tail: 0, breath: Math.floor(t / 1600) % 2, equipped: game.equipped })
-    if (t - lastZ.current > 1500) {
-      lastZ.current = t
-      spawn(parts.current, 'z', 34, 30, t)
+    p.rect(18, 8, 3, 3, '#fff4c9')
+    p.rect(5, 5, 22, 1, '#6a5a80')
+    p.rect(5, 22, 22, 1, '#6a5a80')
+    p.rect(5, 5, 1, 18, '#6a5a80')
+    p.rect(26, 5, 1, 18, '#6a5a80')
+    p.rect(15, 6, 1, 16, '#6a5a80')
+    // the fox, behind its desk, in study glasses
+    const reading = Math.floor(t / 3200) % 5
+    const face = reading === 4 ? 'happy' : t % 4000 < 150 ? 'blink' : 'open'
+    const equipped = { ...game.equipped, face: game.equipped.face ?? 'roundGlasses' }
+    drawFox(p, 32, 13 + (Math.floor(t / 1800) % 2), { pose: 'sit', face, tail: Math.floor(t / 1400) % 2, equipped })
+    // desk
+    p.rect(14, 38, 70, 3, '#b08361')
+    p.rect(14, 41, 70, 2, '#7b523d')
+    p.rect(13, 37, 72, 1, '#4a2a22')
+    p.rect(16, 43, 66, 9, '#7b523d')
+    p.rect(16, 43, 66, 1, '#553628')
+    for (const dx of [20, 58]) {
+      p.rect(dx, 45, 18, 5, '#8a5e45')
+      p.rect(dx + 8, 47, 3, 1, '#e5ab3d')
+    }
+    // cocoa, open casebook (pages turn now and then), banker's lamp
+    p.sprite(TREAT_ART.cocoa, 16, 26)
+    p.sprite(SPECIAL_ART.openBook, 42, 32)
+    if (reading === 2 && t % 3200 < 500) p.rect(48, 32, 1, 5, '#fff4e3')
+    const flick = Math.sin(t / 900)
+    ellipse(p, 72, 34, 20 + Math.round(flick), 13, '#ffe3a0', 0.1)
+    ellipse(p, 72, 34, 10, 7, '#fff0c0', 0.12)
+    p.sprite(ROOM_ART.lamp, 66, 27)
+    if (reading === 3 && t - lastSpark.current > 900) {
+      lastSpark.current = t
+      spawn(parts.current, 'spark', 40 + Math.random() * 16, 14, t)
     }
     stepParticles(p, parts.current, t)
   }
@@ -86,12 +111,24 @@ export function FocusScreen() {
           <span key={i} className={i < on ? 'on' : ''} />
         ))}
       </div>
-      <PixelCanvas w={W} h={H} draw={draw} className="focus-scene" label={`${f} napping while you focus`} />
+      <PixelCanvas w={W} h={H} draw={draw} className="focus-scene" label={`${f} studying with you`} />
+      <div className="sound-chips" role="group" aria-label="background sound">
+        {SOUNDS.map(([id, name]) => (
+          <button
+            key={id}
+            className={`sound-chip ${ambient === id ? 'on' : ''}`}
+            aria-pressed={ambient === id}
+            onClick={() => setGame((s) => ({ ...s, settings: { ...s.settings, ambient: id } }))}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
       <p className="focus-note">
-        shh... {f} is napping while you work.
+        {f} is studying right alongside you.
         <br />
         {game.settings.leaveMode === 'strict'
-          ? `leaving the app for more than ${game.settings.graceSeconds}s will wake ${f} up!`
+          ? `leaving the app for more than ${game.settings.graceSeconds}s will distract ${f}!`
           : `leaving the app pauses the timer.`}
       </p>
       {wake === 'unavailable' && game.settings.leaveMode === 'strict' && (

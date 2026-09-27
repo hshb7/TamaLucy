@@ -5,6 +5,9 @@ import { BRUSH_ART, GIFT_ART, ICON_ART, NEED_ICON_ART, ROOM_ART, TREAT_ART } fro
 import { sprite, type Sprite } from '../art/sprite.ts'
 import type { Face } from '../art/fox.ts'
 import { unlocked } from '../game/career.ts'
+import { isBirthday } from '../game/logic.ts'
+import { isOctober, seasonOf } from '../game/time.ts'
+import { photoSprite } from '../art/photo.ts'
 import { TREATS } from '../game/content.ts'
 import { foxMood, lowestNeed, type NeedKey } from '../game/needs.ts'
 import type { GameState } from '../game/state.ts'
@@ -35,6 +38,7 @@ const shift = (p: Painter, dx: number): Painter => ({
   sprite: (s, x, y, a) => p.sprite(s, x - dx, y, a),
 })
 
+const CONFETTI = ['#f59aa6', '#ffd76e', '#9dcdee', '#c7a8e8', '#94c58a'].map((c) => sprite(['cc'], { c }))
 const BOOK = sprite(['oooooooo', 'oRrrrrYo', 'oRrrrrYo', 'oRrYYrYo', 'oRrrrrYo', 'oooooooo'])
 const ARROW_L = sprite(['..o', '.oo', 'ooo', '.oo', '..o'], { o: '#fffaf3' })
 const ARROW_R = sprite(['o..', 'oo.', 'ooo', 'oo.', 'o..'], { o: '#fffaf3' })
@@ -217,11 +221,18 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onWake, onStatu
       law: unlocked(g.stats.totalMinutes, 'law'),
       bowl: g.bowl,
       hide: doing === 'ball' ? ['ball'] : doing === 'yarn' ? ['yarn'] : [],
+      season: seasonOf(d.getTime()),
+      october: isOctober(d.getTime()),
+      birthday: isBirthday(g, d.getTime()),
+      photo: g.photo ? photoSprite(g.photo) : null,
     }
     drawRoom(p, opts)
     if (g.adventure) p.sprite(ICON_ART.mail, 60, 84)
     else drawTheFox(p, t, g, b, doing)
     drawAtmosphere(p, opts)
+    if (opts.birthday && every('confetti', t, 180)) {
+      particles.current.push({ kind: 'icon', art: CONFETTI[Math.floor(Math.random() * CONFETTI.length)], x: camX + Math.random() * VIEW_W, y: -2, vx: (Math.random() - 0.5) * 8, vy: 14 + Math.random() * 8, born: t, life: 6000 })
+    }
     stepParticles(p, particles.current, t)
 
     // hint that there's more room to either side

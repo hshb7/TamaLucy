@@ -35,6 +35,10 @@ export interface Clothing extends Item {
   slot: Slot
   /** Earned through the fox's law career rather than as a reward. */
   career?: boolean
+  /** Only offered as a reward in this season. */
+  season?: 'october' | 'winter'
+  /** Given on a special day (her birthday), never a random reward. */
+  special?: boolean
 }
 
 export const CLOTHES: Clothing[] = [
@@ -49,6 +53,9 @@ export const CLOTHES: Clothing[] = [
   { id: 'scarf', slot: 'neck', name: 'Cozy scarf', blurb: 'hand-knitted with love.' },
   { id: 'bellCollar', slot: 'neck', name: 'Bell collar', blurb: 'jingle jingle.' },
   { id: 'bandana', slot: 'neck', name: 'Blue bandana', blurb: 'adventure-ready.' },
+  { id: 'pumpkinHat', slot: 'head', name: 'Pumpkin hat', blurb: 'october only! spooky and cute.', season: 'october' },
+  { id: 'earmuffs', slot: 'head', name: 'Earmuffs', blurb: 'a winter exclusive. toasty ears.', season: 'winter' },
+  { id: 'partyHat', slot: 'head', name: 'Party hat', blurb: 'from your birthday ♡', special: true },
   { id: 'necktie', slot: 'neck', name: 'Law-firm tie', blurb: 'dress for the job you want.', career: true },
   { id: 'gradCap', slot: 'head', name: 'Grad cap', blurb: 'juris doctor fox.', career: true },
   { id: 'judgeWig', slot: 'head', name: 'Judge wig', blurb: 'order in the court!', career: true },

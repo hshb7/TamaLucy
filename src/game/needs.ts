@@ -66,6 +66,11 @@ export function isAsleep(s: GameState, t: number) {
 export function simulate(s: GameState, now: number, autonomy = false): GameState {
   let t = s.lastTick
   if (now <= t) return s
+  // exam week: everything is frozen, the fox just waits happily for you
+  const care = s.settings.care ?? 'classic'
+  if (care === 'paused') return { ...s, lastTick: now }
+  const rate = care === 'gentle' ? 0.6 : 1
+  const floor = care === 'gentle' ? 20 : 0
   const n = { ...s.needs }
   const lastUse = { ...s.lastUse }
   let { bowl, napUntil } = s
@@ -77,11 +82,11 @@ export function simulate(s: GameState, now: number, autonomy = false): GameState
     const h = step / HOUR
     const asleep = isBedtime(t) || t < napUntil
     const comfy = (has('mushroomLamp') ? 1.15 : 1) * (has('cushion') ? 1.1 : 1)
-    n.hunger -= (asleep ? 1.2 : 2) * h
-    n.energy += asleep ? 9 * comfy * h : -3.2 * h
-    n.fun -= (asleep ? 0.4 : 2.4) * h
-    n.hygiene -= (asleep ? 0.4 : 1.2) * h
-    n.social -= (asleep ? 0.5 : 1.6) * h
+    n.hunger -= (asleep ? 1.2 : 2) * h * rate
+    n.energy += asleep ? 9 * comfy * h : -3.2 * h * rate
+    n.fun -= (asleep ? 0.4 : 2.4) * h * rate
+    n.hygiene -= (asleep ? 0.4 : 1.2) * h * rate
+    n.social -= (asleep ? 0.5 : 1.6) * h * rate
     if (autonomy && !asleep) {
       if (n.energy < 15) napUntil = t + 90 * MIN
       if (n.hunger < 55 && bowl > 0 && ready('bowl', 2 * HOUR)) {
@@ -103,7 +108,7 @@ export function simulate(s: GameState, now: number, autonomy = false): GameState
         lastUse.books = t
       }
     }
-    for (const k of NEEDS) n[k] = clamp(n[k])
+    for (const k of NEEDS) n[k] = Math.max(floor, clamp(n[k]))
     t += step
   }
   return { ...s, needs: n, bowl, lastUse, napUntil, lastTick: now }

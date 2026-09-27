@@ -43,7 +43,15 @@ export function Album({ onBack }: { onBack: () => void }) {
                   }}
                 >
                   <span className="list-title">
-                    {n.kind === 'secret' ? 'a secret letter ♡' : n.kind === 'missed' ? 'while you were away...' : `a note from ${game.foxName}`}
+                    {n.kind === 'secret'
+                      ? 'a secret letter ♡'
+                      : n.kind === 'missed'
+                        ? 'while you were away...'
+                        : n.kind === 'birthday'
+                          ? 'a birthday letter ♡'
+                          : n.kind === 'exam'
+                            ? 'a good-luck note'
+                            : `a note from ${game.foxName}`}
                   </span>
                   <span className="list-sub">{n.read ? n.text.slice(0, 48) + (n.text.length > 48 ? '…' : '') : 'unopened ✿'}</span>
                 </button>
