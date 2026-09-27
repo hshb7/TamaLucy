@@ -1,0 +1,6 @@
+node_modules
+dist
+dev-dist
+sprites.png
+*.local
+.DS_Store
