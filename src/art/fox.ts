@@ -145,6 +145,12 @@ function blush(kind: Face): Px[] {
   return px
 }
 
+/** Two little whiskers on each cheek, a pixel in from the edge of the face. */
+function whiskers(): Px[] {
+  const left: [number, number][] = [[2, 15], [3, 15], [4, 15], [4, 17], [5, 17], [6, 17]]
+  return left.flatMap(([x, y]): Px[] => [[x, y, 'o'], [31 - x, y, 'o']])
+}
+
 function paint(base: Sprite, px: Px[]): Sprite {
   const parts = blank(base.w, base.h)
   for (const [x, y, ch] of px) parts.data[y * base.w + x] = sprite([ch]).data[0]
@@ -161,7 +167,7 @@ export function foxSitting(face: Face = 'open', tailFrame = 0): Sprite {
   let s = blank(FOX_W, FOX_H)
   s = stamp(s, TAIL[tailFrame % 2], 25, 9)
   s = stamp(s, BODY, 0, 0)
-  s = paint(s, [...eyes(face), ...mouth(face), ...blush(face)])
+  s = paint(s, [...eyes(face), ...mouth(face), ...blush(face), ...whiskers()])
   cache.set(key, s)
   return s
 }
