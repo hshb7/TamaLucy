@@ -337,7 +337,7 @@ function pickUnused(pool: readonly string[], s: GameState, rng: Rng) {
 
 function addNote(s: GameState, n: Pick<Note, 'kind' | 'text'>, now: number): GameState {
   const note: Note = { id: `${now.toString(36)}-${s.notes.length}`, at: now, read: false, ...n }
-  const pool = n.kind === 'secret' ? [] : [n.text]
+  const pool = n.kind === 'secret' || n.kind === 'post' ? [] : [n.text]
   return {
     ...s,
     notes: [note, ...s.notes],
@@ -368,6 +368,26 @@ function writeNote(s: GameState, now: number, minutes: number, label: string, rn
   const template = pickUnused(pick(pools, rng), s, rng)
   const text = fill(template, { name: s.owner.toLowerCase(), fox: s.foxName.toLowerCase(), label, minutes, streak: st })
   return addNote({ ...s, usedNotes: [template, ...s.usedNotes] }, { kind: 'fox', text }, now)
+}
+
+export interface MailLetter {
+  id: string
+  body: string
+  signed: string
+  /** ISO timestamp */
+  deliver_at: string
+}
+
+/** Put letters that came in the mail into the album. Letters she already has are skipped. */
+export function receiveLetters(s: GameState, letters: MailLetter[], now: number): { state: GameState; added: Note[] } {
+  const have = new Set(s.notes.map((n) => n.id))
+  const fresh = letters
+    .filter((l) => !have.has(`post-${l.id}`) && l.body.trim())
+    .map((l) => ({ ...l, at: Math.min(Date.parse(l.deliver_at) || now, now) }))
+    .sort((a, b) => b.at - a.at) // newest first, like every other note
+  if (!fresh.length) return { state: { ...s, lastMailCheck: now }, added: [] }
+  const added: Note[] = fresh.map((l) => ({ id: `post-${l.id}`, kind: 'post', text: l.body.trim(), signed: l.signed.trim(), at: l.at, read: false }))
+  return { state: { ...s, lastMailCheck: now, notes: [...added, ...s.notes] }, added }
 }
 
 export function readNote(s: GameState, id: string): GameState {

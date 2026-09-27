@@ -1,8 +1,18 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Personalise the app here before you share it. 💌
 //  Everything in this file is optional; the app works fine with the defaults.
+//
+//  If this repository is public, put anything personal (your name, the secret
+//  letters, her birthday) in src/gift.local.ts instead. Git ignores that file,
+//  so it never gets pushed, but it's baked into the app when you build:
+//
+//    // src/gift.local.ts
+//    export const GIFT = {
+//      from: 'Sam',
+//      secretNotes: ['hi! if you are reading this...'],
+//    }
 // ─────────────────────────────────────────────────────────────────────────────
-export const GIFT = {
+const DEFAULTS = {
   /** Name shown on the home screen icon and title bar. */
   appName: 'TamaLucy',
   /** Pre-filled in onboarding ("what's your name?"). They can change it. */
@@ -32,3 +42,12 @@ export const GIFT = {
   /** One-tap subject chips on the focus screen (study time is tracked per subject). */
   subjects: ['Torts', 'Contracts', 'Civ Pro', 'Crim Law', 'Con Law', 'Property', 'Evidence', 'Legal Writing', 'Reading', 'Outlining', 'Bar Prep'],
 }
+
+let local: Partial<typeof DEFAULTS> | undefined
+try {
+  local = Object.values(import.meta.glob<{ GIFT?: Partial<typeof DEFAULTS> }>('./gift.local.ts', { eager: true }))[0]?.GIFT
+} catch {
+  // vite.config.ts reads this file too, outside the app, where there's no import.meta.glob
+}
+
+export const GIFT: typeof DEFAULTS = { ...DEFAULTS, ...local }

@@ -4,3 +4,4 @@ dev-dist
 sprites.png
 *.local
 .DS_Store
+src/gift.local.ts

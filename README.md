@@ -57,6 +57,13 @@ home screen, works offline, and needs no app store.
 - **A photo on the wall:** she picks any photo in *decor* and it becomes pixel art in a frame in the study corner. It stays on the phone.
 - Streaks, a daily "4 acorns" goal and a weekly chart.
 
+**Letters from far away ✉**
+- You can keep writing to her after the gift is given. Letters you send from the
+  *post office* page arrive at the fox's door: "you've got mail!", an envelope to
+  open, and the letter kept in her album. Schedule them for a date (her exam
+  morning, her birthday, a random Tuesday) and they stay hidden until then.
+  See [Letters from far away](#letters-from-far-away-).
+
 **Look & feel**: everything is hand-made pixel art drawn in code (no image files), in a
 warm pink/cream kawaii palette, with *Pixelify Sans* + *DotGothic16* pixel fonts and small
 chiptune sound effects.
@@ -84,6 +91,22 @@ order, "found tucked under the rug". One is guaranteed after the 1st, 3rd, 7th,
 12th, 20th, 30th... completed focus session, and they can also turn up when the
 fox writes a note. This is the best place to hide something sweet.
 
+> **Is this repository public?** Then anything in `gift.ts` is public too. Put the
+> personal parts in **`src/gift.local.ts`** instead. It's git-ignored, so it's never
+> pushed, but it's still built into the app:
+>
+> ```ts
+> // src/gift.local.ts (only the fields you want to override)
+> export const GIFT = {
+>   from: 'Sam',
+>   secretNotes: ['hi! if you are reading this, ...'],
+>   birthday: '03-14',
+> }
+> ```
+>
+> Build it on your own computer (`npm run build`) and upload `dist/`. A build
+> made by GitHub Actions or Netlify from the repository won't see the file.
+
 ## Run it
 
 ```bash
@@ -110,7 +133,51 @@ URL. That adds a 6-second focus length and a 12-second break/adventure length
    Installed, it opens full-screen, works offline, and (on iPhone) its saved data
    isn't subject to Safari's 7-day storage cleanup.
 
-Progress is saved on the device (localStorage), so nothing leaves the phone. Settings → *backup* makes a code to move the fox to a new phone.
+Progress is saved on the device (localStorage), so nothing leaves the phone (the one exception: if she connects a mailbox, the app asks it for new letters). Settings → *backup* makes a code to move the fox to a new phone.
+
+## Letters from far away ✉
+
+Letters are kept in a tiny [Supabase](https://supabase.com) database (free plan).
+There are two secret codes, made with `node scripts/new-mailbox.ts`:
+
+| | who has it | what it does |
+|---|---|---|
+| **mailbox code** (`five-cute-words-and-123`) | her | reads letters that have arrived |
+| **writer key** (`writer-xxxx-xxxx-…`) | you | writes, schedules and takes back letters |
+
+**Give her the mailbox code** in one of two ways:
+- Send her the link `https://<your-site>/#mail=<mailbox-code>`. Opening it connects the mailbox, and the code disappears from the address bar.
+- Or write the code on the gift card. She types it into *Settings → mailbox*.
+  On iPhone, the home-screen app has its own storage, separate from Safari, so
+  if she opened the link in Safari first she'll need to type the code in the
+  installed app once.
+
+**Write to her** at `https://<your-site>/#write`. Enter the writer key once (it's
+remembered on that device only), write, preview, then send it right away or
+pick a day and time. You can see which letters are waiting and which were sent, and
+take back one that hasn't arrived yet. The app checks for mail when she opens it
+and every 15 minutes while it's open, but never during a focus session.
+
+**Privacy.** The database stores only sha256 hashes of the two codes, never the
+codes themselves. Its tables are closed to the public API; everything goes through
+five small database functions that each check a code first
+([`supabase/migrations/`](supabase/migrations/)). The publishable key in
+`src/game/remote.ts` is public by design and can't open anything by itself.
+Anyone who has her mailbox code can read her letters, and anyone who has the
+writer key can write to her, so keep both out of the repository and share them
+only with her.
+
+**Good to know**
+- Free Supabase projects pause after about a week with no requests. Her app keeps
+  it awake whenever she opens it. If it does fall asleep, Supabase emails you, and
+  one click on *Restore* in the dashboard wakes it up with every letter still there.
+- Letters are up to 2,000 characters. Scheduled times use the writer's time zone.
+- Letters can't be fetched from the Claude artifact preview (it blocks network
+  requests). They work on the real site.
+- **Using your own Supabase project instead:** run the two SQL files in
+  `supabase/migrations/` (SQL editor), put your project URL and publishable key in
+  `src/game/remote.ts`, then run `node scripts/new-mailbox.ts` and paste the one
+  line of SQL it prints.
 
 ## About "you can't touch other apps"
 
@@ -141,9 +208,13 @@ src/
   ui/                canvas renderer, the room (camera, pie menus), the fox's
                      free-will brain (brain.ts), shared widgets
   screens/           onboarding, home, focus, rewards, break, closet, album, stats, settings
+  write/             the post office (#write): writing and scheduling letters
+  mail.ts            checks her mailbox and announces new letters
 scripts/
   make-icons.ts      renders the app icons from the fox sprite (npm run icons)
   sprite-sheet.ts    renders all sprites to sprites.png for quick art edits (npm run sprites)
+  new-mailbox.ts     makes a mailbox code + writer key and prints the SQL to register them
+supabase/migrations/ the letters database: tables, and the functions that guard them
 ```
 
 The sprites are text grids (one character per pixel, colours in

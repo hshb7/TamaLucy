@@ -13,8 +13,10 @@ import { Wardrobe } from './screens/Wardrobe.tsx'
 import { Album } from './screens/Album.tsx'
 import { StudyScreen } from './screens/Study.tsx'
 import { SettingsScreen } from './screens/Settings.tsx'
-import { FailedModal, PostcardModal, PromotionModal } from './screens/Modals.tsx'
+import { FailedModal, MailModal, PostcardModal, PromotionModal } from './screens/Modals.tsx'
 import { DecorScreen } from './screens/Decor.tsx'
+import type { Note } from './game/state.ts'
+import { checkMail, connectMailbox, mailProblem, onNewMail, takeMailLink } from './mail.ts'
 
 export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'study' | 'career' | 'exams' | 'settings'
 
@@ -24,6 +26,18 @@ export default function App() {
   const [setupOpen, setSetupOpen] = useState(false)
   const [failedAway, setFailedAway] = useState<number | null>(null)
   const [reward, setReward] = useState<RewardResult | null>(null)
+  const [newMail, setNewMail] = useState<Note[]>([])
+
+  // Letters from far away
+  useEffect(
+    () =>
+      onNewMail((added) => {
+        setNewMail((m) => [...added, ...m])
+        sfx.chime()
+        buzz([40, 40, 40])
+      }),
+    [],
+  )
 
   useEffect(() => setSoundEnabled(game.settings.sound), [game.settings.sound])
 
@@ -39,6 +53,7 @@ export default function App() {
         buzz([80, 60, 80])
       } else if (r.outcome === 'close-call') toast(`phew! ${r.state.foxName} looked up, but you came back in time. keep going!`)
       else if (r.outcome === 'paused') toast(`welcome back! the timer waited for you.`)
+      checkMail(2 * 60_000)
     }
     const onVis = () => {
       if (document.visibilityState === 'hidden') setGame((s) => focusHidden(s, Date.now()))
@@ -46,6 +61,16 @@ export default function App() {
     }
     const onHide = () => setGame((s) => focusHidden(s, Date.now()))
     check() // the page may have been reloaded / killed mid-session
+    const link = takeMailLink()
+    if (link)
+      connectMailbox(link).then(
+        (ok) => {
+          if (!ok) return toast('hmm, that mailbox link didn’t work. is it the whole thing?')
+          toast('mailbox connected! letters will find you here ♡')
+          checkMail(0)
+        },
+        (e) => toast(mailProblem(e)),
+      )
     document.addEventListener('visibilitychange', onVis)
     window.addEventListener('pagehide', onHide)
     const unlock = () => unlockAudio()
@@ -83,6 +108,7 @@ export default function App() {
         sfx.chime()
       }
       if (now - s.lastTick > 60_000) setGame((g) => ({ ...simulate(g, now), lastVisit: now }))
+      if (s.mailbox && !s.session && now - s.lastMailCheck > 15 * 60_000) checkMail(15 * 60_000)
     }, 500)
     return () => clearInterval(id)
   }, [])
@@ -115,6 +141,7 @@ export default function App() {
   const calm = !game.session && !game.pending && !reward
   const promo = calm ? pendingPromotion(game) : null
   const showPostcard = game.postcardToShow && calm && promo == null && view !== 'break'
+  const showMail = newMail.length > 0 && calm && promo == null && !showPostcard && failedAway == null
 
   return (
     <>
@@ -139,6 +166,7 @@ export default function App() {
         />
       )}
       {showPostcard && <PostcardModal card={game.postcardToShow!} fresh />}
+      {showMail && <MailModal notes={newMail} onClose={() => setNewMail([])} />}
       <Toasts />
     </>
   )

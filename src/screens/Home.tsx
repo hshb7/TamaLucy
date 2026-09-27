@@ -23,6 +23,8 @@ function notice(game: GameState, now: number, unread: number): Notice | null {
   if (isBirthday(game, now)) return { text: `happy birthday, ${game.owner}!!`, sub: `${f} made you a cake (and a letter) ♡`, icon: SPECIAL_ART.cake, go: 'album', tone: 'pink' }
   const today = examsToday(game, now)[0]
   if (today) return { text: `today: ${today.name}`, sub: `you’ve got this, counsellor. ${f} believes in you ♡`, icon: NEED_ICON_ART.gavel, go: 'exams', tone: 'butter' }
+  const mail = game.notes.find((n) => n.kind === 'post' && !n.read)
+  if (mail) return { text: 'you’ve got mail! ✉', sub: mail.signed ? `a letter from ${mail.signed}` : 'a letter came for you ✿', icon: ICON_ART.mail, go: 'album', tone: 'pink' }
   if (unread) return { text: unread === 1 ? 'a letter is waiting for you!' : `${unread} letters are waiting for you!`, sub: 'tap to open ✿', icon: ICON_ART.mail, go: 'album', tone: 'pink' }
   const soon = upcomingExams(game, now)[0]
   if (soon && daysUntil(soon.date, now) <= 7) return { text: `${soon.name} ${whenLabel(daysUntil(soon.date, now))}`, sub: `${f} is counting down with you`, icon: NEED_ICON_ART.gavel, go: 'exams', tone: 'lav' }

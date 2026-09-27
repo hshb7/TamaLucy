@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { sfx } from '../audio.ts'
 import { ICON_ART, LAW_ART, SOUVENIR_ART } from '../art/items.ts'
 import { CLOTHING_ART } from '../art/clothes.ts'
 import { CAREER } from '../game/career.ts'
 import { ADVENTURES } from '../game/content.ts'
-import { dismissPostcard } from '../game/logic.ts'
+import { dismissPostcard, readNote } from '../game/logic.ts'
 import type { Note, Postcard } from '../game/state.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { formatDuration } from '../hooks.ts'
@@ -20,8 +20,10 @@ export function LetterView({ note, foxName }: { note: Note; foxName: string }) {
     <article className={`letter px-box ${note.kind}`}>
       <p className="letter-date">{date}</p>
       {note.kind === 'secret' && <p className="letter-intro">({foxName.toLowerCase()} found this tucked under the rug...)</p>}
+      {note.kind === 'post' && <p className="letter-intro">(this one came in the mail ✉)</p>}
       {note.text.split('\n').map((line, i) => (line ? <p key={i}>{line}</p> : null))}
-      {note.kind !== 'secret' && (
+      {note.kind === 'post' && note.signed && <p className="sign">— {note.signed}</p>}
+      {note.kind !== 'secret' && note.kind !== 'post' && (
         <p className="sign">
           — {foxName.toLowerCase()} <PixelIcon sprite={PAW} scale={2} />
         </p>
@@ -59,6 +61,56 @@ export function PostcardModal({ card, fresh, onClose }: { card: Postcard; fresh?
       <button className="btn btn-pink" onClick={close}>
         {fresh ? 'welcome back ♡' : 'close'}
       </button>
+    </Modal>
+  )
+}
+
+/** A letter just came in the mail: first the envelope, then the letter. */
+export function MailModal({ notes, onClose }: { notes: Note[]; onClose: () => void }) {
+  const game = useGame()
+  const [open, setOpen] = useState(false)
+  const note = notes[0]
+  const more = notes.length - 1
+  const f = game.foxName
+  const signers = new Set(notes.map((n) => n.signed ?? ''))
+  const from = signers.size === 1 && note.signed ? `, from ${note.signed}` : ''
+  return (
+    <Modal onClose={onClose} className="mail-modal">
+      {!open ? (
+        <>
+          <div className="envelope">
+            <PixelIcon sprite={ICON_ART.mail} scale={6} />
+          </div>
+          <h2>you’ve got mail!</h2>
+          <p>
+            {f} heard the letterbox and ran to the door. {notes.length === 1 ? 'a letter came for you' : `${notes.length} letters came for you`}
+            {from} ✉
+          </p>
+          <div className="row">
+            <button className="btn" onClick={onClose}>
+              later
+            </button>
+            <button
+              className="btn btn-pink"
+              onClick={() => {
+                sfx.sparkle()
+                setGame((s) => readNote(s, note.id))
+                setOpen(true)
+              }}
+            >
+              open it
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <LetterView note={note} foxName={f} />
+          {more > 0 && <p className="muted center">{more === 1 ? 'one more is' : `${more} more are`} waiting in your album ♡</p>}
+          <button className="btn btn-pink" onClick={onClose}>
+            keep it ♡
+          </button>
+        </>
+      )}
     </Modal>
   )
 }

@@ -156,6 +156,14 @@ button {
   text-underline-offset: 4px;
   cursor: pointer;
 }
+.link.inline {
+  padding: 0 2px;
+}
+.mailbox form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 .link.danger {
   color: #c05a6f;
 }
@@ -820,6 +828,20 @@ input:focus {
 .letter.secret {
   background-color: #fff0f4;
   background-image: repeating-linear-gradient(transparent 0 29px, #f8cdd8 29px 30px);
+}
+.letter.post {
+  background-color: #f7f3ff;
+  background-image: repeating-linear-gradient(transparent 0 29px, #ddd3f3 29px 30px);
+}
+.mail-modal .envelope {
+  display: flex;
+  justify-content: center;
+  animation: envelope-bob 1.6s steps(4) infinite;
+}
+@keyframes envelope-bob {
+  50% {
+    transform: translateY(-4px);
+  }
 }
 .letter.small {
   line-height: 1.6;
@@ -1600,4 +1622,58 @@ select:focus {
     flex-direction: column;
     align-items: center;
   }
+}
+
+/* ── post office (#write) ────────────────────────────────────────────────── */
+.po-head {
+  text-align: center;
+  padding: 8px 0 4px;
+}
+.po-head h1 {
+  margin: 0;
+}
+.po-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.po-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 200px;
+  resize: vertical;
+  line-height: 1.6;
+}
+.po-count {
+  text-align: right;
+  font-size: 13px;
+  margin: -8px 0 0;
+}
+.po-sent {
+  color: var(--pink-deep);
+  font-family: var(--font-pixel);
+}
+.po-letter {
+  padding: 0;
+  background: #fffdf6;
+}
+.po-letter-top {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.po-letter-body {
+  padding: 0 12px 10px;
+  line-height: 1.6;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.po-letter-body .sign {
+  text-align: right;
+  font-family: var(--font-pixel);
 }

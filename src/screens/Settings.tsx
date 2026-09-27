@@ -8,6 +8,7 @@ import { LockTips } from './Modals.tsx'
 import type { Settings } from '../game/state.ts'
 import { DEBUG } from '../debug.ts'
 import { BackupSection } from './Backup.tsx'
+import { MailboxSection } from './Mailbox.tsx'
 
 function Choice<T extends string | number>({ value, options, onChange, format }: { value: T; options: T[]; onChange: (v: T) => void; format?: (v: T) => string }) {
   return (
@@ -138,6 +139,8 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         <h2>sounds</h2>
         <Choice value={game.settings.sound ? 'on' : 'off'} options={['on', 'off']} onChange={(v) => set({ sound: v === 'on' })} />
       </section>
+
+      <MailboxSection />
 
       <BackupSection />
 

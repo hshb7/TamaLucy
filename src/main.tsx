@@ -1,10 +1,9 @@
-import { StrictMode } from 'react'
+import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@fontsource/pixelify-sans/latin-400.css'
 import '@fontsource/pixelify-sans/latin-600.css'
 import '@fontsource/dotgothic16/latin-400.css'
 import './styles.css'
-import App from './App.tsx'
 import { registerSW } from 'virtual:pwa-register'
 
 try {
@@ -13,8 +12,16 @@ try {
   // service workers unavailable (private mode, embedded preview): app still works online
 }
 
+// `#write` opens the post office (for sending letters) instead of the game.
+const writing = () => location.hash.startsWith('#write')
+const mode = writing()
+const Root = lazy(() => (mode ? import('./write/PostOffice.tsx') : import('./App.tsx')))
+window.addEventListener('hashchange', () => writing() !== mode && location.reload())
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <Suspense fallback={null}>
+      <Root />
+    </Suspense>
   </StrictMode>,
 )

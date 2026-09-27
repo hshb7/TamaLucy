@@ -8,8 +8,10 @@ export interface Note {
   id: string
   text: string
   at: number
-  kind: 'fox' | 'secret' | 'missed' | 'birthday' | 'exam'
+  kind: 'fox' | 'secret' | 'missed' | 'birthday' | 'exam' | 'post'
   read: boolean
+  /** Who signed a letter that came in the mail. */
+  signed?: string
 }
 
 export interface Postcard {
@@ -159,6 +161,9 @@ export interface GameState {
   birthdayYear: number
   photo: Photo | null
   lastBackupAt: number
+  /** Her mailbox code for letters sent from far away ('' = not connected). */
+  mailbox: string
+  lastMailCheck: number
 }
 
 export function freshState(now: number, rng: () => number = Math.random): GameState {
@@ -208,6 +213,8 @@ export function freshState(now: number, rng: () => number = Math.random): GameSt
     birthdayYear: 0,
     photo: null,
     lastBackupAt: 0,
+    mailbox: '',
+    lastMailCheck: 0,
   }
 }
 
