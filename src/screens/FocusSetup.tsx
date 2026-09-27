@@ -5,9 +5,9 @@ import { startFocus } from '../game/logic.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { Modal } from '../ui/bits.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
+import { DEBUG } from '../debug.ts'
 
 const PRESETS = [10, 15, 25, 45, 60]
-const DEBUG = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug')
 
 export function FocusSetup({ onClose }: { onClose: () => void }) {
   const game = useGame()

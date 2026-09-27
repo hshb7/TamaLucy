@@ -286,7 +286,9 @@ export function claim(s: GameState, now: number, kind: RewardKind, choice: strin
     }
     case 'adventure': {
       if (!choice || !ADVENTURES.some((a) => a.id === choice)) return null
-      const minutes = Math.max(3, Math.min(15, s.settings.breakMinutes))
+      // adventures last about as long as a break (sub-minute breaks only exist in ?debug)
+      const b = s.settings.breakMinutes
+      const minutes = b < 1 ? b : Math.max(3, Math.min(15, b))
       const returnsAt = now + minutes * MIN
       next = { ...s, adventure: { id: choice, startedAt: now, returnsAt } }
       result = { kind, id: choice, returnsAt }

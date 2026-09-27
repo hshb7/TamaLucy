@@ -222,7 +222,7 @@ function RewardResultView({ result, picksLeft, onNext, onDone }: { result: Rewar
                 onDone('break')
               }}
             >
-              take a {game.settings.breakMinutes}-minute break
+              take a {game.settings.breakMinutes < 1 ? `${game.settings.breakMinutes * 60}-second` : `${game.settings.breakMinutes}-minute`} break
             </button>
             <button className="btn" onClick={() => onDone('home')}>
               back home

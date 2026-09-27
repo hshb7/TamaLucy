@@ -6,6 +6,7 @@ import { Modal } from '../ui/bits.tsx'
 import { Header } from './Header.tsx'
 import { LockTips } from './Modals.tsx'
 import type { Settings } from '../game/state.ts'
+import { DEBUG } from '../debug.ts'
 
 function Choice<T extends string | number>({ value, options, onChange, format }: { value: T; options: T[]; onChange: (v: T) => void; format?: (v: T) => string }) {
   return (
@@ -82,7 +83,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
 
       <section className="px-box card">
         <h2>break length</h2>
-        <Choice value={game.settings.breakMinutes} options={[3, 5, 10, 15]} onChange={(v) => set({ breakMinutes: v })} format={(v) => `${v} min`} />
+        <Choice value={game.settings.breakMinutes} options={DEBUG ? [0.2, 3, 5, 10, 15] : [3, 5, 10, 15]} onChange={(v) => set({ breakMinutes: v })} format={(v) => (v < 1 ? `${v * 60}s` : `${v} min`)} />
         <h2>sounds</h2>
         <Choice value={game.settings.sound ? 'on' : 'off'} options={['on', 'off']} onChange={(v) => set({ sound: v === 'on' })} />
       </section>

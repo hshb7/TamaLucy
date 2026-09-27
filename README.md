@@ -61,10 +61,14 @@ fox writes a note. This is the best place to hide something sweet.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173 (add ?debug for a 6-second focus option)
+npm run dev        # http://localhost:5173
 npm test           # game-logic unit tests
 npm run build      # production build in dist/
 ```
+
+**Try the whole loop in a minute:** open the app with `?debug` on the end of the
+URL. That adds a 6-second focus length and a 12-second break/adventure length
+(Settings → break length), so you can see every reward without waiting.
 
 ## Put it on a phone
 
