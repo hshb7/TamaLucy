@@ -133,8 +133,8 @@ function mouth(kind: Face): Px[] {
     case 'sad':
       return [...nose, [14, 17, 'o'], [15, 16, 'o'], [16, 16, 'o'], [17, 17, 'o']]
     default:
-      // a little smile: corners up, curving under the nose
-      return [...nose, [13, 16, 'o'], [18, 16, 'o'], [14, 17, 'o'], [15, 17, 'o'], [16, 17, 'o'], [17, 17, 'o']]
+      // a cat mouth, :3 — two little curves hanging from the nose (ω)
+      return [...nose, [12, 16, 'o'], [13, 17, 'o'], [14, 17, 'o'], [15, 16, 'o'], [16, 16, 'o'], [17, 17, 'o'], [18, 17, 'o'], [19, 16, 'o']]
   }
 }
 
