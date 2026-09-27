@@ -68,8 +68,8 @@ export function Onboarding() {
         <li className="px-box">
           <PixelIcon sprite={ICON_ART.acorn} scale={3} />
           <p>
-            <b>focus with {name}.</b> set a timer and stay in the app. if you leave for more than a few seconds, {name} wakes up
-            worried and the session doesn&rsquo;t count.
+            <b>study with {name}.</b> set a timer and stay in the app. if you leave for more than a few seconds, {name} wakes up
+            worried and the session doesn&rsquo;t count. every hour you study moves {name} up a law career, from 1L to the Supreme Court.
           </p>
         </li>
         <li className="px-box">
@@ -82,7 +82,8 @@ export function Onboarding() {
         <li className="px-box">
           <PixelIcon sprite={ICON_ART.heart} scale={3} />
           <p>
-            <b>come back often.</b> {name} gets hungry and lonely if you stay away for days. tap {name} to say hi!
+            <b>take care of {name}.</b> it has needs like a Sim: hunger, energy, fun, hygiene and love. tap {name} or anything in
+            the room to do things together, and swipe to explore. it gets lonely if you stay away for days.
           </p>
         </li>
       </ul>

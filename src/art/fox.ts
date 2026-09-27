@@ -254,3 +254,67 @@ export function foxCurled(face: Face = 'sleep', breath = 0): Sprite {
   cache.set(key, s)
   return s
 }
+
+// ---------------------------------------------------------------------------
+// Walking pose: the front-facing head (chibi style) on a side-on body with
+// four little legs, tail trailing behind. Faces right; flip for left.
+export const WALK_W = 50
+export const WALK_H = 31
+/** Where the head (and so hats/glasses) sits inside the walking canvas. */
+export const WALK_HEAD = { x: 17, y: 0 }
+
+function headOnly(face: Face): Sprite {
+  const s = foxSitting(face, 0)
+  const w = 32
+  const h = 19
+  const data: (string | null)[] = []
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) data.push(s.data[y * s.w + x])
+  const outline = s.data[1 * s.w + 4]
+  for (let x = 0; x < w; x++) data.push(data[(h - 1) * w + x] ? outline : null)
+  return { w, h: h + 1, data }
+}
+
+const WALK_BODY = sprite([
+  '......oooooooooooooooo......',
+  '....oobbbbbbbbbbbbbbbboo....',
+  '...obbbbbbbbbbbbbbbbbbbbo...',
+  '..olbbbbbbbbbbbbbbbbbbbbbo..',
+  '.olbbbbbbbbbbbbbbbbbbbbbbbo.',
+  '.obbbbbbbbbbbbbbbbbbbbbbbbo.',
+  'obbbbbbbbbbbbbbbbbbbbbbbbbbo',
+  'odbbbbbbbbbbbbbbbbbbbbbbbbbo',
+  '.odbbbbbcccccccccccccbbbbbo.',
+  '..oddbbcccccccccccccccbbdo..',
+  '....oooooooooooooooooooo....',
+])
+const LEG_NEAR = sprite(['obbo', 'obbo', 'obbo', 'obbo', 'occo', 'oooo'])
+const LEG_FAR = sprite(['oddo', 'oddo', 'oddo', 'oddo', 'osso', 'oooo'])
+const WALK_TAIL = sprite(TAIL_ROWS.map((r) => [...r].reverse().join('')))
+
+// [hindNear, hindFar, frontFar, frontNear] x-positions per frame
+const STRIDE = [
+  [9, 14, 27, 32],
+  [11, 12, 29, 30],
+  [14, 9, 32, 27],
+  [12, 11, 30, 29],
+]
+
+/** One frame (0-3) of the walk cycle, facing right. */
+export function foxWalking(frame: number, face: Face = 'open'): Sprite {
+  const f = ((frame % 4) + 4) % 4
+  const key = `walk:${f}:${face}`
+  const hit = cache.get(key)
+  if (hit) return hit
+  const bob = f % 2 // body lifts on the passing frames
+  const [hn, hf, ff, fn] = STRIDE[f]
+  let s = blank(WALK_W, WALK_H)
+  s = stamp(s, WALK_TAIL, 0, 4 - bob)
+  s = stamp(s, LEG_FAR, hf, 24)
+  s = stamp(s, LEG_FAR, ff, 24)
+  s = stamp(s, WALK_BODY, 8, 15 - bob)
+  s = stamp(s, LEG_NEAR, hn, 24)
+  s = stamp(s, LEG_NEAR, fn, 24)
+  s = stamp(s, headOnly(face), WALK_HEAD.x, WALK_HEAD.y - bob)
+  cache.set(key, s)
+  return s
+}

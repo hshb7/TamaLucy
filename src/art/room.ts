@@ -1,22 +1,81 @@
 import { ellipse, type Painter } from './painter.ts'
-import { GIFT_ART } from './items.ts'
+import { GIFT_ART, LAW_ART, ROOM_ART } from './items.ts'
 import { sprite } from './sprite.ts'
 
-export const ROOM_W = 128
+/** The whole room is wider than the screen; the camera pans across it. */
+export const ROOM_W = 208
+export const VIEW_W = 128
 export const ROOM_H = 104
 
-/** Where the sitting fox (42x32 sprite) is drawn. */
-export const FOX_SPOT = { x: 47, y: 64 }
+/** Top of the sitting/walking fox sprites, so their feet land on the floor. */
+export const FOX_Y = 64
+/** Where the sitting fox (42x32 sprite) is drawn in the living room. */
+export const FOX_SPOT = { x: 47, y: FOX_Y }
 /** Where the curled fox (40x22 sprite) lies in its basket. */
 export const BED_SPOT = { x: 2, y: 70 }
 /** Where the curled fox sulks on the rug when it's down. */
 export const RUG_SPOT = { x: 44, y: 72 }
+
+// Furniture positions (top-left of each sprite).
+export const DESK = { x: 132, y: 57 }
+export const TUB = { x: 176, y: 60 }
+export const BOWL = { x: 186, y: 90 }
+export const BALL = { x: 118, y: 95 }
+export const CLOCK = { x: 186, y: 12 }
+
+/**
+ * Places the fox can go. `x` is the centre of the fox's head on the floor.
+ * Hit boxes (for tapping furniture) are in room coordinates.
+ */
+export const SPOTS = {
+  rug: { x: 63 },
+  window: { x: 27 },
+  teddy: { x: 52 },
+  yarn: { x: 102 },
+  ball: { x: 110 },
+  cushion: { x: 109 },
+  desk: { x: 152 },
+  bowl: { x: 177 },
+  tub: { x: 191 },
+  bed: { x: 20 },
+}
+
+export interface Decor {
+  wall: string
+  floor: string
+}
 
 export interface RoomOptions {
   hour: number // 0-24, fractional
   gifts: readonly string[]
   t: number // ms, for animation
   gloom: number // 0 (fine) .. 1 (depressed): greys out the room
+  decor?: Decor
+  /** Career-unlocked law decor (diploma, gavel, scales). */
+  law?: readonly string[]
+  /** Food portions in the bowl (0-3). */
+  bowl?: number
+  /** Objects the fox is currently holding/playing with (drawn by the scene instead). */
+  hide?: readonly string[]
+}
+
+type Wallpaper = { name: string; base: string; a: string; b?: string; kind: 'stripes' | 'gingham' | 'hearts' | 'dots' | 'pinstripe' | 'damask'; trim: string }
+type Floor = { name: string; a: string; b: string; c: string; kind: 'planks' | 'checker' | 'carpet' }
+
+export const WALLPAPERS: Record<string, Wallpaper> = {
+  stripes: { name: 'strawberry milk', base: '#f8e0d6', a: '#f3d3c7', b: '#edc2b6', kind: 'stripes', trim: '#c4966f' },
+  hearts: { name: 'butter hearts', base: '#fff2cf', a: '#f7c3cc', kind: 'hearts', trim: '#d9a86a' },
+  gingham: { name: 'mint gingham', base: '#e6f2e2', a: '#d2e7cd', b: '#bfdcb9', kind: 'gingham', trim: '#9dbb8f' },
+  dots: { name: 'lavender dots', base: '#eee4f9', a: '#d9c7f1', kind: 'dots', trim: '#a996c9' },
+  library: { name: 'law library', base: '#3f5c4a', a: '#486a55', b: '#c9a45a', kind: 'pinstripe', trim: '#6b4a33' },
+  damask: { name: 'justice gold', base: '#f7eed8', a: '#e8d19b', b: '#d9b86c', kind: 'damask', trim: '#a57a3a' },
+}
+
+export const FLOORS: Record<string, Floor> = {
+  honey: { name: 'honey wood', a: '#e2b58a', b: '#cc9b70', c: '#d4a67c', kind: 'planks' },
+  walnut: { name: 'walnut', a: '#a27353', b: '#855a3e', c: '#93664a', kind: 'planks' },
+  checker: { name: 'milk checker', a: '#fff4e6', b: '#f6c9d2', c: '#ead9c8', kind: 'checker' },
+  carpet: { name: 'cloud carpet', a: '#dccfee', b: '#cdbfe3', c: '#e8def5', kind: 'carpet' },
 }
 
 type Sky = { bands: string[]; sun?: 'sun' | 'moon'; stars: boolean; clouds: string | null }
@@ -111,22 +170,72 @@ function drawWindow(p: Painter, o: RoomOptions) {
   p.rect(X + W + 9, Y - 8, 3, 4, '#7b523d')
 }
 
-function drawWallAndFloor(p: Painter) {
-  // wallpaper
-  p.rect(0, 0, ROOM_W, 68, '#f8e0d6')
-  for (let x = 3; x < ROOM_W; x += 10) p.rect(x, 0, 2, 68, '#f3d3c7')
-  for (let y = 6; y < 64; y += 10)
-    for (let x = (y / 10) % 2 === 0 ? 8 : 13; x < ROOM_W; x += 10) p.rect(x, y, 1, 1, '#edc2b6')
-  p.rect(0, 0, ROOM_W, 2, '#e9c3b4')
-  // baseboard
-  p.rect(0, 64, ROOM_W, 5, '#c4966f')
-  p.rect(0, 64, ROOM_W, 1, '#a57a5a')
-  // floor planks
-  p.rect(0, 69, ROOM_W, ROOM_H - 69, '#e2b58a')
-  for (let y = 69, row = 0; y < ROOM_H; y += 7, row++) {
-    p.rect(0, y, ROOM_W, 1, '#cc9b70')
-    for (let x = (row % 2) * 17 + 6; x < ROOM_W; x += 34) p.rect(x, y + 1, 1, 6, '#d4a67c')
+export function drawWallAndFloor(p: Painter, decor: Decor) {
+  const w = WALLPAPERS[decor.wall] ?? WALLPAPERS.stripes
+  const f = FLOORS[decor.floor] ?? FLOORS.honey
+  p.rect(0, 0, ROOM_W, 68, w.base)
+  switch (w.kind) {
+    case 'stripes':
+      for (let x = 3; x < ROOM_W; x += 10) p.rect(x, 0, 2, 68, w.a)
+      for (let y = 6; y < 64; y += 10)
+        for (let x = (y / 10) % 2 === 0 ? 8 : 13; x < ROOM_W; x += 10) p.rect(x, y, 1, 1, w.b!)
+      break
+    case 'gingham':
+      for (let x = 0; x < ROOM_W; x += 8) p.rect(x, 0, 4, 68, w.a)
+      for (let y = 0; y < 68; y += 8) p.rect(0, y, ROOM_W, 4, w.a)
+      for (let y = 0; y < 68; y += 8) for (let x = 0; x < ROOM_W; x += 8) p.rect(x, y, 4, 4, w.b!)
+      break
+    case 'hearts': {
+      const H = sprite(['a.a', 'aaa', '.a.'], { a: w.a })
+      for (let y = 5, r = 0; y < 62; y += 11, r++) for (let x = r % 2 ? 9 : 3; x < ROOM_W; x += 12) p.sprite(H, x, y)
+      break
+    }
+    case 'dots':
+      for (let y = 4, r = 0; y < 64; y += 8, r++) for (let x = r % 2 ? 6 : 2; x < ROOM_W; x += 8) p.rect(x, y, 2, 2, w.a)
+      break
+    case 'pinstripe':
+      for (let x = 2; x < ROOM_W; x += 6) p.rect(x, 0, 1, 68, w.a)
+      p.rect(0, 40, ROOM_W, 1, w.b!)
+      p.rect(0, 42, ROOM_W, 22, w.a)
+      break
+    case 'damask': {
+      const D = sprite(['..a..', '.aba.', 'ab.ba', '.aba.', '..a..'], { a: w.a, b: w.b! })
+      for (let y = 3, r = 0; y < 60; y += 10, r++) for (let x = r % 2 ? 7 : 1; x < ROOM_W; x += 12) p.sprite(D, x, y)
+      break
+    }
   }
+  p.rect(0, 0, ROOM_W, 2, w.trim)
+  // baseboard
+  p.rect(0, 64, ROOM_W, 5, w.trim)
+  p.rect(0, 64, ROOM_W, 1, '#8a6a55')
+  // floor
+  p.rect(0, 69, ROOM_W, ROOM_H - 69, f.a)
+  if (f.kind === 'planks') {
+    for (let y = 69, row = 0; y < ROOM_H; y += 7, row++) {
+      p.rect(0, y, ROOM_W, 1, f.b)
+      for (let x = (row % 2) * 17 + 6; x < ROOM_W; x += 34) p.rect(x, y + 1, 1, 6, f.c)
+    }
+  } else if (f.kind === 'checker') {
+    for (let y = 69, r = 0; y < ROOM_H; y += 6, r++) for (let x = (r % 2) * 8; x < ROOM_W; x += 16) p.rect(x, y, 8, 6, f.b)
+    p.rect(0, 69, ROOM_W, 1, f.c)
+  } else {
+    for (let y = 71; y < ROOM_H; y += 3) for (let x = (y % 2) * 2; x < ROOM_W; x += 5) p.rect(x, y, 1, 1, f.b)
+    for (let y = 72; y < ROOM_H; y += 6) for (let x = (y % 4) + 3; x < ROOM_W; x += 11) p.rect(x, y, 1, 1, f.c)
+  }
+}
+
+function drawClock(p: Painter) {
+  const { x, y } = CLOCK
+  ellipse(p, x + 6, y + 6, 7, 7, '#7b523d')
+  ellipse(p, x + 6, y + 6, 6, 6, '#fffaf0')
+  for (const [dx, dy] of [[6, 1], [11, 6], [6, 11], [1, 6]]) p.rect(x + dx, y + dy, 1, 1, '#9b7667')
+  const d = new Date()
+  const hand = (turns: number, len: number, col: string) => {
+    const a = turns * Math.PI * 2 - Math.PI / 2
+    for (let i = 0; i <= len; i++) p.rect(Math.round(x + 6 + Math.cos(a) * i), Math.round(y + 6 + Math.sin(a) * i), 1, 1, col)
+  }
+  hand(((d.getHours() % 12) + d.getMinutes() / 60) / 12, 3, '#4a2a22')
+  hand(d.getMinutes() / 60, 5, '#e4819a')
 }
 
 const BASKET_BLANKET = '#fff0e3'
@@ -182,13 +291,17 @@ export function drawGlows(p: Painter, o: RoomOptions) {
     ellipse(p, 102, 30, 9, 7, '#ffe6b8', 0.15 * dark)
   }
   if (o.gifts.includes('fairyLights')) for (let x = 4; x < ROOM_W; x += 8) ellipse(p, x, 8, 3, 3, '#fff0c0', 0.12 * dark)
+  // banker's lamp on the desk
+  ellipse(p, DESK.x + 33, DESK.y - 4, 20, 13, '#ffe3a0', 0.11 * dark)
+  ellipse(p, DESK.x + 33, DESK.y - 4, 10, 7, '#fff0c0', 0.13 * dark)
   // window moonlight
   p.rect(12, 12, 30, 30, '#c9d6ff', 0.06 * dark)
 }
 
 export function drawRoom(p: Painter, o: RoomOptions) {
   const has = (id: string) => o.gifts.includes(id)
-  drawWallAndFloor(p)
+  const law = (id: string) => o.law?.includes(id) ?? false
+  drawWallAndFloor(p, o.decor ?? { wall: 'stripes', floor: 'honey' })
   drawWindow(p, o)
   drawShelf(p)
   if (has('painting')) p.sprite(GIFT_ART.painting, 92, 12)
@@ -198,11 +311,23 @@ export function drawRoom(p: Painter, o: RoomOptions) {
   if (has('snowGlobe')) p.sprite(GIFT_ART.snowGlobe, 109, 26)
   if (has('cactus')) p.sprite(GIFT_ART.cactus, 23, 34)
   if (has('plant')) p.sprite(GIFT_ART.plant, 108, 58)
+  // study + bath corner
+  if (law('diploma')) p.sprite(LAW_ART.diploma, 140, 18)
+  drawClock(p)
+  p.sprite(ROOM_ART.desk, DESK.x, DESK.y)
+  p.sprite(ROOM_ART.casebooks, DESK.x + 3, DESK.y - 10)
+  if (law('scales')) p.sprite(LAW_ART.scales, DESK.x + 16, DESK.y - 11)
+  if (law('gavel')) p.sprite(LAW_ART.gavel, DESK.x + 4, DESK.y - 7)
+  p.sprite(ROOM_ART.lamp, DESK.x + 28, DESK.y - 11)
+  p.sprite(ROOM_ART.tub, TUB.x, TUB.y)
   drawRug(p, has('heartRug'))
   drawBed(p)
   if (has('teddy')) p.sprite(GIFT_ART.teddy, 34, 66)
   if (has('cushion')) p.sprite(GIFT_ART.cushion, 100, 88)
-  if (has('yarn')) p.sprite(GIFT_ART.yarn, 88, 93)
+  const hidden = (id: string) => o.hide?.includes(id) ?? false
+  if (has('yarn') && !hidden('yarn')) p.sprite(GIFT_ART.yarn, 88, 93)
+  if (!hidden('ball')) p.sprite(ROOM_ART.ball, BALL.x, BALL.y)
+  p.sprite((o.bowl ?? 0) > 0 ? ROOM_ART.bowlFull : ROOM_ART.bowlEmpty, BOWL.x, BOWL.y)
 }
 
 /** Time-of-day tint + gloom. Draw after the fox so everything shares the light. */

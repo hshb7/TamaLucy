@@ -33,6 +33,8 @@ export const GIFTS: Item[] = [
 
 export interface Clothing extends Item {
   slot: Slot
+  /** Earned through the fox's law career rather than as a reward. */
+  career?: boolean
 }
 
 export const CLOTHES: Clothing[] = [
@@ -47,6 +49,9 @@ export const CLOTHES: Clothing[] = [
   { id: 'scarf', slot: 'neck', name: 'Cozy scarf', blurb: 'hand-knitted with love.' },
   { id: 'bellCollar', slot: 'neck', name: 'Bell collar', blurb: 'jingle jingle.' },
   { id: 'bandana', slot: 'neck', name: 'Blue bandana', blurb: 'adventure-ready.' },
+  { id: 'necktie', slot: 'neck', name: 'Law-firm tie', blurb: 'dress for the job you want.', career: true },
+  { id: 'gradCap', slot: 'head', name: 'Grad cap', blurb: 'juris doctor fox.', career: true },
+  { id: 'judgeWig', slot: 'head', name: 'Judge wig', blurb: 'order in the court!', career: true },
 ]
 
 export interface AdventureDef {
@@ -127,13 +132,24 @@ export const ADVENTURES: AdventureDef[] = [
   },
   {
     id: 'library',
-    place: 'Old Library',
-    verb: 'reading in the library',
+    place: 'the Law Library',
+    verb: 'reading in the law library',
     souvenir: 'bookmark',
     souvenirName: 'Flower bookmark',
     stories: [
-      'i snuck into the library and read a whole book about foxes. we are very clever, it turns out. i made you a bookmark!',
-      'the librarian owl said i was very quiet (i was napping). i pressed a flower between the pages for you.',
+      'i snuck into the law library and read a whole casebook. i have many questions about adverse possession. i made you a bookmark!',
+      'the librarian owl said i was very quiet (i was napping on the reporters). i pressed a flower between the pages for you.',
+    ],
+  },
+  {
+    id: 'courthouse',
+    place: 'the Courthouse Steps',
+    verb: 'people-watching at the courthouse',
+    souvenir: 'feather',
+    souvenirName: 'Pigeon feather',
+    stories: [
+      'i sat on the courthouse steps and watched everyone rush in with their briefcases. a pigeon gave me this feather. i think he was a witness.',
+      'i peeked into a courtroom. the judge had a very serious face and a very nice robe. someday that\u2019ll be you. (i\u2019ll be the bailiff.)',
     ],
   },
   {

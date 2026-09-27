@@ -4,19 +4,29 @@ import { GIFT } from '../gift.ts'
 import {
   arrive,
   bondLevel,
+  celebratePromotion,
   claim,
   completeFocus,
-  decay,
+  doActivity,
   focusHidden,
   focusVisible,
+  foxMood,
   moodOf,
+  moodValue,
   offer,
+  ownsClothing,
+  pendingPromotion,
   pet,
   resolveAdventure,
+  setDecor,
+  simulate,
   startFocus,
   streak,
   dayKey,
+  toggleWear,
 } from './logic.ts'
+import { migrate } from './state.ts'
+import { rankOf, unlocked, CAREER } from './career.ts'
 
 const HOUR = 3_600_000
 const MIN = 60_000
@@ -27,22 +37,46 @@ const seq = (...vals: number[]) => {
   return () => vals[i++ % vals.length]
 }
 
+const FULL = { hunger: 80, energy: 80, fun: 80, hygiene: 80, social: 80 }
 function ready(overrides: Partial<GameState> = {}): GameState {
-  return { ...freshState(T0, seq(0.1, 0.5)), onboarded: true, happiness: 80, tummy: 80, ...overrides }
+  return { ...freshState(T0, seq(0.1, 0.5)), onboarded: true, needs: { ...FULL }, bowl: 0, ...overrides }
 }
+const mood = (s: GameState) => moodOf(moodValue(s.needs))
 
-describe('mood decay', () => {
-  it('stays fine after a day, sad after two, depressed after three', () => {
+describe('needs & mood', () => {
+  it('is fine after a day away, sad after two, depressed after three', () => {
     const s = ready()
-    expect(moodOf(decay(s, T0 + 24 * HOUR).happiness)).toMatch(/happy|okay/)
-    expect(moodOf(decay(s, T0 + 48 * HOUR).happiness)).toMatch(/sad|okay/)
-    expect(moodOf(decay(s, T0 + 72 * HOUR).happiness)).toBe('depressed')
+    expect(mood(simulate(s, T0 + 24 * HOUR, true))).toMatch(/happy|okay/)
+    expect(mood(simulate(s, T0 + 48 * HOUR, true))).toMatch(/sad/)
+    expect(mood(simulate(s, T0 + 72 * HOUR, true))).toBe('depressed')
   })
 
   it('never goes out of bounds', () => {
-    const s = decay(ready(), T0 + 400 * 24 * HOUR)
-    expect(s.happiness).toBe(0)
-    expect(s.tummy).toBe(0)
+    const s = simulate(ready(), T0 + 400 * 24 * HOUR)
+    expect(Object.values(s.needs).every((v) => v >= 0 && v <= 100)).toBe(true)
+    expect(s.needs.hunger).toBe(0)
+  })
+
+  it('one very low need drags the mood down', () => {
+    expect(moodValue({ ...FULL, hygiene: 5 })).toBeLessThan(60)
+    expect(moodValue(FULL)).toBeGreaterThan(75)
+  })
+
+  it('eats from the bowl on its own while you are away', () => {
+    const hungry = ready({ needs: { ...FULL, hunger: 40 }, bowl: 3 })
+    const later = simulate(hungry, T0 + 6 * HOUR, true)
+    expect(later.bowl).toBeLessThan(3)
+    expect(later.needs.hunger).toBeGreaterThan(simulate({ ...hungry, bowl: 0 }, T0 + 6 * HOUR, true).needs.hunger)
+  })
+
+  it('restores energy while sleeping at night', () => {
+    const night = new Date(2026, 8, 1, 23, 30).getTime()
+    const tired = ready({ needs: { ...FULL, energy: 20 }, lastTick: night })
+    expect(simulate(tired, night + 6 * HOUR).needs.energy).toBeGreaterThan(60)
+  })
+
+  it('mood helper agrees with the needs', () => {
+    expect(foxMood(ready())).toBe(mood(ready()))
   })
 
   it('leaves a "missed you" note after a long absence', () => {
@@ -82,7 +116,7 @@ describe('focus sessions', () => {
     const r = focusVisible(s, T0 + 3 * MIN)
     expect(r.outcome).toBe('failed')
     expect(r.state.session).toBeNull()
-    expect(r.state.happiness).toBeLessThan(80)
+    expect(r.state.needs.social).toBeLessThan(80)
     expect(r.state.stats.left).toBe(1)
   })
 
@@ -121,12 +155,16 @@ describe('rewards', () => {
     expect(s.pending).toBeNull()
   })
 
-  it('treats fill the tummy, favourites more', () => {
+  it('treats fill the tummy (favourites more) and stock the pantry', () => {
     const s = done()
     const fav = s.favoriteTreats[0]
-    const r = claim({ ...s, tummy: 10 }, T0, 'treat', fav)!
+    const r = claim({ ...s, needs: { ...s.needs, hunger: 10 } }, T0, 'treat', fav)!
     expect(r.result).toMatchObject({ kind: 'treat', favorite: true, firstFavorite: true })
-    expect(r.state.tummy).toBe(55)
+    expect(r.state.needs.hunger).toBe(55)
+    expect(r.state.pantry[fav]).toBe(2)
+    const fed = doActivity(r.state, T0, 'treat', fav)
+    expect(fed.pantry[fav]).toBe(1)
+    expect(fed.needs.hunger).toBeGreaterThan(r.state.needs.hunger)
   })
 
   it('new clothes are worn straight away', () => {
@@ -150,6 +188,53 @@ describe('rewards', () => {
 
   it('rejects bogus choices', () => {
     expect(claim(done(), T0, 'gift', 'spaceship')).toBeNull()
+  })
+})
+
+describe('law career', () => {
+  it('climbs ranks with focus time and unlocks decor + outfits', () => {
+    expect(rankOf(0)).toBe(0)
+    expect(CAREER[rankOf(60)].title).toBe('1L')
+    expect(CAREER[rankOf(6600)].title).toBe('Supreme Court Justice')
+    expect(unlocked(0, 'wall')).not.toContain('gingham')
+    expect(unlocked(60, 'wall')).toContain('gingham')
+    expect(unlocked(4800, 'clothes')).toContain('judgeWig')
+  })
+
+  it('announces a promotion once', () => {
+    let s = ready()
+    s = completeFocus(startFocus(s, T0, 60, ''), T0 + 60 * MIN)
+    expect(pendingPromotion(s)).toBe(1)
+    s = celebratePromotion(s)
+    expect(pendingPromotion(s)).toBeNull()
+  })
+
+  it('locks decor and career outfits until earned', () => {
+    const s = ready()
+    expect(setDecor(s, { wall: 'library' }).decor.wall).toBe('stripes')
+    expect(setDecor(s, { wall: 'hearts' }).decor.wall).toBe('hearts')
+    expect(ownsClothing(s, 'judgeWig')).toBe(false)
+    expect(toggleWear(s, 'judgeWig').equipped.head).toBeUndefined()
+    const judge = ready({ stats: { ...s.stats, totalMinutes: 5000 } })
+    expect(toggleWear(judge, 'judgeWig').equipped.head).toBe('judgeWig')
+  })
+
+  it('never offers career outfits as random rewards', () => {
+    const s = offer(completeFocus(startFocus(ready(), T0, 25, ''), T0 + 25 * MIN), 'clothes', seq(0.99, 0.01, 0.5))
+    expect(s.pending!.offer!.options.some((id) => ['necktie', 'gradCap', 'judgeWig'].includes(id))).toBe(false)
+  })
+})
+
+describe('save migration', () => {
+  it('upgrades a v1 save to needs', () => {
+    const v1 = { ...freshState(T0), v: 1, happiness: 40, tummy: 20, stats: { ...freshState(T0).stats, totalMinutes: 300 } } as Record<string, unknown>
+    delete v1.needs
+    const s = migrate(v1)
+    expect(s.v).toBe(2)
+    expect(s.needs.hunger).toBe(20)
+    expect(s.needs.social).toBe(40)
+    expect(s.rankSeen).toBe(rankOf(300)) // no retroactive promotion spam
+    expect('happiness' in s).toBe(false)
   })
 })
 
@@ -177,15 +262,45 @@ describe('misc', () => {
     expect(streak({ ...days, [dayKey(T0)]: 10 }, T0)).toBe(3)
   })
 
-  it('caps petting bonus', () => {
-    let s = ready({ happiness: 50 })
-    for (let i = 0; i < 10; i++) s = pet(s, T0 + i * 1000).state
-    expect(s.happiness).toBe(60)
+  it('social actions fade out when spammed', () => {
+    let s = ready({ needs: { ...FULL, social: 20 } })
+    for (let i = 0; i < 6; i++) s = pet(s, T0 + i * 1000).state
+    const afterSix = s.needs.social
+    expect(afterSix).toBe(38)
+    for (let i = 0; i < 10; i++) s = pet(s, T0 + (10 + i) * 1000).state
+    expect(s.needs.social - afterSix).toBeLessThan(10)
+  })
+
+  it('bowl only feeds when there is food in it', () => {
+    const empty = ready({ needs: { ...FULL, hunger: 20 }, bowl: 0 })
+    expect(doActivity(empty, T0, 'eat').needs.hunger).toBe(20)
+    const full = doActivity({ ...empty, bowl: 2 }, T0, 'eat')
+    expect(full.needs.hunger).toBe(48)
+    expect(full.bowl).toBe(1)
+  })
+
+  it('records focus time per subject', () => {
+    const s = completeFocus(startFocus(ready(), T0, 25, 'Torts'), T0 + 25 * MIN)
+    expect(s.stats.subjects).toEqual({ Torts: 25 })
   })
 
   it('levels up with focus time', () => {
     expect(bondLevel(0)).toBe(1)
     expect(bondLevel(15)).toBe(2)
     expect(bondLevel(60)).toBe(3)
+  })
+})
+
+describe('flashcards', async () => {
+  const { makeRound, CARDS } = await import('./flashcards.ts')
+  it('builds rounds with one right answer among four', () => {
+    const round = makeRound(8)
+    expect(round).toHaveLength(8)
+    for (const q of round) {
+      expect(q.choices).toHaveLength(4)
+      expect(new Set(q.choices).size).toBe(4)
+      expect(q.choices[q.answer]).toBe(q.card.meaning)
+    }
+    expect(new Set(CARDS.map((c) => c.term)).size).toBe(CARDS.length)
   })
 })

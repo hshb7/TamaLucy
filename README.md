@@ -1,9 +1,11 @@
 # TamaLucy 🦊
 
-A cozy, pixel-art Tamagotchi that helps you focus. A little brown fox lives in a
-tiny room on your phone. Focus with it (Pomodoro-style), and it earns
-adventures, gifts, treats, clothes and handwritten notes. Stay away too long
-and it gets hungry, lonely, and eventually really down.
+A cozy, pixel-art Tamagotchi (with a little Sims in it) that helps you focus.
+A brown fox lives in a tiny room on your phone, walks around, eats, naps and
+plays on its own, and wants your attention. Study with it (Pomodoro-style) and
+it earns adventures, gifts, treats, clothes and handwritten notes, and climbs a
+law career from 1L to the Supreme Court. Stay away too long and it gets hungry,
+lonely, and eventually really down.
 
 ![screenshots](docs/screenshots.png)
 
@@ -26,12 +28,21 @@ home screen, works offline, and needs no app store.
 - 🎀 **Clothes**: 11 outfits (frog hat, strawberry hat, beret, flower crown, heart shades, scarf...). Mix and match in the closet.
 - 💌 **Note**: the fox writes you a little letter. ~40 notes, some depending on time of day, session length and your streak.
 
-**Tamagotchi care**
-- Happiness and tummy drain over time: fine overnight, sad after about 2 days away, depressed around day 3. The room turns grey, and the fox curls up on the rug under a little rain cloud.
-- Come back after a long absence and it will have left you "while you were away..." letters.
-- Tap the fox to pet it (hearts + something to say). It gets hungry thought bubbles too.
-- The window follows the real time of day (sunrise, day, sunset, night). At night the fox sleeps in its basket.
-- Streaks, a daily "4 acorns" goal, bond levels, and a weekly chart.
+**A little life sim (Sims-style)**
+- **Needs:** hunger, energy, fun, hygiene and social, shown as five bars. Mood comes from all of them, and one very low need drags it down. A mood gem floats over the fox's head.
+- **Free will:** the fox walks around the room by itself. It eats from its bowl when hungry, naps when tired, plays with the ball or yarn, reads your casebooks at the desk, looks out the window, and hugs its teddy when lonely. Thought bubbles show what it wants.
+- **Pie menus:** tap the fox for pet, cuddle, chat, brush fur, dance, play tag, give a treat or quiz me. Tap furniture to use it: refill the bowl, bath time, take a nap, study together at the desk, and so on. The current action shows as a chip you can cancel.
+- **A bigger room:** swipe to pan across it. There's a living room, a study corner with a green banker's lamp, a clawfoot bathtub, a food bowl and a wall clock that shows the real time.
+- **Decor:** wallpapers and floors to choose from, with more unlocked by the career.
+- **While you're away** the fox looks after itself (a full bowl buys it about a day), but it still gets sad after about 2 days and depressed around day 3. The room turns grey, the fox curls up under a rain cloud, and it leaves "while you were away..." letters.
+- The window follows the real time of day, and the fox sleeps in its basket at night.
+
+**Law school edition**
+- **Career ladder:** every hour of focus moves the fox up: Pre-Law Pup, 1L, 2L, 3L, Law Graduate, Passed the Bar, Associate, Senior Associate, Partner, Judge, Supreme Court Justice. Each promotion gets a celebration and unlocks something (grad cap, tie, judge wig, diploma, gavel, scales of justice, wallpapers).
+- **Subjects:** one-tap chips on the focus screen (Torts, Contracts, Civ Pro, Crim Law, Con Law, Property, Evidence, Legal Writing...), with study time per subject on the career screen. Edit the list in `src/gift.ts`.
+- **Legal Latin flashcards:** the fox quizzes you on 26 terms (mens rea, stare decisis, res ipsa loquitur...). Tap the fox → *quiz me*, the desk → *flashcards*, or use it during breaks.
+- Law-pun notes from the fox ("IRAC. issue: you're tired..."), a Law Library and Courthouse Steps adventure.
+- Streaks, a daily "4 acorns" goal and a weekly chart.
 
 **Look & feel**: everything is hand-made pixel art drawn in code (no image files), in a
 warm pink/cream kawaii palette, with *Pixelify Sans* + *DotGothic16* pixel fonts and small
@@ -66,7 +77,7 @@ npm test           # game-logic unit tests
 npm run build      # production build in dist/
 ```
 
-**Try the whole loop in a minute:** open the app with `?debug` on the end of the
+**Try the whole loop in a minute:** open the app with `?debug` (or `#debug`) on the end of the
 URL. That adds a 6-second focus length and a 12-second break/adventure length
 (Settings → break length), so you can see every reward without waiting.
 
@@ -109,8 +120,10 @@ route there if you ever want it.
 src/
   gift.ts            ← personalise here
   art/               pixel art as code: fox, clothes, items, room (+ day/night)
-  game/              state, rules (mood decay, sessions, rewards), text content, tests
-  ui/                canvas renderer, animated room + fox, shared widgets
+  game/              state + save migration, needs & offline simulation, sessions,
+                     rewards, law career, flashcards, text content, tests
+  ui/                canvas renderer, the room (camera, pie menus), the fox's
+                     free-will brain (brain.ts), shared widgets
   screens/           onboarding, home, focus, rewards, break, closet, album, stats, settings
 scripts/
   make-icons.ts      renders the app icons from the fox sprite (npm run icons)

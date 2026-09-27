@@ -3,6 +3,7 @@ import { GIFT } from '../gift.ts'
 import {
   GENERAL_NOTES,
   LABEL_NOTES,
+  LAW_NOTES,
   LONG_NOTES,
   MISSED_NOTES,
   MORNING_NOTES,
@@ -11,6 +12,8 @@ import {
   fill,
 } from './notes.ts'
 import type { GameState, Note, Postcard } from './state.ts'
+import { EFFECTS, SOCIAL, bump, simulate, type Activity } from './needs.ts'
+import { unlocked, rankOf, type UnlockKind } from './career.ts'
 
 type Rng = () => number
 const HOUR = 3_600_000
@@ -18,7 +21,6 @@ const MIN = 60_000
 /** Completed-session counts at which a secret letter is guaranteed (if any are left). */
 export const SECRET_MILESTONES = [1, 3, 7, 12, 20, 30, 50, 75, 100]
 
-const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n))
 const pick = <T>(arr: readonly T[], rng: Rng): T => arr[Math.floor(rng() * arr.length)]
 function shuffle<T>(arr: readonly T[], rng: Rng): T[] {
   const a = arr.slice()
@@ -56,49 +58,18 @@ export function minutesForLevel(level: number) {
   return (level - 1) ** 2 * 15
 }
 
-// ─── mood ───────────────────────────────────────────────────────────────────
+// ─── mood & time passing ──────────────────────────────────────────────────
 
-export type Mood = 'joyful' | 'happy' | 'okay' | 'sad' | 'depressed'
-
-export function moodOf(happiness: number): Mood {
-  if (happiness < 15) return 'depressed'
-  if (happiness < 35) return 'sad'
-  if (happiness < 60) return 'okay'
-  if (happiness < 85) return 'happy'
-  return 'joyful'
-}
-
-export const HUNGRY = 30
-
-/**
- * Apply the passage of time. Tummy empties over ~2 days; happiness drains
- * slowly, faster when hungry, slower at night. Roughly: fine after a day
- * away, sad after two, depressed after three.
- */
-export function decay(s: GameState, now: number): GameState {
-  let t = s.lastTick
-  if (now <= t) return s
-  let { happiness, tummy } = s
-  const end = Math.min(now, t + 30 * 24 * HOUR)
-  while (t < end) {
-    const step = Math.min(30 * MIN, end - t)
-    const h = step / HOUR
-    const hour = new Date(t).getHours()
-    const night = hour >= 23 || hour < 7
-    tummy -= (night ? 1.2 : 2) * h
-    happiness -= (night ? 0.4 : 0.8) * h + (tummy < 25 ? 1 : 0) * h
-    t += step
-  }
-  return { ...s, happiness: clamp(happiness), tummy: clamp(tummy), lastTick: now }
-}
+export { foxMood, isAsleep, moodOf, moodValue, simulate, type Mood } from './needs.ts'
 
 /** Called when the app is opened / comes back into view. */
 export function arrive(s: GameState, now: number, rng: Rng = Math.random): GameState {
-  let next = decay(s, now)
+  // longer gaps: the fox looked after itself (bowl, toys, naps) while you were gone
+  let next = simulate(s, now, now - s.lastTick > 10 * MIN)
   const away = now - s.lastVisit
   if (next.onboarded && away > 30 * HOUR) {
     next = addNote(next, { kind: 'missed', text: pickUnused(MISSED_NOTES, next, rng) }, now)
-    next.happiness = clamp(next.happiness + 5) // a little reunion joy
+    next = bump(next, { social: 5 }) // a little reunion joy
   }
   next = resolveAdventure(next, now, rng)
   return { ...next, lastVisit: now }
@@ -148,7 +119,7 @@ export function focusVisible(s: GameState, now: number): { state: GameState; out
     const extra = Math.max(0, now - since)
     const endsAt = since >= ses.endsAt ? ses.endsAt : ses.endsAt + extra
     return {
-      state: { ...s, happiness: clamp(s.happiness - 1), session: { ...ses, hiddenAt: null, lastBeat: now, endsAt, awayMs: ses.awayMs + extra } },
+      state: { ...bump(s, { social: -1 }), session: { ...ses, hiddenAt: null, lastBeat: now, endsAt, awayMs: ses.awayMs + extra } },
       outcome: 'paused',
       awayMs,
     }
@@ -157,9 +128,8 @@ export function focusVisible(s: GameState, now: number): { state: GameState; out
     return { state: { ...s, session: { ...ses, hiddenAt: null, lastBeat: now, awayMs: ses.awayMs + awayMs } }, outcome: 'close-call', awayMs }
   }
   const failed: GameState = {
-    ...s,
+    ...bump(s, { social: -12, fun: -6 }),
     session: null,
-    happiness: clamp(s.happiness - 12),
     stats: { ...s.stats, left: s.stats.left + 1 },
   }
   return { state: failed, outcome: 'failed', awayMs }
@@ -167,7 +137,7 @@ export function focusVisible(s: GameState, now: number): { state: GameState; out
 
 export function giveUp(s: GameState): GameState {
   if (!s.session) return s
-  return { ...s, session: null, happiness: clamp(s.happiness - 5), stats: { ...s.stats, gaveUp: s.stats.gaveUp + 1 } }
+  return { ...bump(s, { social: -5 }), session: null, stats: { ...s.stats, gaveUp: s.stats.gaveUp + 1 } }
 }
 
 export function remainingMs(s: GameState, now: number) {
@@ -188,14 +158,16 @@ export function completeFocus(s: GameState, now: number, rng: Rng = Math.random)
     sessions: next.stats.sessions + 1,
     days,
     daySessions: { ...next.stats.daySessions, [key]: (next.stats.daySessions[key] ?? 0) + 1 },
+    subjects: ses.label ? { ...next.stats.subjects, [ses.label]: (next.stats.subjects[ses.label] ?? 0) + minutes } : next.stats.subjects,
   }
   stats.bestStreak = Math.max(stats.bestStreak, streak(days, now))
   const milestone = SECRET_MILESTONES.includes(stats.sessions) && next.secretsDelivered < GIFT.secretNotes.length
   if (milestone) next = deliverSecret(next, now)
+  // studying together is quality time
+  next = bump(next, { social: Math.min(20, 6 + minutes / 3), fun: Math.min(10, 3 + minutes / 6) })
   next = {
     ...next,
     session: null,
-    happiness: clamp(next.happiness + Math.min(20, 6 + minutes / 3)),
     stats,
     pending: {
       minutes,
@@ -214,7 +186,7 @@ export function completeFocus(s: GameState, now: number, rng: Rng = Math.random)
 
 export function available(s: GameState, kind: RewardKind): boolean {
   if (kind === 'gift') return GIFTS.some((g) => !s.gifts.includes(g.id))
-  if (kind === 'clothes') return CLOTHES.some((c) => !s.wardrobe.includes(c.id))
+  if (kind === 'clothes') return CLOTHES.some((c) => !c.career && !s.wardrobe.includes(c.id))
   return true
 }
 
@@ -225,7 +197,7 @@ export function offer(s: GameState, kind: RewardKind, rng: Rng = Math.random): G
   let options: string[] = []
   if (kind === 'treat') options = shuffle(TREATS, rng).slice(0, n).map((t) => t.id)
   if (kind === 'gift') options = shuffle(GIFTS.filter((g) => !s.gifts.includes(g.id)), rng).slice(0, n).map((g) => g.id)
-  if (kind === 'clothes') options = shuffle(CLOTHES.filter((c) => !s.wardrobe.includes(c.id)), rng).slice(0, n).map((c) => c.id)
+  if (kind === 'clothes') options = shuffle(CLOTHES.filter((c) => !c.career && !s.wardrobe.includes(c.id)), rng).slice(0, n).map((c) => c.id)
   if (kind === 'adventure') {
     // prefer places we haven't sent a postcard from yet
     const fresh = ADVENTURES.filter((a) => !s.postcards.some((p) => p.adventure === a.id))
@@ -257,29 +229,28 @@ export function claim(s: GameState, now: number, kind: RewardKind, choice: strin
       if (!choice || !byId(TREATS, choice)) return null
       const favorite = s.favoriteTreats.includes(choice)
       const firstFavorite = favorite && !s.treatsFed[choice]
+      // one now, two saved in the pantry for later
       next = {
-        ...s,
-        tummy: clamp(s.tummy + (favorite ? 45 : 35)),
-        happiness: clamp(s.happiness + (favorite ? 12 : 5)),
+        ...bump(s, { hunger: favorite ? 45 : 35, social: favorite ? 12 : 5, fun: 3 }),
         treatsFed: { ...s.treatsFed, [choice]: (s.treatsFed[choice] ?? 0) + 1 },
+        pantry: { ...s.pantry, [choice]: (s.pantry[choice] ?? 0) + 2 },
       }
       result = { kind, id: choice, favorite, firstFavorite }
       break
     }
     case 'gift': {
       if (!choice || !byId(GIFTS, choice) || s.gifts.includes(choice)) return null
-      next = { ...s, gifts: [...s.gifts, choice], happiness: clamp(s.happiness + 18) }
+      next = { ...bump(s, { fun: 18, social: 8 }), gifts: [...s.gifts, choice] }
       result = { kind, id: choice }
       break
     }
     case 'clothes': {
       const item = choice ? byId(CLOTHES, choice) : undefined
-      if (!item || s.wardrobe.includes(item.id)) return null
+      if (!item || item.career || s.wardrobe.includes(item.id)) return null
       next = {
-        ...s,
+        ...bump(s, { fun: 12, social: 4 }),
         wardrobe: [...s.wardrobe, item.id],
         equipped: { ...s.equipped, [item.slot]: item.id },
-        happiness: clamp(s.happiness + 12),
       }
       result = { kind, id: item.id }
       break
@@ -296,7 +267,7 @@ export function claim(s: GameState, now: number, kind: RewardKind, choice: strin
     }
     case 'note': {
       next = writeNote(s, now, p.minutes, p.label, rng)
-      next = { ...next, happiness: clamp(next.happiness + 8) }
+      next = bump(next, { social: 8, fun: 2 })
       result = { kind, note: next.notes[0] }
       break
     }
@@ -344,7 +315,7 @@ function writeNote(s: GameState, now: number, minutes: number, label: string, rn
   if (s.secretsDelivered < GIFT.secretNotes.length && rng() < 0.3) return deliverSecret(s, now)
   const hour = new Date(now).getHours()
   const st = streak(s.stats.days, now)
-  const pools: string[][] = [GENERAL_NOTES, GENERAL_NOTES]
+  const pools: string[][] = [GENERAL_NOTES, GENERAL_NOTES, LAW_NOTES]
   if (hour >= 5 && hour < 11) pools.push(MORNING_NOTES)
   if (hour >= 21 || hour < 4) pools.push(NIGHT_NOTES)
   if (minutes >= 45) pools.push(LONG_NOTES, LONG_NOTES)
@@ -366,13 +337,12 @@ export function resolveAdventure(s: GameState, now: number, rng: Rng = Math.rand
   if (!adv || (!force && now < adv.returnsAt)) return s
   const def = ADVENTURES.find((a) => a.id === adv.id)!
   const card: Postcard = { adventure: def.id, story: pick(def.stories, rng), at: now }
+  // a great time, but it comes home hungry, tired and a bit muddy
   return {
-    ...s,
+    ...bump(s, { fun: 30, social: 5, hunger: -10, energy: -15, hygiene: -20 }),
     adventure: null,
     postcards: [card, ...s.postcards],
     postcardToShow: card,
-    happiness: clamp(s.happiness + 20),
-    tummy: clamp(s.tummy - 10),
   }
 }
 
@@ -390,27 +360,91 @@ export function endBreak(s: GameState): GameState {
   return { ...s, breakEndsAt: null }
 }
 
-/** Petting gives a small boost, capped so it can't replace real attention. */
-export function pet(s: GameState, now: number): { state: GameState; counted: boolean } {
-  const fresh = now - s.pets.windowStart > 30 * MIN
-  const pets = fresh ? { windowStart: now, count: 0 } : s.pets
-  const counted = pets.count < 5
-  return {
-    state: { ...s, pets: { ...pets, count: pets.count + 1 }, happiness: clamp(s.happiness + (counted ? 2 : 0)) },
-    counted,
+/**
+ * The fox does something in the room (on its own, or because you asked).
+ * Social actions share a 30-minute window: after a handful they stop
+ * counting, so real attention beats button mashing.
+ */
+export function doActivity(s: GameState, now: number, act: Activity, arg?: string): GameState {
+  let next = s
+  let scale = 1
+  if (SOCIAL.includes(act)) {
+    const fresh = now - s.pets.windowStart > 30 * MIN
+    const pets = fresh ? { windowStart: now, count: 0 } : s.pets
+    scale = pets.count < 6 ? 1 : 0.2
+    next = { ...next, pets: { ...pets, count: pets.count + 1 } }
   }
+  if (act === 'eat') {
+    if (next.bowl <= 0) return next
+    next = { ...next, bowl: next.bowl - 1 }
+  }
+  if (act === 'treat') {
+    if (!arg || !next.pantry[arg]) return next
+    const favorite = next.favoriteTreats.includes(arg)
+    const pantry = { ...next.pantry, [arg]: next.pantry[arg] - 1 }
+    if (!pantry[arg]) delete pantry[arg]
+    next = {
+      ...bump(next, { hunger: favorite ? 40 : 30, social: favorite ? 12 : 5 }),
+      pantry,
+      treatsFed: { ...next.treatsFed, [arg]: (next.treatsFed[arg] ?? 0) + 1 },
+    }
+  }
+  if (act === 'nap') next = { ...next, napUntil: 0 }
+  const fx = EFFECTS[act]
+  const scaled: typeof fx = {}
+  for (const [k, v] of Object.entries(fx) as [keyof typeof fx, number][]) scaled[k] = v > 0 ? v * scale : v
+  return bump(next, scaled)
+}
+
+export function refillBowl(s: GameState): GameState {
+  return { ...s, bowl: 3 }
+}
+
+/** Kept for the simple tap-to-pet on the fox. */
+export function pet(s: GameState, now: number): { state: GameState; counted: boolean } {
+  const before = s.pets
+  const state = doActivity(s, now, 'pet')
+  const fresh = now - before.windowStart > 30 * MIN
+  return { state, counted: fresh || before.count < 6 }
+}
+
+// ─── career, decor, quiz ─────────────────────────────────────────────────────
+
+export function ownsClothing(s: GameState, id: string) {
+  return s.wardrobe.includes(id) || unlocked(s.stats.totalMinutes, 'clothes').includes(id)
+}
+
+export function isUnlocked(s: GameState, kind: UnlockKind, id: string) {
+  return unlocked(s.stats.totalMinutes, kind).includes(id)
+}
+
+export function setDecor(s: GameState, patch: { wall?: string; floor?: string }): GameState {
+  if (patch.wall && !isUnlocked(s, 'wall', patch.wall)) return s
+  if (patch.floor && !isUnlocked(s, 'floor', patch.floor)) return s
+  return { ...s, decor: { ...s.decor, ...patch } }
+}
+
+/** A promotion is waiting to be celebrated. */
+export function pendingPromotion(s: GameState): number | null {
+  const r = rankOf(s.stats.totalMinutes)
+  return r > s.rankSeen ? r : null
+}
+
+export function celebratePromotion(s: GameState): GameState {
+  return { ...s, rankSeen: rankOf(s.stats.totalMinutes) }
+}
+
+export function finishQuiz(s: GameState, correct: number, total: number): GameState {
+  const q = s.quiz
+  const next = bump(s, { fun: 12 + correct, social: 6 })
+  return { ...next, quiz: { rounds: q.rounds + 1, best: Math.max(q.best, correct), correct: q.correct + correct, answered: q.answered + total } }
 }
 
 export function toggleWear(s: GameState, id: string): GameState {
   const item = byId(CLOTHES, id)
-  if (!item || !s.wardrobe.includes(id)) return s
+  if (!item || !ownsClothing(s, id)) return s
   const equipped = { ...s.equipped }
   if (equipped[item.slot] === id) delete equipped[item.slot]
   else equipped[item.slot] = id
   return { ...s, equipped }
-}
-
-export function isAsleep(s: GameState, now: number) {
-  const h = new Date(now).getHours()
-  return (h >= 23 || h < 6) && !s.session
 }

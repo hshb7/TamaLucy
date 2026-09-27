@@ -3,9 +3,9 @@
 //   node scripts/sprite-sheet.ts sprites.png
 import { writeFileSync } from 'node:fs'
 import { Raster } from './png.ts'
-import { foxCurled, foxSitting, type Face } from '../src/art/fox.ts'
+import { foxCurled, foxSitting, foxWalking, type Face } from '../src/art/fox.ts'
 import { CLOTHING_ART } from '../src/art/clothes.ts'
-import { GIFT_ART, ICON_ART, SOUVENIR_ART, TREAT_ART } from '../src/art/items.ts'
+import { GIFT_ART, ICON_ART, LAW_ART, NEED_ICON_ART, ROOM_ART, SOUVENIR_ART, TREAT_ART, moodGem, BRUSH_ART } from '../src/art/items.ts'
 import { BED_SPOT, FOX_SPOT, ROOM_H, ROOM_W, drawAtmosphere, drawRoom } from '../src/art/room.ts'
 import { blank, stamp, type Sprite } from '../src/art/sprite.ts'
 import type { Painter } from '../src/art/painter.ts'
@@ -24,21 +24,26 @@ function dressed(id: string): Sprite {
 const faces: Face[] = ['open', 'blink', 'happy', 'sad', 'eat', 'shock', 'love']
 const rows: Sprite[][] = [
   [...faces.map((f) => foxSitting(f)), foxCurled('sleep'), foxCurled('sad')],
+  [0, 1, 2, 3].map((f) => foxWalking(f)),
+  [...Object.values(ROOM_ART), ...Object.values(LAW_ART), ...Object.values(NEED_ICON_ART), ...['joyful', 'okay', 'sad', 'depressed'].map(moodGem), BRUSH_ART],
   Object.keys(CLOTHING_ART).map(dressed),
   [...Object.values(TREAT_ART), ...Object.values(SOUVENIR_ART)],
   [...Object.values(GIFT_ART), ...Object.values(ICON_ART)],
 ]
 
+const allLaw = ['diploma', 'gavel', 'scales']
 const scenes = [
-  { hour: 10, gifts: [] as string[], gloom: 0, sleep: false },
-  { hour: 18, gifts: Object.keys(GIFT_ART), gloom: 0, sleep: false },
-  { hour: 23, gifts: Object.keys(GIFT_ART), gloom: 0, sleep: true },
-  { hour: 14, gifts: [], gloom: 1, sleep: false },
+  { hour: 10, gifts: [] as string[], gloom: 0, sleep: false, decor: { wall: 'stripes', floor: 'honey' }, law: [] as string[], bowl: 0 },
+  { hour: 18, gifts: Object.keys(GIFT_ART), gloom: 0, sleep: false, decor: { wall: 'gingham', floor: 'checker' }, law: allLaw, bowl: 3 },
+  { hour: 23, gifts: Object.keys(GIFT_ART), gloom: 0, sleep: true, decor: { wall: 'library', floor: 'walnut' }, law: allLaw, bowl: 2 },
+  { hour: 14, gifts: [], gloom: 1, sleep: false, decor: { wall: 'damask', floor: 'carpet' }, law: ['diploma'], bowl: 0 },
+  { hour: 12, gifts: ['plant'], gloom: 0, sleep: false, decor: { wall: 'hearts', floor: 'honey' }, law: [], bowl: 1 },
+  { hour: 12, gifts: [], gloom: 0, sleep: false, decor: { wall: 'dots', floor: 'carpet' }, law: allLaw, bowl: 1 },
 ]
 
 const rowW = (r: Sprite[]) => r.reduce((w, s) => w + s.w + PAD, PAD)
 const width = Math.max(...rows.map(rowW), 2 * (ROOM_W + PAD) + PAD) * S
-const height = (rows.reduce((h, r) => h + Math.max(...r.map((s) => s.h)) + PAD, PAD) + 2 * (ROOM_H + PAD)) * S
+const height = (rows.reduce((h, r) => h + Math.max(...r.map((s) => s.h)) + PAD, PAD) + 3 * (ROOM_H + PAD)) * S
 const img = new Raster(width, height, '#fbe7d6')
 
 let y = PAD
@@ -70,10 +75,11 @@ scenes.forEach((sc, i) => {
         }
     },
   }
-  const o = { hour: sc.hour, gifts: sc.gifts, t: 0, gloom: sc.gloom }
+  const o = { hour: sc.hour, gifts: sc.gifts, t: 0, gloom: sc.gloom, decor: sc.decor, law: sc.law, bowl: sc.bowl }
   drawRoom(p, o)
   if (sc.sleep) p.sprite(foxCurled('sleep'), BED_SPOT.x, BED_SPOT.y)
   else p.sprite(foxSitting(sc.gloom ? 'sad' : 'open'), FOX_SPOT.x, FOX_SPOT.y)
+  if (i === 1) p.sprite(foxWalking(1), 130, FOX_SPOT.y)
   drawAtmosphere(p, o)
 })
 

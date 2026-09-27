@@ -32,6 +32,26 @@ export const GENERAL_NOTES = [
   'whatever happens today, you’re still my favourite.',
 ]
 
+// Law school edition. Terms of art used correctly, puns used shamelessly.
+export const LAW_NOTES = [
+  'i briefed a case today. fox v. snack bowl. holding: the bowl should never be empty. very persuasive.',
+  'objection! you\u2019ve been working too hard. sustained. please stretch.',
+  'res ipsa loquitur: your hard work speaks for itself.',
+  'i read your outline. i didn\u2019t understand it, but it looked very smart.',
+  'stare decisis: you did great last time, so precedent says you\u2019ll do great today.',
+  'the court of {fox} finds you... wonderful. case closed. *bangs tiny gavel*',
+  'habeas corpus? more like habeas cuddles. i demand you bring me your body for a hug.',
+  'cold calls can\u2019t scare you. you\u2019ve got this, counsellor.',
+  'i put a sticky note on your casebook that says "you\u2019re doing great." it\u2019s legally binding.',
+  'prima facie evidence that you\u2019re my favourite: exhibit a, this note.',
+  'the burden of proof is on anyone who says you can\u2019t do this. they will not meet it.',
+  'i filed a motion for a snack break. the motion is granted.',
+  'a reasonable person would be very proud of you right now. i checked.',
+  'IRAC. issue: you\u2019re tired. rule: rest is allowed. application: take a break. conclusion: nap.',
+  'someday you\u2019ll be a brilliant lawyer and i\u2019ll tell everyone i knew you back when you lived on cold coffee.',
+  'i tried to read the rule against perpetuities. i am now taking a very long nap.',
+]
+
 export const MORNING_NOTES = [
   'good morning, {name}! i woke up early to cheer you on. (then i napped a bit.)',
   'morning focus is the best focus. the birds agree.',

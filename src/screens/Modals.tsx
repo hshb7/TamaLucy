@@ -1,4 +1,8 @@
-import { ICON_ART, SOUVENIR_ART } from '../art/items.ts'
+import { useEffect } from 'react'
+import { sfx } from '../audio.ts'
+import { ICON_ART, LAW_ART, SOUVENIR_ART } from '../art/items.ts'
+import { CLOTHING_ART } from '../art/clothes.ts'
+import { CAREER } from '../game/career.ts'
 import { ADVENTURES } from '../game/content.ts'
 import { dismissPostcard } from '../game/logic.ts'
 import type { Note, Postcard } from '../game/state.ts'
@@ -104,6 +108,37 @@ export function LockTips({ onClose }: { onClose: () => void }) {
       <p className="muted">tip: the screen stays awake during focus, so the fox won&rsquo;t think you left.</p>
       <button className="btn btn-pink" onClick={onClose}>
         got it
+      </button>
+    </Modal>
+  )
+}
+
+export function PromotionModal({ rank, onClose }: { rank: number; onClose: () => void }) {
+  const game = useGame()
+  useEffect(() => sfx.fanfare(), [])
+  const r = CAREER[rank]
+  const hours = Math.round(game.stats.totalMinutes / 6) / 10
+  return (
+    <Modal onClose={onClose} className="promo">
+      <p className="promo-kicker">promotion!</p>
+      <FoxPortrait equipped={game.equipped} cheer className="portrait-m" />
+      <h2>
+        {game.foxName} is now {/^[AEIOU]/.test(r.title) ? 'an' : 'a'} {r.title}!
+      </h2>
+      <p className="center">after {hours} hours of studying together. {game.foxName} couldn&rsquo;t have done it without you.</p>
+      {r.unlocks.length > 0 && (
+        <ul className="unlocks">
+          {r.unlocks.map((u) => (
+            <li key={u.id} className="px-box">
+              {u.kind === 'clothes' && <PixelIcon sprite={CLOTHING_ART[u.id].sprite} scale={2} />}
+              {u.kind === 'law' && <PixelIcon sprite={LAW_ART[u.id]} scale={2} />}
+              <span>unlocked {u.label}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button className="btn btn-pink" onClick={onClose}>
+        congratulations! ♡
       </button>
     </Modal>
   )

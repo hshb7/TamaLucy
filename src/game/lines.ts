@@ -1,25 +1,33 @@
 import { ADVENTURES } from './content.ts'
-import { HUNGRY, isAsleep, moodOf } from './logic.ts'
+import { NEED_INFO, foxMood, isAsleep, lowestNeed } from './needs.ts'
 import type { GameState } from './state.ts'
 
 const pick = <T,>(a: readonly T[]) => a[Math.floor(Math.random() * a.length)]
 
-const TAP: Record<ReturnType<typeof moodOf>, string[]> = {
-  joyful: ['i’m so happy!!', 'let’s do our best today!', '*happy tail wags*', 'you’re here! you’re here!', 'best. day. ever.'],
-  happy: ['hehe, that tickles!', 'what are we working on today?', 'i feel so cozy.', '*purrs* (foxes can purr. look it up)', 'hi {name}!'],
-  okay: ['hi {name}.', 'wanna focus together?', 'i could go for a snack...', '*stretches*', 'let’s do something fun?'],
+const TAP: Record<ReturnType<typeof foxMood>, string[]> = {
+  joyful: ['i\u2019m so happy!!', 'let\u2019s do our best today!', '*happy tail wags*', 'you\u2019re here! you\u2019re here!', 'best. day. ever.', 'counsellor! you\u2019re back!'],
+  happy: ['hehe, that tickles!', 'what are we studying today?', 'i feel so cozy.', '*purrs* (foxes can purr. look it up)', 'hi {name}!', 'i\u2019m studying for the fox bar.'],
+  okay: ['hi {name}.', 'wanna focus together?', '*stretches*', 'let\u2019s do something fun?', 'objection! not enough pets.'],
   sad: ['i missed you...', 'can we spend some time together?', '*sniffles*', 'will you stay a bit?'],
-  depressed: ['...', 'i thought you forgot about me...', '*hides under blanket*', 'i’m okay. (i’m not okay.)'],
+  depressed: ['...', 'i thought you forgot about me...', '*hides under blanket*', 'i\u2019m okay. (i\u2019m not okay.)'],
 }
 
-const HUNGRY_LINES = ['my tummy is rumbling...', 'is it snack time? it feels like snack time.', 'i’m sooo hungry. focus for a treat?']
-const SLEEPY = ['zzz... *mumbles* ...five more minutes...', '*yawn* oh, hi... it’s so late...', 'you should sleep too... zzz']
+const NEEDY: Record<string, string[]> = {
+  hunger: ['my tummy is rumbling...', 'is it snack time? it feels like snack time.', 'could you fill my bowl?'],
+  energy: ['*yaaawn*', 'i could really use a nap...', 'so... sleepy...'],
+  fun: ['i\u2019m booored. play with me?', 'wanna throw the ball?', 'let\u2019s dance!'],
+  hygiene: ['i might be a little... stinky.', 'bath time? (please say no)', 'i rolled in something. don\u2019t ask.'],
+  social: ['hold me?', 'i missed you.', 'can we just hang out?'],
+}
+
+const SLEEPY = ['zzz... *mumbles* ...five more minutes...', '*yawn* oh, hi... it\u2019s so late...', 'you should sleep too... zzz']
 
 export function tapLine(s: GameState, now: number): string {
   const vars = (t: string) => t.replace('{name}', s.owner).replace('{fox}', s.foxName)
   if (isAsleep(s, now)) return vars(pick(SLEEPY))
-  if (s.tummy < HUNGRY && Math.random() < 0.5) return vars(pick(HUNGRY_LINES))
-  return vars(pick(TAP[moodOf(s.happiness)]))
+  const low = lowestNeed(s.needs)
+  if (s.needs[low] < 35 && Math.random() < 0.6) return vars(pick(NEEDY[low]))
+  return vars(pick(TAP[foxMood(s)]))
 }
 
 export function statusLine(s: GameState, now: number): string {
@@ -29,10 +37,11 @@ export function statusLine(s: GameState, now: number): string {
     return `${f} is out ${a?.verb ?? 'exploring'} at ${a?.place ?? 'somewhere'}`
   }
   if (isAsleep(s, now)) return `${f} is fast asleep`
-  const mood = moodOf(s.happiness)
+  const mood = foxMood(s)
   if (mood === 'depressed') return `${f} is feeling really down... spend some time together?`
+  const low = lowestNeed(s.needs)
+  if (s.needs[low] < 30) return `${f} ${NEED_INFO[low].low}`
   if (mood === 'sad') return `${f} is feeling lonely`
-  if (s.tummy < HUNGRY) return `${f} is hungry. focus to earn a treat!`
   if (mood === 'okay') return `${f} is doing okay`
   if (mood === 'happy') return `${f} is feeling cozy`
   return `${f} is over the moon`

@@ -146,7 +146,7 @@ function RewardResultView({ result, picksLeft, onNext, onDone }: { result: Rewar
           <FoxPortrait equipped={game.equipped} eating={result.id} className="portrait-l" />
           <h1 className="title">nom nom nom!</h1>
           <p className="lead">
-            {f} gobbled up the {t.name.toLowerCase()}.
+            {f} gobbled up the {t.name.toLowerCase()}, and saved two more in the pantry (tap {f} → give a treat).
             {result.firstFavorite && <b className="favorite"> you found {f}&rsquo;s favourite treat! ♡</b>}
             {result.favorite && !result.firstFavorite && <b className="favorite"> it&rsquo;s {f}&rsquo;s favourite! ♡</b>}
           </p>

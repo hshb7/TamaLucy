@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { buzz, setSoundEnabled, sfx, unlockAudio } from './audio.ts'
-import { arrive, completeFocus, decay, endBreak, focusHidden, focusVisible, heartbeat, resolveAdventure, type RewardResult } from './game/logic.ts'
+import { arrive, celebratePromotion, completeFocus, endBreak, focusHidden, focusVisible, heartbeat, pendingPromotion, resolveAdventure, simulate, type RewardResult } from './game/logic.ts'
 import { getGame, setGame, useGame } from './game/store.ts'
 import { Toasts, toast } from './ui/bits.tsx'
 import { Onboarding } from './screens/Onboarding.tsx'
@@ -13,9 +13,10 @@ import { Wardrobe } from './screens/Wardrobe.tsx'
 import { Album } from './screens/Album.tsx'
 import { StatsScreen } from './screens/Stats.tsx'
 import { SettingsScreen } from './screens/Settings.tsx'
-import { FailedModal, PostcardModal } from './screens/Modals.tsx'
+import { FailedModal, PostcardModal, PromotionModal } from './screens/Modals.tsx'
+import { DecorScreen } from './screens/Decor.tsx'
 
-export type View = 'home' | 'break' | 'wardrobe' | 'album' | 'stats' | 'settings'
+export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'stats' | 'settings'
 
 export default function App() {
   const game = useGame()
@@ -81,7 +82,7 @@ export default function App() {
         setGame(resolveAdventure(s, now))
         sfx.chime()
       }
-      if (now - s.lastTick > 60_000) setGame((g) => ({ ...decay(g, now), lastVisit: now }))
+      if (now - s.lastTick > 60_000) setGame((g) => ({ ...simulate(g, now), lastVisit: now }))
     }, 500)
     return () => clearInterval(id)
   }, [])
@@ -104,12 +105,15 @@ export default function App() {
     )
   else if (view === 'break') screen = <BreakScreen onFocus={openSetup} onHome={() => setView('home')} />
   else if (view === 'wardrobe') screen = <Wardrobe onBack={() => setView('home')} />
+  else if (view === 'decor') screen = <DecorScreen onBack={() => setView('home')} />
   else if (view === 'album') screen = <Album onBack={() => setView('home')} />
   else if (view === 'stats') screen = <StatsScreen onBack={() => setView('home')} />
   else if (view === 'settings') screen = <SettingsScreen onBack={() => setView('home')} />
   else screen = <Home onFocus={openSetup} go={setView} />
 
-  const showPostcard = game.postcardToShow && !game.session && !game.pending && !reward && view !== 'break'
+  const calm = !game.session && !game.pending && !reward
+  const promo = calm ? pendingPromotion(game) : null
+  const showPostcard = game.postcardToShow && calm && promo == null && view !== 'break'
 
   return (
     <>
@@ -122,6 +126,14 @@ export default function App() {
           onRetry={() => {
             setFailedAway(null)
             openSetup()
+          }}
+        />
+      )}
+      {promo != null && failedAway == null && (
+        <PromotionModal
+          rank={promo}
+          onClose={() => {
+            setGame(celebratePromotion)
           }}
         />
       )}

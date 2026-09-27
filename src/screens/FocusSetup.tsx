@@ -6,6 +6,7 @@ import { setGame, useGame } from '../game/store.ts'
 import { Modal } from '../ui/bits.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
 import { DEBUG } from '../debug.ts'
+import { GIFT } from '../gift.ts'
 
 const PRESETS = [10, 15, 25, 45, 60]
 
@@ -48,12 +49,19 @@ export function FocusSetup({ onClose }: { onClose: () => void }) {
           +
         </button>
       </div>
-      <label className="field">
-        <span>
+      <div className="field">
+        <label htmlFor="focus-label">
           what are you working on? <span className="muted">(optional)</span>
-        </span>
-        <input value={label} maxLength={40} placeholder="e.g. chemistry notes" onChange={(e) => setLabel(e.target.value)} />
-      </label>
+        </label>
+        <div className="subject-chips">
+          {GIFT.subjects.map((sub) => (
+            <button key={sub} className={`subject-chip ${label === sub ? 'on' : ''}`} onClick={() => setLabel(label === sub ? '' : sub)}>
+              {sub}
+            </button>
+          ))}
+        </div>
+        <input id="focus-label" value={label} maxLength={40} placeholder="or type anything, e.g. Torts outline" onChange={(e) => setLabel(e.target.value)} />
+      </div>
       <p className="hint">
         <PixelIcon sprite={ICON_ART.heart} scale={2} />
         {strict
