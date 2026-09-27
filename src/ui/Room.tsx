@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BED_SPOT, BOWL, DESK, FOX_Y, ROOM_H, ROOM_W, RUG_SPOT, SPOTS, TUB, VIEW_W, drawAtmosphere, drawRoom } from '../art/room.ts'
 import type { Painter } from '../art/painter.ts'
-import { BRUSH_ART, GIFT_ART, ICON_ART, NEED_ICON_ART, ROOM_ART, TREAT_ART, moodGem } from '../art/items.ts'
+import { BRUSH_ART, GIFT_ART, ICON_ART, NEED_ICON_ART, ROOM_ART, TREAT_ART } from '../art/items.ts'
 import { sprite, type Sprite } from '../art/sprite.ts'
 import type { Face } from '../art/fox.ts'
 import { unlocked } from '../game/career.ts'
@@ -245,7 +245,6 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onWake, onStatu
     const baseFace = (): Face => (mood === 'sad' ? 'sad' : mood === 'joyful' && Math.floor(t / 3000) % 4 === 0 ? 'happy' : idleFace(t))
     const wag = mood === 'joyful' ? 2.2 : mood === 'happy' ? 1.2 : mood === 'sad' ? 0.35 : 0.8
     let head = { x: b.x, y: FOX_Y }
-    let sitting = true
 
     const sit = (x: number, y: number, face: Face, tailSpeed = wag) => {
       drawFox(p, x - 16, y, { pose: 'sit', face, tail: idleTail(t, tailSpeed), equipped: eq })
@@ -266,7 +265,6 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onWake, onStatu
             drawFox(p, BED_SPOT.x, BED_SPOT.y, { pose: 'curl', face: 'sleep', tail: 0, breath: Math.floor(t / 1400) % 2, equipped: eq })
             foxBox.current = { x: BED_SPOT.x, y: BED_SPOT.y, w: 40, h: 22 }
             head = { x: BED_SPOT.x + 10, y: BED_SPOT.y + 4 }
-            sitting = false
             if (every('z', t, 1300)) spawn(list, 'z', BED_SPOT.x + 8, BED_SPOT.y, t)
           }
           break
@@ -278,7 +276,6 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onWake, onStatu
           drawFox(p, RUG_SPOT.x, RUG_SPOT.y, { pose: 'curl', face: 'sad', tail: 0, breath: Math.floor(t / 2000) % 2, equipped: eq })
           foxBox.current = { x: RUG_SPOT.x, y: RUG_SPOT.y, w: 40, h: 22 }
           head = { x: RUG_SPOT.x + 10, y: RUG_SPOT.y + 4 }
-          sitting = false
           const cy = RUG_SPOT.y - 8 + Math.round(Math.sin(t / 900))
           p.sprite(RAIN_CLOUD, RUG_SPOT.x + 2, cy)
           if (every('drop', t, 260)) spawn(list, 'drop', RUG_SPOT.x + 10, cy + 7, t)
@@ -356,7 +353,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onWake, onStatu
     }
     anchor.current = head
 
-    // needs you can see: stink lines, thought bubbles, the mood gem
+    // needs you can see: stink lines and thought bubbles
     const low = lowestNeed(g.needs)
     const resting = doing === 'sleep' || doing === 'nap' || doing === 'sulk' || doing === 'bath'
     if (g.needs.hygiene < 30 && !resting && every('stink', t, 650)) spawn(list, 'stink', head.x - 12 + Math.random() * 24, FOX_Y + 6, t)
@@ -365,10 +362,6 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onWake, onStatu
       p.sprite(THOUGHT, head.x + 16, FOX_Y - 14)
       const icon = NEED_THOUGHT[low]
       p.sprite(icon, head.x + 16 + Math.round((16 - icon.w) / 2), FOX_Y - 14 + Math.round((13 - icon.h) / 2))
-    }
-    if (!resting || awake) {
-      const gy = (sitting ? head.y : FOX_Y) - 16 + Math.round(Math.sin(t / 500))
-      p.sprite(moodGem(mood), head.x - 3, gy)
     }
   }
 

@@ -5,7 +5,7 @@ import { writeFileSync } from 'node:fs'
 import { Raster } from './png.ts'
 import { foxCurled, foxSitting, foxWalking, type Face } from '../src/art/fox.ts'
 import { CLOTHING_ART } from '../src/art/clothes.ts'
-import { GIFT_ART, ICON_ART, LAW_ART, NEED_ICON_ART, ROOM_ART, SOUVENIR_ART, TREAT_ART, moodGem, BRUSH_ART } from '../src/art/items.ts'
+import { GIFT_ART, ICON_ART, LAW_ART, NEED_ICON_ART, ROOM_ART, SOUVENIR_ART, TREAT_ART, BRUSH_ART } from '../src/art/items.ts'
 import { BED_SPOT, FOX_SPOT, ROOM_H, ROOM_W, drawAtmosphere, drawRoom } from '../src/art/room.ts'
 import { blank, stamp, type Sprite } from '../src/art/sprite.ts'
 import type { Painter } from '../src/art/painter.ts'
@@ -25,7 +25,7 @@ const faces: Face[] = ['open', 'blink', 'happy', 'sad', 'eat', 'shock', 'love']
 const rows: Sprite[][] = [
   [...faces.map((f) => foxSitting(f)), foxCurled('sleep'), foxCurled('sad')],
   [0, 1, 2, 3].map((f) => foxWalking(f)),
-  [...Object.values(ROOM_ART), ...Object.values(LAW_ART), ...Object.values(NEED_ICON_ART), ...['joyful', 'okay', 'sad', 'depressed'].map(moodGem), BRUSH_ART],
+  [...Object.values(ROOM_ART), ...Object.values(LAW_ART), ...Object.values(NEED_ICON_ART), BRUSH_ART],
   Object.keys(CLOTHING_ART).map(dressed),
   [...Object.values(TREAT_ART), ...Object.values(SOUVENIR_ART)],
   [...Object.values(GIFT_ART), ...Object.values(ICON_ART)],

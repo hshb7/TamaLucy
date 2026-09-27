@@ -719,24 +719,4 @@ export const NEED_ICON_ART: Record<string, Sprite> = {
   ]),
 }
 
-export const MOOD_GEM_COLORS: Record<string, [string, string, string]> = {
-  joyful: ['#c9f7b8', '#7fd46f', '#4a9e47'],
-  happy: ['#c9f7b8', '#7fd46f', '#4a9e47'],
-  okay: ['#fff3a8', '#f2cf55', '#c99a26'],
-  sad: ['#ffd6ae', '#f59e5b', '#c46d2c'],
-  depressed: ['#ffc0c4', '#ea6b78', '#b33c52'],
-}
-
-const GEM_ROWS = ['...o...', '..oLo..', '.oLgGo.', 'oLwgGGo', 'oLggGGo', '.oLgGo.', '.oLgGo.', '..ogo..', '..oGo..', '...o...']
-const gems = new Map<string, Sprite>()
-export function moodGem(mood: string): Sprite {
-  let g = gems.get(mood)
-  if (!g) {
-    const [L, m, D] = MOOD_GEM_COLORS[mood] ?? MOOD_GEM_COLORS.okay
-    g = sprite(GEM_ROWS, { L, g: m, G: D })
-    gems.set(mood, g)
-  }
-  return g
-}
-
 export const BRUSH_ART = sprite(['.oooooooo.', 'oPPPPPPPPo', 'ommmmmmmmo', '.oooooooo.', '.t.t.t.t..'])
