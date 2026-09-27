@@ -183,6 +183,17 @@ button {
 .chip.streak {
   background: #ffd9bd;
 }
+.chip.acorn-chip {
+  background: #fff1c7;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pill-acorn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 
 .chips {
   display: flex;
@@ -316,6 +327,10 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+.home-name .chip {
+  white-space: nowrap;
 }
 .home-name h1 {
   font-size: 30px;
@@ -323,7 +338,7 @@ button {
 .home-badges {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 .icon-btn {
   position: relative;
@@ -376,7 +391,7 @@ button {
 }
 .bubble {
   position: absolute;
-  transform: translate(-50%, calc(-100% - 8px));
+  transform: translate(calc(-50% + var(--dx, 0px)), calc(-100% - 8px));
   background: white;
   box-shadow: var(--outline);
   padding: 6px 10px;
@@ -391,7 +406,7 @@ button {
 .bubble::after {
   content: '';
   position: absolute;
-  left: 50%;
+  left: calc(50% - var(--dx, 0px));
   bottom: -9px;
   width: 6px;
   height: 6px;
@@ -400,7 +415,7 @@ button {
 }
 @keyframes pop {
   from {
-    transform: translate(-50%, calc(-100% - 2px)) scale(0.8);
+    transform: translate(calc(-50% + var(--dx, 0px)), calc(-100% - 2px)) scale(0.8);
     opacity: 0;
   }
 }
@@ -1190,6 +1205,26 @@ input:focus {
 }
 .pie-item:disabled {
   opacity: 0.55;
+}
+.pie-item.locked {
+  color: var(--ink-soft);
+  background: #f3e6da;
+}
+.pie-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  color: #8a5a36;
+  background: #fff1c7;
+  padding: 0 4px;
+  margin-left: 2px;
+  box-shadow: 0 0 0 2px #e8c98a;
+}
+.pie-item.locked .pie-cost {
+  background: #f6e2dc;
+  color: #b43d57;
+  box-shadow: 0 0 0 2px #e8b7b7;
 }
 @keyframes pie-in {
   from {

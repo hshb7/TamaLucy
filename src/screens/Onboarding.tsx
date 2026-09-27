@@ -82,8 +82,9 @@ export function Onboarding() {
         <li className="px-box">
           <PixelIcon sprite={ICON_ART.heart} scale={3} />
           <p>
-            <b>take care of {name}.</b> it has needs like a Sim: hunger, energy, fun, hygiene and love. tap {name} or anything in
-            the room to do things together, and swipe to explore. it gets lonely if you stay away for days.
+            <b>take care of {name}.</b> it has needs like a Sim: hunger, energy, fun, hygiene and love. studying earns acorns
+            (one for every 5 minutes), and you spend them on food, baths and playtime: tap {name} or anything in the room. petting
+            is always free. it gets lonely if you stay away for days.
           </p>
         </li>
       </ul>

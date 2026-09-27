@@ -29,10 +29,21 @@ home screen, works offline, and needs no app store.
 - 🎀 **Clothes**: 11 outfits (frog hat, strawberry hat, beret, flower crown, heart shades, scarf...). Mix and match in the closet.
 - 💌 **Note**: the fox writes you a little letter. ~40 notes, some depending on time of day, session length and your streak.
 
+**Acorns: studying is how she looks after the fox**
+- Focusing earns acorns: 1 for every 5 minutes (a 25-minute session = 5), shown
+  in the top bar and on the reward screen.
+- Looking after the fox costs them: a portion of food 1 (so refilling an empty bowl
+  is 3), a bath 2, and brushing, cuddles, chats, dancing, tag, ball or yarn 1 each.
+  The pie menus show the price, and if she's short, the fox suggests focusing together.
+- Always free: petting, naps, treats she's already won, flashcards and quizzes. The
+  fox still eats from its bowl, naps and plays with its toys on its own, but only
+  studying refills the bowl and keeps it clean. Prices live in `COSTS` in
+  `src/game/logic.ts`.
+
 **A little life sim (Sims-style)**
 - **Needs:** hunger, energy, fun, hygiene and social, shown as five bars. Mood comes from all of them, and one very low need drags it down.
 - **Free will:** the fox walks around the room by itself. It eats from its bowl when hungry, naps when tired, plays with the ball or yarn, reads your casebooks at the desk, looks out the window, and hugs its teddy when lonely. Thought bubbles show what it wants.
-- **Pie menus:** tap the fox for pet, cuddle, chat, brush fur, dance, play tag, give a treat or quiz me. Tap furniture to use it: refill the bowl, bath time, take a nap, study together at the desk, and so on. The current action shows as a chip you can cancel.
+- **Pie menus:** tap the fox for pet, cuddle, chat, brush fur, dance, play tag, give a treat or quiz me. Tap furniture to use it: refill the bowl, bath time, take a nap, study together at the desk, and so on. The current action shows as a chip you can cancel, and nothing is charged unless it finishes.
 - **A bigger room:** swipe to pan across it. There's a living room, a study corner with a green banker's lamp, a clawfoot bathtub, a food bowl and a wall clock that shows the real time.
 - **Decor:** wallpapers and floors to choose from, with more unlocked by the career.
 - **While you're away** the fox looks after itself (a full bowl buys it about a day), but it still gets sad after about 2 days and depressed around day 3. The room turns grey, the fox curls up under a rain cloud, and it leaves "while you were away..." letters.

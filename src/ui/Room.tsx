@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BED_SPOT, BOWL, DESK, FOX_Y, ROOM_H, ROOM_W, RUG_SPOT, SPOTS, TUB, VIEW_W, drawAtmosphere, drawRoom } from '../art/room.ts'
 import type { Painter } from '../art/painter.ts'
 import { BRUSH_ART, GIFT_ART, ICON_ART, NEED_ICON_ART, ROOM_ART, TREAT_ART } from '../art/items.ts'
 import { sprite, type Sprite } from '../art/sprite.ts'
 import type { Face } from '../art/fox.ts'
 import { unlocked } from '../game/career.ts'
-import { isBirthday } from '../game/logic.ts'
+import { costOf, isBirthday, refillCost } from '../game/logic.ts'
 import { isOctober, seasonOf } from '../game/time.ts'
 import { photoSprite } from '../art/photo.ts'
 import { TREATS } from '../game/content.ts'
-import { foxMood, lowestNeed, type NeedKey } from '../game/needs.ts'
+import { foxMood, lowestNeed, type Activity, type NeedKey } from '../game/needs.ts'
 import type { GameState } from '../game/state.ts'
 import { PixelCanvas } from './PixelCanvas.tsx'
 import { PieMenu, type PieOption } from './PieMenu.tsx'
@@ -25,6 +25,8 @@ interface Props {
   onStart?: (t: Task) => void
   onDone: (t: Task) => void
   onCommand: (cmd: RoomCommand) => void
+  /** She picked something she doesn't have enough acorns for. */
+  onBroke: (cost: number) => void
   /** Tapped the fox while it was asleep or sulking. */
   onWake?: () => void
   onStatus?: (label: string | null) => void
@@ -125,7 +127,7 @@ function userTask(kind: TaskKind, here: number, arg?: string): Task {
 }
 
 /** The fox's home: a wide room you can swipe across, a fox with free will, and pie menus. */
-export function Room({ game, bubble, onStart, onDone, onCommand, onWake, onStatus }: Props) {
+export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake, onStatus }: Props) {
   const gameRef = useRef(game)
   gameRef.current = game
   const hooks = useRef({ onStart, onDone, onStatus })
@@ -433,6 +435,14 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onWake, onStatu
 
   // ─── menus ───────────────────────────────────────────────────────────────
   const optionsFor = (m: Menu): { title: string; options: PieOption[] } => {
+    const menu = raw(m)
+    const acorns = gameRef.current.acorns
+    return { ...menu, options: menu.options.map((o) => ({ ...o, cost: priceOf(o.id), locked: !o.disabled && priceOf(o.id) > acorns })) }
+  }
+
+  const priceOf = (id: string) => (id === 'refill' ? refillCost(gameRef.current) : costOf(id as Activity))
+
+  const raw = (m: Menu): { title: string; options: PieOption[] } => {
     const g = gameRef.current
     if (m.sub === 'treat') {
       const opts = TREATS.filter((tr) => g.pantry[tr.id]).map((tr) => ({ id: `treat:${tr.id}`, label: `${tr.name} ×${g.pantry[tr.id]}`, icon: TREAT_ART[tr.id] }))
@@ -496,6 +506,8 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onWake, onStatu
     if (!m) return
     const b = brain.current!
     if (id === 'treats') return setMenu({ ...m, sub: 'treat' })
+    const price = priceOf(id)
+    if (price > gameRef.current.acorns) return onBroke(price)
     if (id === 'refill' || id === 'study' || id === 'quiz') return onCommand(id)
     if (id.startsWith('treat:')) return b.ask(userTask('treat', b.x, id.slice(6)))
     b.ask(userTask(id as TaskKind, b.x))
@@ -506,6 +518,20 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onWake, onStatu
   const a = anchor.current
   const bubbleLeft = ((a.x - cam.current) / VIEW_W) * 100
   const bubbleTop = ((a.y - 4) / ROOM_H) * 100
+
+  // keep long speech bubbles inside the room; the tail still points at the fox
+  const bubbleEl = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = bubbleEl.current
+    const room = wrap.current
+    if (!el || !room) return
+    const w = el.offsetWidth
+    const roomW = room.clientWidth
+    const cx = (bubbleLeft / 100) * roomW
+    const pad = 4
+    const dx = cx - w / 2 < pad ? pad - (cx - w / 2) : cx + w / 2 > roomW - pad ? roomW - pad - (cx + w / 2) : 0
+    el.style.setProperty('--dx', `${dx}px`)
+  })
 
   return (
     <div
@@ -531,7 +557,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onWake, onStatu
         </button>
       )}
       {bubble && !game.adventure && !menu && bubbleLeft > 4 && bubbleLeft < 96 && (
-        <div className="bubble" style={{ left: `${bubbleLeft}%`, top: `${bubbleTop}%` }} key={bubble}>
+        <div className="bubble" ref={bubbleEl} style={{ left: `${bubbleLeft}%`, top: `${bubbleTop}%` }} key={bubble}>
           {bubble}
         </div>
       )}

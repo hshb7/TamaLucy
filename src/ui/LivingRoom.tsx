@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { sfx } from '../audio.ts'
 import { ADVENTURES } from '../game/content.ts'
-import { doActivity, refillBowl } from '../game/logic.ts'
+import { doActivity, doCare, refillBowl, refillCost } from '../game/logic.ts'
 import { statusLine, tapLine } from '../game/lines.ts'
 import type { Activity } from '../game/needs.ts'
 import { getGame, setGame, useGame } from '../game/store.ts'
@@ -66,10 +66,22 @@ export function LivingRoom({ onStudy, onQuiz }: { onStudy: () => void; onQuiz: (
     }
   }
 
-  const onDone = (t: Task) => setGame((s) => doActivity(s, Date.now(), t.kind as Activity, t.arg))
+  // what she asks for costs acorns; what the fox does by itself is free
+  const onDone = (t: Task) => setGame((s) => (t.user ? doCare : doActivity)(s, Date.now(), t.kind as Activity, t.arg))
+
+  const onBroke = (cost: number) => {
+    sfx.tap()
+    const have = getGame().acorns
+    say(
+      have
+        ? `that’s ${cost} acorns and we only have ${have}... focus with me and we’ll earn more?`
+        : `we’re out of acorns! focus with me for a bit and we’ll earn some ✿`,
+    )
+  }
 
   const onCommand = (cmd: RoomCommand) => {
     if (cmd === 'refill') {
+      if (refillCost(getGame()) > getGame().acorns) return onBroke(refillCost(getGame()))
       setGame(refillBowl)
       sfx.nom()
       say('thank you!! *happy tail wags*')
@@ -80,7 +92,7 @@ export function LivingRoom({ onStudy, onQuiz }: { onStudy: () => void; onQuiz: (
   const adv = game.adventure && ADVENTURES.find((a) => a.id === game.adventure!.id)
   return (
     <>
-      <Room game={game} bubble={bubble} onStart={onStart} onDone={onDone} onCommand={onCommand} onWake={() => say(tapLine(getGame(), Date.now()))} onStatus={setStatus} />
+      <Room game={game} bubble={bubble} onStart={onStart} onDone={onDone} onCommand={onCommand} onBroke={onBroke} onWake={() => say(tapLine(getGame(), Date.now()))} onStatus={setStatus} />
       <p className="status">
         {adv
           ? `${game.foxName} is out ${adv.verb} at ${adv.place} · back in ${formatClock(game.adventure!.returnsAt - now)}`

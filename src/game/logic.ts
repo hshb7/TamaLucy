@@ -204,11 +204,14 @@ export function completeFocus(s: GameState, now: number, rng: Rng = Math.random)
   if (milestone) next = deliverSecret(next, now)
   // studying together is quality time
   next = bump(next, { social: Math.min(20, 6 + minutes / 3), fun: Math.min(10, 3 + minutes / 6) })
+  const acorns = acornsFor(minutes)
   next = {
     ...next,
+    acorns: next.acorns + acorns,
     session: null,
     stats,
     pending: {
+      acorns,
       minutes,
       label: ses.label,
       picksLeft: minutes >= 45 ? 2 : 1,
@@ -432,7 +435,8 @@ export function endBreak(s: GameState): GameState {
 export function doActivity(s: GameState, now: number, act: Activity, arg?: string): GameState {
   let next = s
   let scale = 1
-  if (SOCIAL.includes(act)) {
+  // paid actions are already limited by acorns; only free petting fades out
+  if (SOCIAL.includes(act) && !costOf(act)) {
     const fresh = now - s.pets.windowStart > 30 * MIN
     const pets = fresh ? { windowStart: now, count: 0 } : s.pets
     scale = pets.count < 6 ? 1 : 0.2
@@ -460,8 +464,31 @@ export function doActivity(s: GameState, now: number, act: Activity, arg?: strin
   return bump(next, scaled)
 }
 
+// ─── acorns ─────────────────────────────────────────────────────────────────
+// Focusing earns acorns, and looking after the fox costs them, so the fox
+// stays happy only if she studies. Petting, naps, treats she already won and
+// flashcards are free, and the fox still eats, naps and plays on its own.
+
+/** One acorn for every 5 minutes of focus, and at least one per session. */
+export const acornsFor = (minutes: number) => Math.max(1, Math.floor(minutes / 5))
+
+/** What she can ask the fox to do, in acorns. Anything not listed is free. */
+export const COSTS: Partial<Record<Activity, number>> = { bath: 2, brush: 1, cuddle: 1, chat: 1, dance: 1, play: 1, ball: 1, yarn: 1 }
+export const costOf = (act: Activity) => COSTS[act] ?? 0
+/** One acorn per portion of food. */
+export const refillCost = (s: GameState) => Math.max(0, 3 - s.bowl)
+
+/** She asked the fox to do something: it happens if she can pay for it. */
+export function doCare(s: GameState, now: number, act: Activity, arg?: string): GameState {
+  const cost = costOf(act)
+  if (s.acorns < cost) return s
+  return { ...doActivity(s, now, act, arg), acorns: s.acorns - cost }
+}
+
 export function refillBowl(s: GameState): GameState {
-  return { ...s, bowl: 3 }
+  const cost = refillCost(s)
+  if (!cost || s.acorns < cost) return s
+  return { ...s, bowl: 3, acorns: s.acorns - cost }
 }
 
 /** Kept for the simple tap-to-pet on the fox. */

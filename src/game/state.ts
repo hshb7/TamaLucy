@@ -47,6 +47,8 @@ export interface PendingReward {
   taken: RewardKind[]
   /** A secret letter was found this session (milestone). */
   foundLetter?: boolean
+  /** Acorns this session earned. */
+  acorns?: number
 }
 
 export type CareLevel = 'classic' | 'gentle' | 'paused'
@@ -120,6 +122,8 @@ export interface GameState {
   owner: string
   foxName: string
   needs: Needs
+  /** Earned by focusing, spent on looking after the fox. */
+  acorns: number
   /** Food portions in the bowl (0-3). */
   bowl: number
   /** Treats saved for later: id -> count. */
@@ -180,6 +184,7 @@ export function freshState(now: number, rng: () => number = Math.random): GameSt
     owner: GIFT.recipientName,
     foxName: GIFT.foxName,
     needs: { hunger: 75, energy: 90, fun: 75, hygiene: 90, social: 75 },
+    acorns: 5,
     bowl: 3,
     pantry: {},
     decor: { wall: 'stripes', floor: 'honey' },

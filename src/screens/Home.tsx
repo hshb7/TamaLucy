@@ -11,6 +11,7 @@ import { QuizChooser } from '../ui/QuizChooser.tsx'
 import { LivingRoom } from '../ui/LivingRoom.tsx'
 import { NeedsPanel } from '../ui/NeedsPanel.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
+import { toast } from '../ui/bits.tsx'
 import type { View } from '../App.tsx'
 
 const DAILY_GOAL = 4
@@ -56,6 +57,13 @@ export function Home({ onFocus, go }: { onFocus: () => void; go: (v: View) => vo
           </button>
         </div>
         <div className="home-badges">
+          <button
+            className="chip chip-btn-plain acorn-chip"
+            aria-label={`${game.acorns} acorns`}
+            onClick={() => toast(`acorns come from focusing: 1 for every 5 minutes. spend them on food, baths and playtime with ${game.foxName} ✿`, 5000)}
+          >
+            <PixelIcon sprite={ICON_ART.acorn} scale={2} /> {game.acorns}
+          </button>
           <span className="chip streak" title="focus streak">
             <PixelIcon sprite={ICON_ART.flame} scale={2} /> {st}
           </span>
@@ -76,15 +84,15 @@ export function Home({ onFocus, go }: { onFocus: () => void; go: (v: View) => vo
       <section className="today px-box" aria-label="today's focus">
         <div className="acorns">
           {Array.from({ length: Math.max(DAILY_GOAL, todaySessions) }, (_, i) => (
-            <PixelIcon key={i} sprite={ICON_ART.acorn} scale={2} className={i < todaySessions ? '' : 'silhouette'} />
+            <PixelIcon key={i} sprite={ICON_ART.heart} scale={2} className={i < todaySessions ? '' : 'silhouette'} />
           ))}
         </div>
         <p>
           {todaySessions === 0
-            ? `tap ${game.foxName} or anything in the room ✿`
+            ? `focus to earn acorns, then spend them on ${game.foxName} ✿`
             : todaySessions >= DAILY_GOAL
-              ? `all acorns collected today! ${formatMinutes(today)} of focus ✿`
-              : `${todaySessions}/${DAILY_GOAL} today · ${formatMinutes(today)} of focus`}
+              ? `all ${DAILY_GOAL} sessions done today! ${formatMinutes(today)} of focus ✿`
+              : `${todaySessions}/${DAILY_GOAL} sessions today · ${formatMinutes(today)} of focus`}
         </p>
       </section>
 

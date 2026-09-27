@@ -1,4 +1,5 @@
 import type { Sprite } from '../art/sprite.ts'
+import { ICON_ART } from '../art/items.ts'
 import { PixelIcon } from './PixelIcon.tsx'
 
 export interface PieOption {
@@ -6,6 +7,10 @@ export interface PieOption {
   label: string
   icon?: Sprite
   disabled?: boolean
+  /** Price in acorns, shown next to the label. */
+  cost?: number
+  /** Can't afford it right now (still tappable, so the fox can explain). */
+  locked?: boolean
 }
 
 interface Props {
@@ -39,7 +44,7 @@ export function PieMenu({ x, y, width, height, title, options, onPick, onClose }
       return (
         <button
           key={o.id}
-          className={`pie-item ${dir < 0 ? 'pie-left' : ''}`}
+          className={`pie-item ${dir < 0 ? 'pie-left' : ''} ${o.locked ? 'locked' : ''}`}
           style={{ left: cx + dir * (22 - bend), top: cy + off * ROW, animationDelay: `${i * 30}ms` }}
           disabled={o.disabled}
           onPointerDown={(e) => e.stopPropagation()}
@@ -50,6 +55,12 @@ export function PieMenu({ x, y, width, height, title, options, onPick, onClose }
         >
           {o.icon && <PixelIcon sprite={o.icon} scale={2} />}
           <span>{o.label}</span>
+          {!!o.cost && (
+            <span className="pie-cost" aria-label={`${o.cost} acorn${o.cost === 1 ? '' : 's'}`}>
+              <PixelIcon sprite={ICON_ART.acorn} scale={1} />
+              {o.cost}
+            </span>
+          )}
         </button>
       )
     })

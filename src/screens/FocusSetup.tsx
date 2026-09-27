@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ICON_ART } from '../art/items.ts'
 import { sfx } from '../audio.ts'
-import { startFocus } from '../game/logic.ts'
+import { acornsFor, startFocus } from '../game/logic.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { Modal } from '../ui/bits.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
@@ -67,6 +67,10 @@ export function FocusSetup({ onClose }: { onClose: () => void }) {
         {strict
           ? `stay in the app! leaving for more than ${game.settings.graceSeconds}s distracts ${f}, and the session won’t count.`
           : `leaving the app pauses the timer until you come back.`}
+      </p>
+      <p className="hint">
+        <PixelIcon sprite={ICON_ART.acorn} scale={2} />
+        earns {acornsFor(minutes)} acorn{acornsFor(minutes) === 1 ? '' : 's'} for looking after {f}
       </p>
       <p className="hint">
         <PixelIcon sprite={ICON_ART.gift} scale={2} />

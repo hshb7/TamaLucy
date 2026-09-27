@@ -98,8 +98,13 @@ export function RewardScreen({ result, setResult, onDone }: Props) {
       <FoxPortrait equipped={game.equipped} cheer className="portrait-l" />
       <h1 className="title">you did it!</h1>
       <p className="lead">
-        {p.minutes || 'less than 1'} minute{p.minutes === 1 ? '' : 's'} of focus{p.label ? ` on “${p.label}”` : ''}. {f} is so proud of you!
+        {p.minutes ? `${p.minutes} minute${p.minutes === 1 ? '' : 's'}` : 'less than a minute'} of focus{p.label ? ` on “${p.label}”` : ''}. {f} is so proud of you!
       </p>
+      {!!p.acorns && p.taken.length === 0 && (
+        <p className="pill pill-acorn">
+          <PixelIcon sprite={ICON_ART.acorn} scale={2} /> +{p.acorns} acorn{p.acorns === 1 ? '' : 's'} to spend on {f}
+        </p>
+      )}
       {p.foundLetter && p.taken.length === 0 && <p className="pill pill-pink">{f} found a secret letter under the rug! it&rsquo;s in your album ♡</p>}
       {p.picksLeft > 1 || p.taken.length > 0 ? (
         <p className="pill">
