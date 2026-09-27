@@ -8,6 +8,9 @@ import { dayKey } from '../game/time.ts'
 import { formatMinutes } from '../hooks.ts'
 import { Modal, toast } from '../ui/bits.tsx'
 
+/** Embedded previews (iframes) usually block downloads; the installed app doesn't. */
+const canDownload = typeof window !== 'undefined' && window.self === window.top
+
 function ago(t: number) {
   if (!t) return 'never'
   const days = Math.floor((Date.now() - t) / 86_400_000)
@@ -62,9 +65,11 @@ export function BackupSection() {
         <button className="btn" onClick={copy} disabled={!code}>
           copy code
         </button>
-        <button className="btn" onClick={download} disabled={!code}>
-          save as file
-        </button>
+        {canDownload && (
+          <button className="btn" onClick={download} disabled={!code}>
+            save as file
+          </button>
+        )}
       </div>
       <button className="link" onClick={() => setRestoring(true)}>
         restore from a backup →
