@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { buzz, setSoundEnabled, sfx, unlockAudio } from './audio.ts'
-import { arrive, celebratePromotion, completeFocus, endBreak, focusHidden, focusVisible, heartbeat, pendingPromotion, resolveAdventure, simulate, type RewardResult } from './game/logic.ts'
+import { arrive, celebratePromotion, completeFocus, endBreak, failFocus, focusHidden, focusVisible, heartbeat, pendingPromotion, resolveAdventure, simulate, type RewardResult } from './game/logic.ts'
 import { getGame, setGame, useGame } from './game/store.ts'
 import { Toasts, toast } from './ui/bits.tsx'
 import { Onboarding } from './screens/Onboarding.tsx'
@@ -19,6 +19,7 @@ import type { Note } from './game/state.ts'
 import { checkMail, connectMailbox, mailProblem, onNewMail, takeMailLink } from './mail.ts'
 import { startSync, syncFor, syncNow } from './sync.ts'
 import { notify } from './notify.ts'
+import { isNativeApp, native } from './native.ts'
 
 export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'study' | 'career' | 'exams' | 'settings'
 
@@ -27,6 +28,7 @@ export default function App() {
   const [view, setView] = useState<View>(() => (getGame().breakEndsAt ? 'break' : 'home'))
   const [setupOpen, setSetupOpen] = useState(false)
   const [failedAway, setFailedAway] = useState<number | null>(null)
+  const [failedBlocked, setFailedBlocked] = useState(false)
   const [reward, setReward] = useState<RewardResult | null>(null)
   const [newMail, setNewMail] = useState<Note[]>([])
 
@@ -57,9 +59,33 @@ export default function App() {
     return () => clearTimeout(id)
   }, [endsAt, free])
 
+  // The iPhone app: the session in the Dynamic Island, and her distracting apps blocked until it ends
+  const ses = game.session
+  const sesKey = ses ? `${ses.startedAt}:${ses.endsAt}` : ''
+  const hadSession = useRef(false)
+  useEffect(() => {
+    if (!isNativeApp) return
+    if (ses) native.focusStarted({ startedAt: ses.startedAt, endsAt: ses.endsAt, label: ses.label, fox: game.foxName })
+    else if (hadSession.current) native.focusEnded(getGame().pending ? 'done' : 'gaveUp')
+    hadSession.current = !!ses
+  }, [sesKey]) // only when the session itself starts, moves or ends
+
   // Leaving the app during focus + coming back
   useEffect(() => {
     const check = async () => {
+      // she tapped "use it anyway" on a blocked app (iPhone app)
+      const running = getGame().session
+      if (isNativeApp && running) {
+        const at = await native.brokeFocusAt()
+        if (at >= running.startedAt && at <= running.endsAt && getGame().session?.startedAt === running.startedAt) {
+          setGame(failFocus)
+          setFailedBlocked(true)
+          setFailedAway(0)
+          sfx.sad()
+          buzz([80, 60, 80], 'warning')
+          return
+        }
+      }
       // bring in progress from her other device first, so time spent there
       // doesn't count as time away (a running session belongs to this device)
       const g = getGame()
@@ -68,9 +94,10 @@ export default function App() {
       const r = focusVisible(arrive(getGame(), now), now)
       setGame(r.state)
       if (r.outcome === 'failed') {
+        setFailedBlocked(false)
         setFailedAway(r.awayMs)
         sfx.sad()
-        buzz([80, 60, 80])
+        buzz([80, 60, 80], 'warning')
       } else if (r.outcome === 'close-call') toast(`phew! ${r.state.foxName} looked up, but you came back in time. keep going!`)
       else if (r.outcome === 'paused') toast(`welcome back! the timer waited for you.`)
       checkMail(2 * 60_000)
@@ -114,7 +141,7 @@ export default function App() {
         if (now >= s.session.endsAt && !s.session.hiddenAt) {
           setGame(completeFocus(s, now))
           sfx.fanfare()
-          buzz([60, 40, 60, 40, 120])
+          buzz([60, 40, 60, 40, 120], 'success')
           return
         }
         if (now - s.session.lastBeat > 3000) setGame(heartbeat(s, now))
@@ -162,7 +189,7 @@ export default function App() {
 
   const calm = !game.session && !game.pending && !reward
   const promo = calm ? pendingPromotion(game) : null
-  const showPostcard = game.postcardToShow && calm && promo == null && view !== 'break'
+  const showPostcard = game.postcardToShow && calm && promo == null && view !== 'break' && failedAway == null
   const showMail = newMail.length > 0 && calm && promo == null && !showPostcard && failedAway == null
 
   return (
@@ -172,6 +199,7 @@ export default function App() {
       {failedAway != null && (
         <FailedModal
           awayMs={failedAway}
+          blocked={failedBlocked}
           onClose={() => setFailedAway(null)}
           onRetry={() => {
             setFailedAway(null)

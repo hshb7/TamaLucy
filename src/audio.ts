@@ -1,4 +1,5 @@
 // Tiny chiptune sound effects synthesised with WebAudio (no audio files).
+import { isNativeApp, native } from './native.ts'
 let ctx: AudioContext | null = null
 let enabled = true
 
@@ -49,11 +50,13 @@ export const sfx = {
   sparkle: () => play([[C6, 0, 0.06], [E6, 0.06, 0.06], [G6, 0.12, 0.1]], 'triangle', 0.06),
 }
 
-export function buzz(ms: number | number[]) {
+/** A little vibration: web vibration where supported, the Taptic Engine in the iPhone app. */
+export function buzz(ms: number | number[], style: 'light' | 'success' | 'warning' = 'light') {
+  if (isNativeApp) return native.haptic(style)
   try {
     navigator.vibrate?.(ms)
   } catch {
-    // unsupported (iOS): ignore
+    // unsupported (iOS Safari): ignore
   }
 }
 

@@ -5,11 +5,15 @@ import '@fontsource/pixelify-sans/latin-600.css'
 import '@fontsource/dotgothic16/latin-400.css'
 import './styles.css'
 import { registerSW } from 'virtual:pwa-register'
+import { isNativeApp } from './native.ts'
 
-try {
-  registerSW({ immediate: true })
-} catch {
-  // service workers unavailable (private mode, embedded preview): app still works online
+// offline support for the web app (the iPhone app already has its files built in)
+if (!isNativeApp) {
+  try {
+    registerSW({ immediate: true })
+  } catch {
+    // service workers unavailable (private mode, embedded preview): app still works online
+  }
 }
 
 // `#write` opens the post office (for sending letters) instead of the game.

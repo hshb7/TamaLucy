@@ -146,6 +146,11 @@ URL. That adds a 6-second focus length and a 12-second break/adventure length
      window and Dock icon. (In Chrome: the install icon in the address bar.)
 3. **Sign in on both with her mailbox code** (see below). It's the same fox everywhere.
 
+**Want the fox in her Dynamic Island, and her distracting apps locked while she
+focuses?** That needs the native iPhone app in [`ios/`](ios/README.md): the same app,
+wrapped for iPhone, built with Xcode and your Apple Developer account. It shares the
+same fox with the web app on her Mac.
+
 ### One fox, every device
 
 Her mailbox code is her login. The fox lives in the cloud (the same small Supabase
@@ -258,11 +263,13 @@ src/
   mail.ts            checks her mailbox and announces new letters
   sync.ts            one fox on every device: cloud save, sign-in, merging
   notify.ts          the end-of-session notification (Mac)
+  native.ts          the bridge to the native iPhone app (ios/)
 scripts/
   make-icons.ts      renders the app icons from the fox sprite (npm run icons)
   sprite-sheet.ts    renders all sprites to sprites.png for quick art edits (npm run sprites)
   new-mailbox.ts     makes a mailbox code + writer key and prints the SQL to register them
 supabase/migrations/ the database: letters, the cloud save, and the functions that guard them
+ios/                 the native iPhone app: Dynamic Island + Screen Time app blocking (see ios/README.md)
 ```
 
 The sprites are text grids (one character per pixel, colours in

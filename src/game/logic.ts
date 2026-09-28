@@ -168,12 +168,17 @@ export function focusVisible(s: GameState, now: number): { state: GameState; out
   if (awayMs <= grace) {
     return { state: { ...s, session: { ...ses, hiddenAt: null, lastBeat: now, awayMs: ses.awayMs + awayMs } }, outcome: 'close-call', awayMs }
   }
-  const failed: GameState = {
+  return { state: failFocus(s), outcome: 'failed', awayMs }
+}
+
+/** The fox looked up and she was gone (or she opened a blocked app): the session doesn't count. */
+export function failFocus(s: GameState): GameState {
+  if (!s.session) return s
+  return {
     ...bump(s, { social: -12, fun: -6 }),
     session: null,
     stats: { ...s.stats, left: s.stats.left + 1 },
   }
-  return { state: failed, outcome: 'failed', awayMs }
 }
 
 export function giveUp(s: GameState): GameState {

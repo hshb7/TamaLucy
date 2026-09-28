@@ -115,7 +115,7 @@ export function MailModal({ notes, onClose }: { notes: Note[]; onClose: () => vo
   )
 }
 
-export function FailedModal({ awayMs, onClose, onRetry }: { awayMs: number; onClose: () => void; onRetry: () => void }) {
+export function FailedModal({ awayMs, blocked, onClose, onRetry }: { awayMs: number; blocked?: boolean; onClose: () => void; onRetry: () => void }) {
   const game = useGame()
   const f = game.foxName
   return (
@@ -123,8 +123,8 @@ export function FailedModal({ awayMs, onClose, onRetry }: { awayMs: number; onCl
       <FoxPortrait equipped={game.equipped} face="sad" className="portrait-m" />
       <h2>{f} looked up and you were gone...</h2>
       <p>
-        you left the app for {formatDuration(awayMs)}, so this session didn&rsquo;t count. {f} is a little sad, but it&rsquo;s
-        okay. you can try again!
+        {blocked ? 'you opened one of your blocked apps' : `you left the app for ${formatDuration(awayMs)}`}, so this session didn&rsquo;t
+        count. {f} is a little sad, but it&rsquo;s okay. you can try again!
       </p>
       <div className="row">
         <button className="btn" onClick={onClose}>
