@@ -44,7 +44,7 @@ function PhotoSection() {
           <div className="photo-frame empty-frame" aria-hidden />
         )}
         <div className="photo-actions">
-          <p className="muted">pick any photo (friends, a pet, a favourite place) and it becomes pixel art in the study corner. it stays on this phone.</p>
+          <p className="muted">pick any photo (friends, a pet, a favourite place) and it becomes pixel art in the study corner. only the pixel version is kept.</p>
           <label className={`btn file-btn ${busy ? 'busy' : ''}`}>
             {busy ? 'pixelating…' : game.photo ? 'change photo' : 'add a photo'}
             <input type="file" accept="image/*" disabled={busy} onChange={(e) => pick(e.target.files?.[0])} />

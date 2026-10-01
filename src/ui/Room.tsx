@@ -30,6 +30,8 @@ interface Props {
   /** Tapped the fox while it was asleep or sulking. */
   onWake?: () => void
   onStatus?: (label: string | null) => void
+  /** Show the whole room at once (wide screens) instead of a window you swipe across. */
+  wide?: boolean
 }
 
 type Box = { x: number; y: number; w: number; h: number }
@@ -127,7 +129,11 @@ function userTask(kind: TaskKind, here: number, arg?: string): Task {
 }
 
 /** The fox's home: a wide room you can swipe across, a fox with free will, and pie menus. */
-export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake, onStatus }: Props) {
+export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake, onStatus, wide = false }: Props) {
+  // how much of the room is on screen (pixel-art units)
+  const viewW = wide ? ROOM_W : VIEW_W
+  const viewRef = useRef(viewW)
+  viewRef.current = viewW
   const gameRef = useRef(game)
   gameRef.current = game
   const hooks = useRef({ onStart, onDone, onStatus })
@@ -181,7 +187,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
 
   // camera starts centred on the fox
   useEffect(() => {
-    cam.current = Math.max(0, Math.min(ROOM_W - VIEW_W, brain.current!.x - VIEW_W / 2))
+    cam.current = Math.max(0, Math.min(ROOM_W - viewRef.current, brain.current!.x - viewRef.current / 2))
   }, [])
 
   const every = (key: string, t: number, ms: number) => {
@@ -200,9 +206,10 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
     if (!g.adventure) b.update(t, g)
 
     // camera: follow the fox unless the player is looking around
-    const maxCam = ROOM_W - VIEW_W
+    const viewW = viewRef.current
+    const maxCam = ROOM_W - viewW
     if (!menuRef.current && t > manualUntil.current) {
-      const target = Math.max(0, Math.min(maxCam, b.x - VIEW_W / 2))
+      const target = Math.max(0, Math.min(maxCam, b.x - viewW / 2))
       cam.current += (target - cam.current) * Math.min(1, dt * 0.004)
     }
     const camX = Math.round(cam.current)
@@ -233,14 +240,14 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
     else drawTheFox(p, t, g, b, doing)
     drawAtmosphere(p, opts)
     if (opts.birthday && every('confetti', t, 180)) {
-      particles.current.push({ kind: 'icon', art: CONFETTI[Math.floor(Math.random() * CONFETTI.length)], x: camX + Math.random() * VIEW_W, y: -2, vx: (Math.random() - 0.5) * 8, vy: 14 + Math.random() * 8, born: t, life: 6000 })
+      particles.current.push({ kind: 'icon', art: CONFETTI[Math.floor(Math.random() * CONFETTI.length)], x: camX + Math.random() * viewW, y: -2, vx: (Math.random() - 0.5) * 8, vy: 14 + Math.random() * 8, born: t, life: 6000 })
     }
     stepParticles(p, particles.current, t)
 
     // hint that there's more room to either side
     const pulse = 0.35 + 0.25 * Math.sin(t / 300)
     if (camX > 1) p0.sprite(ARROW_L, 2, 52, pulse)
-    if (camX < maxCam - 1) p0.sprite(ARROW_R, VIEW_W - 5, 52, pulse)
+    if (camX < maxCam - 1) p0.sprite(ARROW_R, viewW - 5, 52, pulse)
 
     const label = g.adventure ? null : cur ? (b.walking ? HEADING[cur.kind] ?? cur.label : cur.label) : null
     if (label !== lastLabel.current) {
@@ -383,7 +390,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
 
   const toRoom = (clientX: number, clientY: number) => {
     const r = wrap.current!.getBoundingClientRect()
-    const vx = ((clientX - r.left) / r.width) * VIEW_W
+    const vx = ((clientX - r.left) / r.width) * viewRef.current
     const vy = ((clientY - r.top) / r.height) * ROOM_H
     return { x: vx + Math.round(cam.current), y: vy, cssX: clientX - r.left, cssY: clientY - r.top }
   }
@@ -424,7 +431,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
     if (!d.moved && Math.abs(dx) < 7) return
     d.moved = true
     const r = wrap.current!.getBoundingClientRect()
-    cam.current = Math.max(0, Math.min(ROOM_W - VIEW_W, d.cam - dx * (VIEW_W / r.width)))
+    cam.current = Math.max(0, Math.min(ROOM_W - viewRef.current, d.cam - dx * (viewRef.current / r.width)))
     manualUntil.current = performance.now() + 7000
   }
   const onPointerUp = (e: React.PointerEvent) => {
@@ -516,7 +523,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
   const { title, options } = menu ? optionsFor(menu) : { title: '', options: [] }
   const box = wrap.current?.getBoundingClientRect()
   const a = anchor.current
-  const bubbleLeft = ((a.x - cam.current) / VIEW_W) * 100
+  const bubbleLeft = ((a.x - cam.current) / viewW) * 100
   const bubbleTop = ((a.y - 4) / ROOM_H) * 100
 
   // keep long speech bubbles inside the room; the tail still points at the fox
@@ -542,7 +549,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
       onPointerUp={onPointerUp}
       onPointerCancel={() => (drag.current = null)}
     >
-      <PixelCanvas w={VIEW_W} h={ROOM_H} draw={draw} fps={20} label={`${game.foxName}'s room`} />
+      <PixelCanvas w={viewW} h={ROOM_H} draw={draw} fps={20} label={`${game.foxName}'s room`} />
       {userLabel && (
         <button
           className="action-chip"

@@ -58,7 +58,10 @@ export function BackupSection() {
     <section className="px-box card">
       <h2>backup</h2>
       <p className="muted">
-        {game.foxName} lives on this phone. a backup code lets you bring {game.foxName} back if you delete the app or switch phones. last backup: {ago(game.lastBackupAt)}.
+        {game.mailbox
+          ? `${game.foxName} is saved in the cloud with your mailbox code. a backup code is a spare copy you can keep anywhere.`
+          : `${game.foxName} lives on this device. a backup code lets you bring ${game.foxName} back if you delete the app or switch devices.`}{' '}
+        last backup: {ago(game.lastBackupAt)}.
       </p>
       <textarea id="backup-code" ref={box} className="backup-code" readOnly value={code} rows={2} onFocus={(e) => e.currentTarget.select()} aria-label="backup code" />
       <div className="row">
@@ -101,7 +104,7 @@ function RestoreModal({ onClose }: { onClose: () => void }) {
       <Modal onClose={onClose}>
         <h2>restore {b.fox}?</h2>
         <p>
-          this backup has {b.fox} with {formatMinutes(b.minutes)} of focus and {b.notes} letters. it will replace {game.foxName} on this phone.
+          this backup has {b.fox} with {formatMinutes(b.minutes)} of focus and {b.notes} letters. it will replace {game.foxName} here.
         </p>
         <div className="row">
           <button className="btn" onClick={onClose}>

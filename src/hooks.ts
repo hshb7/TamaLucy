@@ -1,4 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
+
+/** The desktop layout: a wide window (her Mac, or a laptop browser). Matches the CSS breakpoint. */
+export const WIDE_QUERY = '(min-width: 900px) and (min-height: 560px)'
+
+export function useWide(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mq = window.matchMedia(WIDE_QUERY)
+      mq.addEventListener('change', onChange)
+      return () => mq.removeEventListener('change', onChange)
+    },
+    () => window.matchMedia(WIDE_QUERY).matches,
+  )
+}
 
 /** Re-render every `ms` and return the current time. */
 export function useNow(ms = 1000) {

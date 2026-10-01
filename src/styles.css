@@ -318,6 +318,29 @@ button {
 }
 
 /* ── home ────────────────────────────────────────────────────────────────── */
+/* home: on a phone the two wrappers step aside and everything stacks
+   (header, needs, room, focus button…); on a wide screen they become the
+   room column and the sidebar (see the desktop section at the end) */
+.home-main,
+.home-side {
+  display: contents;
+}
+.home .home-head {
+  order: -2;
+}
+.home .needs {
+  order: -1;
+}
+.home .nav {
+  order: 1;
+}
+.need-label {
+  display: none;
+}
+.settings-cards {
+  display: contents;
+}
+
 .home-head {
   display: flex;
   align-items: center;
@@ -1711,4 +1734,101 @@ select:focus {
 .po-letter-body .sign {
   text-align: right;
   font-family: var(--font-pixel);
+}
+
+/* ── desktop: her Mac, or any wide window ─────────────────────────────────
+   Keep in sync with WIDE_QUERY in src/hooks.ts (the room shows in full there). */
+@media (min-width: 900px) and (min-height: 560px) {
+  .screen:not(.focus) {
+    max-width: 760px;
+    padding: 24px 32px 28px;
+  }
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  /* home: the whole room on the left, everything else in a sidebar */
+  .screen.home {
+    max-width: 1320px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-rows: auto 1fr;
+    gap: 18px 32px;
+    align-items: start;
+  }
+  .home .home-head {
+    grid-column: 1 / -1;
+  }
+  .home-main {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-self: center;
+  }
+  .home-main .room {
+    /* as wide as the column, but never taller than the window */
+    width: min(calc(100% - 2 * var(--b)), calc((100dvh - 250px) * 2));
+    align-self: center;
+  }
+  .home-side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-self: center;
+  }
+  .home .needs {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px 14px;
+    background: var(--card);
+    box-shadow: var(--outline);
+    margin: var(--b);
+  }
+  .need-label {
+    display: block;
+    flex: none;
+    width: 68px;
+    font-family: var(--font-pixel);
+    font-size: 14px;
+  }
+  /* the menu becomes a toolbar under the room */
+  .home-main .nav {
+    margin-top: 4px;
+    width: calc(100% - 2 * var(--b));
+    max-width: min(100%, calc((100dvh - 250px) * 2));
+    align-self: center;
+    gap: 10px;
+  }
+  .home-main .nav button {
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 6px;
+    font-size: 15px;
+  }
+  .home-side .letter-card {
+    animation: none;
+  }
+
+  /* settings: cards in two columns */
+  .screen.settings {
+    max-width: 1080px;
+  }
+  .settings-cards {
+    display: block;
+    columns: 2;
+    column-gap: 20px;
+  }
+  .settings-cards > * {
+    break-inside: avoid;
+    margin: 0 var(--b) 18px;
+  }
+
+  /* focus: a bigger timer and study corner */
+  .focus > :not(.scrim) {
+    max-width: 600px;
+  }
+  .timer {
+    font-size: 120px;
+  }
 }

@@ -74,61 +74,65 @@ export function Home({ onFocus, go }: { onFocus: () => void; go: (v: View) => vo
         </div>
       </header>
 
-      <NeedsPanel game={game} />
+      {/* wide screens: the room (with the menu under it) on the left, the rest in a sidebar; see .home-main / .home-side */}
+      <div className="home-main">
+        <LivingRoom onStudy={onFocus} onQuiz={() => setQuiz(true)} />
+        <nav className="nav">
+          <button onClick={() => go('wardrobe')}>
+            <PixelIcon sprite={ICON_ART.bow} scale={3} />
+            <span>closet</span>
+          </button>
+          <button onClick={() => go('decor')}>
+            <PixelIcon sprite={NEED_ICON_ART.palette} scale={3} />
+            <span>decor</span>
+          </button>
+          <button onClick={() => go('album')}>
+            <PixelIcon sprite={ICON_ART.gift} scale={3} />
+            <span>album</span>
+            {unread > 0 && <span className="badge">{unread}</span>}
+          </button>
+          <button onClick={() => go('study')}>
+            <PixelIcon sprite={NEED_ICON_ART.card} scale={3} />
+            <span>study</span>
+          </button>
+          <button onClick={() => go('settings')}>
+            <PixelIcon sprite={ICON_ART.gear} scale={3} />
+            <span>settings</span>
+          </button>
+        </nav>
+      </div>
 
-      <LivingRoom onStudy={onFocus} onQuiz={() => setQuiz(true)} />
+      <aside className="home-side">
+        <NeedsPanel game={game} />
 
-      <button className="btn btn-big btn-pink" onClick={onFocus}>
-        <PixelIcon sprite={ICON_ART.acorn} scale={3} /> focus with {game.foxName}
-      </button>
-      <section className="today px-box" aria-label="today's focus">
-        <div className="acorns">
-          {Array.from({ length: Math.max(DAILY_GOAL, todaySessions) }, (_, i) => (
-            <PixelIcon key={i} sprite={ICON_ART.heart} scale={2} className={i < todaySessions ? '' : 'silhouette'} />
-          ))}
-        </div>
-        <p>
-          {todaySessions === 0
-            ? `focus to earn acorns, then spend them on ${game.foxName} ✿`
-            : todaySessions >= DAILY_GOAL
-              ? `all ${DAILY_GOAL} sessions done today! ${formatMinutes(today)} of focus ✿`
-              : `${todaySessions}/${DAILY_GOAL} sessions today · ${formatMinutes(today)} of focus`}
-        </p>
-      </section>
+        <button className="btn btn-big btn-pink" onClick={onFocus}>
+          <PixelIcon sprite={ICON_ART.acorn} scale={3} /> focus with {game.foxName}
+        </button>
+        <section className="today px-box" aria-label="today's focus">
+          <div className="acorns">
+            {Array.from({ length: Math.max(DAILY_GOAL, todaySessions) }, (_, i) => (
+              <PixelIcon key={i} sprite={ICON_ART.heart} scale={2} className={i < todaySessions ? '' : 'silhouette'} />
+            ))}
+          </div>
+          <p>
+            {todaySessions === 0
+              ? `focus to earn acorns, then spend them on ${game.foxName} ✿`
+              : todaySessions >= DAILY_GOAL
+                ? `all ${DAILY_GOAL} sessions done today! ${formatMinutes(today)} of focus ✿`
+                : `${todaySessions}/${DAILY_GOAL} sessions today · ${formatMinutes(today)} of focus`}
+          </p>
+        </section>
 
-      {note && (
-        <button className={`letter-card px-box tone-${note.tone ?? 'pink'}`} onClick={() => go(note.go)}>
-          <PixelIcon sprite={note.icon} scale={3} />
-          <span>
-            {note.text}
-            <small>{note.sub}</small>
-          </span>
-        </button>
-      )}
-
-      <nav className="nav">
-        <button onClick={() => go('wardrobe')}>
-          <PixelIcon sprite={ICON_ART.bow} scale={3} />
-          <span>closet</span>
-        </button>
-        <button onClick={() => go('decor')}>
-          <PixelIcon sprite={NEED_ICON_ART.palette} scale={3} />
-          <span>decor</span>
-        </button>
-        <button onClick={() => go('album')}>
-          <PixelIcon sprite={ICON_ART.gift} scale={3} />
-          <span>album</span>
-          {unread > 0 && <span className="badge">{unread}</span>}
-        </button>
-        <button onClick={() => go('study')}>
-          <PixelIcon sprite={NEED_ICON_ART.card} scale={3} />
-          <span>study</span>
-        </button>
-        <button onClick={() => go('settings')}>
-          <PixelIcon sprite={ICON_ART.gear} scale={3} />
-          <span>settings</span>
-        </button>
-      </nav>
+        {note && (
+          <button className={`letter-card px-box tone-${note.tone ?? 'pink'}`} onClick={() => go(note.go)}>
+            <PixelIcon sprite={note.icon} scale={3} />
+            <span>
+              {note.text}
+              <small>{note.sub}</small>
+            </span>
+          </button>
+        )}
+      </aside>
       {quiz && <QuizChooser onClose={() => setQuiz(false)} onMakeCards={() => go('study')} />}
     </main>
   )

@@ -129,84 +129,87 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
   const set = (patch: Partial<Settings>) => setGame((s) => ({ ...s, settings: { ...s.settings, ...patch } }))
 
   return (
-    <main className="screen">
+    <main className="screen settings">
       <Header title="settings" onBack={onBack} />
-      <section className="px-box card form">
-        <NameField label="fox’s name" value={game.foxName} max={14} onSave={(v) => setGame((s) => ({ ...s, foxName: v }))} />
-        <NameField label="your name" value={game.owner} max={16} onSave={(v) => setGame((s) => ({ ...s, owner: v }))} />
-      </section>
+      {/* two columns of cards on a wide screen */}
+      <div className="settings-cards">
+        <section className="px-box card form">
+          <NameField label="fox’s name" value={game.foxName} max={14} onSave={(v) => setGame((s) => ({ ...s, foxName: v }))} />
+          <NameField label="your name" value={game.owner} max={16} onSave={(v) => setGame((s) => ({ ...s, owner: v }))} />
+        </section>
 
-      <section className="px-box card">
-        <h2>how much looking after {game.foxName} needs</h2>
-        <Choice
-          value={game.settings.care}
-          options={['classic', 'gentle', 'paused']}
-          onChange={(v) => set({ care: v, careBefore: v === 'paused' ? (game.settings.care === 'paused' ? game.settings.careBefore : game.settings.care) : undefined })}
-          format={(v) => (v === 'classic' ? 'classic' : v === 'gentle' ? 'gentle' : 'exam week')}
-        />
-        <p className="muted">
-          {game.settings.care === 'classic'
-            ? `a real little pet: ${game.foxName} gets sad after a couple of days alone, and depressed after three.`
-            : game.settings.care === 'gentle'
-              ? `needs drain more slowly, and ${game.foxName} never gets more than a little sad.`
-              : `everything is paused. ${game.foxName} won’t get hungry or lonely until you turn this off.`}
-        </p>
-      </section>
+        <section className="px-box card">
+          <h2>how much looking after {game.foxName} needs</h2>
+          <Choice
+            value={game.settings.care}
+            options={['classic', 'gentle', 'paused']}
+            onChange={(v) => set({ care: v, careBefore: v === 'paused' ? (game.settings.care === 'paused' ? game.settings.careBefore : game.settings.care) : undefined })}
+            format={(v) => (v === 'classic' ? 'classic' : v === 'gentle' ? 'gentle' : 'exam week')}
+          />
+          <p className="muted">
+            {game.settings.care === 'classic'
+              ? `a real little pet: ${game.foxName} gets sad after a couple of days alone, and depressed after three.`
+              : game.settings.care === 'gentle'
+                ? `needs drain more slowly, and ${game.foxName} never gets more than a little sad.`
+                : `everything is paused. ${game.foxName} won’t get hungry or lonely until you turn this off.`}
+          </p>
+        </section>
 
-      <section className="px-box card">
-        <h2>your birthday</h2>
-        <BirthdayField value={game.birthday} onChange={(v) => setGame((s) => ({ ...s, birthday: v }))} />
-        <p className="muted">{game.foxName} has a little something planned for the day. (no peeking.)</p>
-      </section>
+        <section className="px-box card">
+          <h2>your birthday</h2>
+          <BirthdayField value={game.birthday} onChange={(v) => setGame((s) => ({ ...s, birthday: v }))} />
+          <p className="muted">{game.foxName} has a little something planned for the day. (no peeking.)</p>
+        </section>
 
-      {isNativeApp && <BlockingSection />}
+        {isNativeApp && <BlockingSection />}
 
-      <section className="px-box card">
-        <h2>when I leave the app during focus</h2>
-        <Choice
-          value={game.settings.leaveMode}
-          options={['strict', 'gentle', 'free']}
-          onChange={(v) => set({ leaveMode: v })}
-          format={(v) => (v === 'strict' ? 'end the session' : v === 'gentle' ? 'just pause' : 'keep going')}
-        />
-        <p className="muted">
-          {game.settings.leaveMode === 'strict'
-            ? `leaving for more than a few seconds ends the session, and ${game.foxName} gets sad. best on your phone.`
-            : game.settings.leaveMode === 'free'
-              ? `the timer keeps running while you study in other apps, and ${game.foxName} lets you know when it’s done. best on your Mac.`
-              : 'the timer pauses while you are away. no penalty, but no fox-powered willpower either.'}
-        </p>
-        <p className="muted">this is set separately on each device.</p>
-        {game.settings.leaveMode === 'strict' && (
-          <>
-            <h3>grace period</h3>
-            <Choice value={game.settings.graceSeconds} options={[5, 10, 20]} onChange={(v) => set({ graceSeconds: v })} format={(v) => `${v}s`} />
-          </>
-        )}
-        <button className="link" onClick={() => setTips(true)}>
-          how to lock your phone to this app →
-        </button>
-      </section>
+        <section className="px-box card">
+          <h2>when I leave the app during focus</h2>
+          <Choice
+            value={game.settings.leaveMode}
+            options={['strict', 'gentle', 'free']}
+            onChange={(v) => set({ leaveMode: v })}
+            format={(v) => (v === 'strict' ? 'end the session' : v === 'gentle' ? 'just pause' : 'keep going')}
+          />
+          <p className="muted">
+            {game.settings.leaveMode === 'strict'
+              ? `leaving for more than a few seconds ends the session, and ${game.foxName} gets sad. best on your phone.`
+              : game.settings.leaveMode === 'free'
+                ? `the timer keeps running while you study in other apps, and ${game.foxName} lets you know when it’s done. best on your Mac.`
+                : 'the timer pauses while you are away. no penalty, but no fox-powered willpower either.'}
+          </p>
+          <p className="muted">this is set separately on each device.</p>
+          {game.settings.leaveMode === 'strict' && (
+            <>
+              <h3>grace period</h3>
+              <Choice value={game.settings.graceSeconds} options={[5, 10, 20]} onChange={(v) => set({ graceSeconds: v })} format={(v) => `${v}s`} />
+            </>
+          )}
+          <button className="link" onClick={() => setTips(true)}>
+            how to lock your phone to this app →
+          </button>
+        </section>
 
-      <section className="px-box card">
-        <h2>break length</h2>
-        <Choice value={game.settings.breakMinutes} options={DEBUG ? [0.2, 3, 5, 10, 15] : [3, 5, 10, 15]} onChange={(v) => set({ breakMinutes: v })} format={(v) => (v < 1 ? `${v * 60}s` : `${v} min`)} />
-        <h2>sounds</h2>
-        <Choice value={game.settings.sound ? 'on' : 'off'} options={['on', 'off']} onChange={(v) => set({ sound: v === 'on' })} />
-      </section>
+        <section className="px-box card">
+          <h2>break length</h2>
+          <Choice value={game.settings.breakMinutes} options={DEBUG ? [0.2, 3, 5, 10, 15] : [3, 5, 10, 15]} onChange={(v) => set({ breakMinutes: v })} format={(v) => (v < 1 ? `${v * 60}s` : `${v} min`)} />
+          <h2>sounds</h2>
+          <Choice value={game.settings.sound ? 'on' : 'off'} options={['on', 'off']} onChange={(v) => set({ sound: v === 'on' })} />
+        </section>
 
-      <MailboxSection />
+        <MailboxSection />
 
-      <BackupSection />
+        <BackupSection />
 
-      <section className="px-box card">
-        <button className="link" onClick={() => setInstall(true)}>
-          install {GIFT.appName} on your iPhone or Mac →
-        </button>
-        <button className="link danger" onClick={() => setReset(1)}>
-          start over…
-        </button>
-      </section>
+        <section className="px-box card">
+          <button className="link" onClick={() => setInstall(true)}>
+            install {GIFT.appName} on your iPhone or Mac →
+          </button>
+          <button className="link danger" onClick={() => setReset(1)}>
+            start over…
+          </button>
+        </section>
+      </div>
 
       <p className="muted center credits">
         made with love{GIFT.from ? ` by ${GIFT.from}` : ''} for {game.owner} ♡

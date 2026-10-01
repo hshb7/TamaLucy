@@ -12,10 +12,12 @@ struct TamaLucyMacApp: App {
     var body: some Scene {
         Window("TamaLucy", id: "main") {
             MacWebView()
-                .frame(minWidth: 360, minHeight: 620)
+                // narrow it down and it turns into the compact (phone-style) layout,
+                // a little study buddy for the corner of the screen
+                .frame(minWidth: 380, minHeight: 600)
                 .background(Color(red: 1, green: 0.957, blue: 0.91))
         }
-        .defaultSize(width: 430, height: 880)
+        .defaultSize(width: 1180, height: 780)
         .commands {
             // one fox, one window
             CommandGroup(replacing: .newItem) {}

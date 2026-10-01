@@ -5,7 +5,7 @@ import { doActivity, doCare, refillBowl, refillCost } from '../game/logic.ts'
 import { statusLine, tapLine } from '../game/lines.ts'
 import type { Activity } from '../game/needs.ts'
 import { getGame, setGame, useGame } from '../game/store.ts'
-import { formatClock, useNow } from '../hooks.ts'
+import { formatClock, useNow, useWide } from '../hooks.ts'
 import { Room, type RoomCommand } from './Room.tsx'
 import type { Task } from './brain.ts'
 
@@ -46,6 +46,8 @@ const SOUND: Partial<Record<string, () => void>> = {
 export function LivingRoom({ onStudy, onQuiz }: { onStudy: () => void; onQuiz: () => void }) {
   const game = useGame()
   const now = useNow(1000)
+  // on a wide screen the whole room fits, so there's nothing to swipe
+  const wide = useWide()
   const [bubble, setBubble] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -92,7 +94,7 @@ export function LivingRoom({ onStudy, onQuiz }: { onStudy: () => void; onQuiz: (
   const adv = game.adventure && ADVENTURES.find((a) => a.id === game.adventure!.id)
   return (
     <>
-      <Room game={game} bubble={bubble} onStart={onStart} onDone={onDone} onCommand={onCommand} onBroke={onBroke} onWake={() => say(tapLine(getGame(), Date.now()))} onStatus={setStatus} />
+      <Room game={game} bubble={bubble} onStart={onStart} onDone={onDone} onCommand={onCommand} onBroke={onBroke} wide={wide} onWake={() => say(tapLine(getGame(), Date.now()))} onStatus={setStatus} />
       <p className="status">
         {adv
           ? `${game.foxName} is out ${adv.verb} at ${adv.place} · back in ${formatClock(game.adventure!.returnsAt - now)}`

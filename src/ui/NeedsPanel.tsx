@@ -15,6 +15,7 @@ export function NeedsPanel({ game }: { game: GameState }) {
         return (
           <div key={k} className="need" role="meter" aria-label={NEED_INFO[k].label} aria-valuenow={Math.round(v)} aria-valuemin={0} aria-valuemax={100} title={NEED_INFO[k].label}>
             <PixelIcon sprite={ICONS[NEED_INFO[k].icon as keyof typeof ICONS]} scale={2} />
+            <span className="need-label">{NEED_INFO[k].label}</span>
             <div className={`need-bar ${tone}`}>
               <span style={{ width: `${Math.max(4, v)}%` }} />
             </div>
