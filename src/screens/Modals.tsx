@@ -123,7 +123,7 @@ export function FailedModal({ awayMs, blocked, onClose, onRetry }: { awayMs: num
       <FoxPortrait equipped={game.equipped} face="sad" className="portrait-m" />
       <h2>{f} looked up and you were gone...</h2>
       <p>
-        {blocked ? 'you opened one of your blocked apps' : `you left the app for ${formatDuration(awayMs)}`}, so this session didn&rsquo;t
+        {blocked ? 'you went to one of your distracting apps' : `you left the app for ${formatDuration(awayMs)}`}, so this session didn&rsquo;t
         count. {f} is a little sad, but it&rsquo;s okay. you can try again!
       </p>
       <div className="row">

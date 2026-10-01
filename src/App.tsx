@@ -19,7 +19,7 @@ import type { Note } from './game/state.ts'
 import { checkMail, connectMailbox, mailProblem, onNewMail, takeMailLink } from './mail.ts'
 import { startSync, syncFor, syncNow } from './sync.ts'
 import { notify } from './notify.ts'
-import { isNativeApp, native } from './native.ts'
+import { isNativeApp, native, onNative } from './native.ts'
 
 export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'study' | 'career' | 'exams' | 'settings'
 
@@ -72,20 +72,23 @@ export default function App() {
 
   // Leaving the app during focus + coming back
   useEffect(() => {
-    const check = async () => {
-      // she tapped "use it anyway" on a blocked app (iPhone app)
+    /** She gave in to one of her distracting apps (iPhone: "use it anyway"; Mac: the fox popped up). */
+    const checkBroke = async () => {
       const running = getGame().session
-      if (isNativeApp && running) {
-        const at = await native.brokeFocusAt()
-        if (at >= running.startedAt && at <= running.endsAt && getGame().session?.startedAt === running.startedAt) {
-          setGame(failFocus)
-          setFailedBlocked(true)
-          setFailedAway(0)
-          sfx.sad()
-          buzz([80, 60, 80], 'warning')
-          return
-        }
-      }
+      if (!isNativeApp || !running) return false
+      const at = await native.brokeFocusAt()
+      if (at < running.startedAt || at > running.endsAt || getGame().session?.startedAt !== running.startedAt) return false
+      setGame(failFocus)
+      setFailedBlocked(true)
+      setFailedAway(0)
+      sfx.sad()
+      buzz([80, 60, 80], 'warning')
+      return true
+    }
+    // the Mac app is often still on screen when it happens, so it tells us right away
+    const offBroke = onNative('broke', () => void checkBroke())
+    const check = async () => {
+      if (await checkBroke()) return
       // bring in progress from her other device first, so time spent there
       // doesn't count as time away (a running session belongs to this device)
       const g = getGame()
@@ -125,6 +128,7 @@ export default function App() {
     const unlock = () => unlockAudio()
     window.addEventListener('pointerdown', unlock)
     return () => {
+      offBroke()
       document.removeEventListener('visibilitychange', onVis)
       window.removeEventListener('pagehide', onHide)
       window.removeEventListener('pointerdown', unlock)

@@ -10,7 +10,7 @@ import { DEBUG } from '../debug.ts'
 import { BackupSection } from './Backup.tsx'
 import { MailboxSection } from './Mailbox.tsx'
 import { resetSync } from '../sync.ts'
-import { isNativeApp, native, type BlockingStatus } from '../native.ts'
+import { isNativeApp, native, nativePlatform, type BlockingStatus } from '../native.ts'
 import { toast } from '../ui/bits.tsx'
 
 function Choice<T extends string | number>({ value, options, onChange, format }: { value: T; options: T[]; onChange: (v: T) => void; format?: (v: T) => string }) {
@@ -47,7 +47,7 @@ function NameField({ label, value, max, onSave }: { label: string; value: string
   )
 }
 
-/** iPhone app only: which apps Screen Time blocks while she focuses. */
+/** Native apps only: on the iPhone, Screen Time locks her distracting apps; on the Mac, the fox pops up over them. */
 function BlockingSection() {
   const game = useGame()
   const [status, setStatus] = useState<BlockingStatus | null>(null)
@@ -57,29 +57,39 @@ function BlockingSection() {
   }, [])
   if (!status?.available) return null
   const f = game.foxName
+  const mac = nativePlatform === 'mac'
+  const n = status.count
   const choose = async () => {
     setBusy(true)
     const next = await native.chooseBlockedApps()
     setStatus(next)
     setBusy(false)
     if (next.count > 0) {
-      // the blocked apps are the rule now, so other apps (notes, readings) are fine
+      // the chosen apps are the rule now, so other apps (notes, readings) are fine
       setGame((s) => ({ ...s, settings: { ...s.settings, leaveMode: 'free' } }))
-      toast(`got it! those stay locked while you and ${f} focus ✿`)
+      toast(mac ? `got it! ${f} will keep an eye out for those ✿` : `got it! those stay locked while you and ${f} focus ✿`)
     }
   }
   return (
     <section className="px-box card">
-      <h2>block distracting apps</h2>
+      <h2>{mac ? 'distracting apps' : 'block distracting apps'}</h2>
       <p className="muted">
-        {status.count > 0
-          ? `${status.count} app${status.count === 1 ? '' : 's'} and site${status.count === 1 ? '' : 's'} are locked during focus. opening one shows ${f}; “use it anyway” ends the session.`
-          : `pick the apps that pull you away (instagram, tiktok...). during focus they show ${f} instead, and anything else, like your readings, still works.`}
+        {mac
+          ? n > 0
+            ? `${n} app${n === 1 ? '' : 's'} to watch during focus. opening one brings up ${f}: back to studying, or “use it anyway”, which ends the session.`
+            : `pick the apps that pull you away (messages, games...). during focus, opening one brings up ${f}. everything else, like Word and your readings, works as usual.`
+          : n > 0
+            ? `${n} app${n === 1 ? '' : 's'} and site${n === 1 ? '' : 's'} are locked during focus. opening one shows ${f}; “use it anyway” ends the session.`
+            : `pick the apps that pull you away (instagram, tiktok...). during focus they show ${f} instead, and anything else, like your readings, still works.`}
       </p>
       <button className="btn" disabled={busy} onClick={choose}>
-        {busy ? 'opening Screen Time…' : status.count > 0 ? 'change blocked apps' : 'choose apps to block'}
+        {busy ? (mac ? 'choosing…' : 'opening Screen Time…') : n > 0 ? (mac ? 'choose again' : 'change blocked apps') : mac ? 'choose apps' : 'choose apps to block'}
       </button>
-      <p className="muted">uses Apple&rsquo;s Screen Time. it stays on this phone: the app never sees which apps you use.</p>
+      <p className="muted">
+        {mac
+          ? 'it stays on this Mac: the app only notices the apps you pick, and only during focus.'
+          : 'uses Apple’s Screen Time. it stays on this phone: the app never sees which apps you use.'}
+      </p>
     </section>
   )
 }

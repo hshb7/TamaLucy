@@ -1,4 +1,4 @@
-# The iPhone app, described for XcodeGen (https://github.com/yonaskolb/XcodeGen).
+# The iPhone and Mac apps, described for XcodeGen (https://github.com/yonaskolb/XcodeGen).
 # Generate the Xcode project with `xcodegen` in this folder; see ios/README.md.
 #
 # Change APP_ID and DEVELOPMENT_TEAM below, and nothing else.
@@ -6,6 +6,7 @@ name: TamaLucy
 options:
   deploymentTarget:
     iOS: "16.2"
+    macOS: "13.0"
   createIntermediateGroups: true
 settings:
   base:
@@ -174,3 +175,50 @@ targets:
         com.apple.developer.family-controls: true
         com.apple.security.application-groups:
           - group.$(APP_ID)
+
+  # ─── the Mac app ──────────────────────────────────────────────────────────
+  # The same web app in a window, the fox + countdown in the menu bar, and a fox
+  # that pops up over her distracting apps during focus. Nothing needs Apple's
+  # approval, so it can go straight to her Mac (see ios/README.md).
+  TamaLucyMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: Mac
+      - path: App/AppSchemeHandler.swift
+      - path: Shared/Fox.xcassets
+      - path: ../dist
+        type: folder
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_NAME: TamaLucy
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_ID).mac
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+    info:
+      path: Mac/Info.plist
+      properties:
+        CFBundleDisplayName: TamaLucy
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.productivity
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+    entitlements:
+      path: Mac/Mac.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        # letters + syncing her fox
+        com.apple.security.network.client: true
+        # reading the apps she picks as distracting
+        com.apple.security.files.user-selected.read-only: true
+    preBuildScripts:
+      - name: Check the web app is built
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ ! -f "${SRCROOT}/../dist/index.html" ]; then
+            echo "error: the web app isn't built yet. Run 'npm install && npm run build' in the repo folder, then build again."
+            exit 1
+          fi

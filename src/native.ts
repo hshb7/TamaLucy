@@ -1,8 +1,8 @@
-// The bridge to the native iPhone app (ios/). In a browser none of this
-// exists and every call quietly does nothing, so the web app is unchanged.
+// The bridge to the native iPhone and Mac apps (ios/). In a browser none of
+// this exists and every call quietly does nothing, so the web app is unchanged.
 //
 // JS → native: window.webkit.messageHandlers.tamalucy.postMessage({ id, cmd, ...args })
-// native → JS: window.__tamalucyNative.reply(id, result)
+// native → JS: window.__tamalucyNative.reply(id, result) and .emit(event)
 
 interface Handler {
   postMessage(msg: unknown): void
@@ -11,11 +11,19 @@ interface Handler {
 const handler = (): Handler | undefined =>
   (window as unknown as { webkit?: { messageHandlers?: { tamalucy?: Handler } } }).webkit?.messageHandlers?.tamalucy
 
-/** Running inside the native iPhone app. */
+/** Running inside the native iPhone or Mac app. */
 export const isNativeApp = typeof window !== 'undefined' && !!handler()
+
+/** Which native app (the Mac app says so before the page loads). */
+export const nativePlatform: 'ios' | 'mac' | null = !isNativeApp
+  ? null
+  : (window as unknown as { __tamalucyPlatform?: string }).__tamalucyPlatform === 'mac'
+    ? 'mac'
+    : 'ios'
 
 let nextId = 1
 const waiting = new Map<number, (result: unknown) => void>()
+const listeners = new Map<string, Set<() => void>>()
 
 if (isNativeApp) {
   ;(window as unknown as { __tamalucyNative: unknown }).__tamalucyNative = {
@@ -23,6 +31,19 @@ if (isNativeApp) {
       waiting.get(id)?.(result)
       waiting.delete(id)
     },
+    emit(event: string) {
+      listeners.get(event)?.forEach((fn) => fn())
+    },
+  }
+}
+
+/** Something happened on the native side ("broke": she gave in to a distracting app). */
+export function onNative(event: 'broke', fn: () => void) {
+  const set = listeners.get(event) ?? new Set()
+  set.add(fn)
+  listeners.set(event, set)
+  return () => {
+    set.delete(fn)
   }
 }
 
@@ -64,14 +85,14 @@ export const native = {
   focusEnded(reason: 'done' | 'gaveUp' | 'failed') {
     return call<boolean>('focus.end', { reason }, false)
   },
-  /** When she last tapped "use it anyway" on a blocked app (ms), or 0. Clears it. */
+  /** When she last gave in to a blocked/watched app (ms), or 0. Clears it. */
   brokeFocusAt() {
     return call<number>('focus.broke', {}, 0)
   },
   blockingStatus() {
     return call<BlockingStatus>('blocking.status', {}, NONE)
   },
-  /** Ask for Screen Time access if needed, then let her pick apps to block. */
+  /** iPhone: Screen Time access + Apple's app picker. Mac: pick apps from /Applications. */
   chooseBlockedApps() {
     return call<BlockingStatus>('blocking.choose', {}, NONE)
   },

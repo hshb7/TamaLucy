@@ -4,7 +4,7 @@ import { ellipse } from '../art/painter.ts'
 import { giveUp } from '../game/logic.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { formatClock, useNow, useWakeLock } from '../hooks.ts'
-import { isNativeApp } from '../native.ts'
+import { nativePlatform } from '../native.ts'
 import { Modal } from '../ui/bits.tsx'
 import { PixelCanvas } from '../ui/PixelCanvas.tsx'
 import { drawFox, spawn, stepParticles, type Particle } from '../ui/foxDraw.ts'
@@ -142,9 +142,11 @@ export function FocusScreen() {
         {game.settings.leaveMode === 'strict'
           ? `leaving the app for more than ${game.settings.graceSeconds}s will distract ${f}!`
           : game.settings.leaveMode === 'free'
-            ? isNativeApp
+            ? nativePlatform === 'ios'
               ? `your distracting apps are locked till then. ${f} will call you when time’s up.`
-              : `go study in any app. ${f} will call you when time’s up.`
+              : nativePlatform === 'mac'
+                ? `go study in any app. ${f} keeps an eye out for your distracting ones, and calls you when time’s up.`
+                : `go study in any app. ${f} will call you when time’s up.`
             : `leaving the app pauses the timer.`}
       </p>
       {wake === 'unavailable' && game.settings.leaveMode === 'strict' && (

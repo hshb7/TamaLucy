@@ -1,7 +1,11 @@
-# TamaLucy for iPhone
+# TamaLucy for iPhone and Mac
 
-The same app as the website, wrapped as a real iPhone app so it can do the two
-things a website can't:
+The same app as the website, wrapped as real iPhone and Mac apps. One Xcode project,
+two apps, and the same fox on both (her mailbox code signs her in on each).
+
+## iPhone
+
+The iPhone app can do the two things a website can't:
 
 - **The fox in the Dynamic Island** (and on the lock screen) with a live countdown
   while she focuses. Needs an iPhone with a Dynamic Island (iPhone 14 Pro and later,
@@ -15,15 +19,30 @@ things a website can't:
 It uses Apple's Screen Time: she approves it with Face ID, and the app never sees
 which apps she uses. Nothing about her phone is sent anywhere.
 
-Everything else (the fox, acorns, letters, sync with her Mac) is the web app inside,
-so it's the same fox as on her Mac. The Mac keeps using the website version (see the
-main README).
+Everything else (the fox, acorns, letters, syncing) is the web app inside, so it's the
+same fox as on her Mac.
+
+## Mac
+
+On a Mac she studies in other apps (Word, PDFs, Westlaw), so nothing gets locked.
+Instead:
+
+- **The fox and a countdown in the menu bar** for the whole session (the Mac's Dynamic
+  Island), plus minutes left on the Dock icon. Click the fox for *Open TamaLucy* and
+  *Keep Window on Top* (a little study buddy in the corner of her screen).
+- **A fox over her distracting apps.** She picks them once (Settings → *distracting
+  apps*). During focus, opening one brings up a floating fox: *back to studying* hides
+  the app, *use it anyway* ends the session. Staying in the app for 20 seconds ends it
+  too. The app only notices the apps she picked, and only during focus.
+- **"Time's up!" notifications**, even with the window closed: TamaLucy keeps running in
+  the menu bar.
 
 ## What's in here
 
 ```
 project.yml        the Xcode project, described for XcodeGen (you set APP_ID + team here)
-App/               the app: a full-screen web view + FocusBridge (Dynamic Island, blocking, haptics)
+App/               the iPhone app: a full-screen web view + FocusBridge (Dynamic Island, blocking, haptics)
+Mac/               the Mac app: window, menu bar fox (FocusCenter), the fox over distracting apps
 Widget/            the Live Activity (Dynamic Island + lock screen)
 Shield/            the fox screen on a blocked app
 ShieldAction/      its buttons ("back to studying" / "use it anyway")
@@ -31,7 +50,7 @@ Monitor/           unlocks her apps when time's up, even if TamaLucy was closed
 Shared/            code and fox images shared between them
 ```
 
-The web app talks to the native side through `src/native.ts`.
+The web app talks to both native sides through `src/native.ts`.
 
 ## Build it and put it on her phone
 
@@ -71,6 +90,25 @@ An app installed from Xcode like this keeps working for a year (your development
 profile's lifetime). Run it from Xcode again to renew it, or to update it after you
 change the web app (`npm run build` first).
 
+## The Mac app
+
+Same project, same `APP_ID` and team (the Mac app's id is `APP_ID.mac`).
+
+1. **Try it on your Mac:** at the top of Xcode pick the **TamaLucyMac** scheme and
+   **My Mac**, then press ▶. Sign in with her code (or set up a test fox), pick a couple
+   of distracting apps in Settings and start a focus session: the fox appears in the menu
+   bar, and opening one of those apps brings up the fox.
+2. **Give it to her:** with the **TamaLucyMac** scheme selected, Product → **Archive**.
+   In the window that opens: **Distribute App** → **Direct Distribution**. Xcode signs it
+   with your Developer ID and has Apple notarize it (a few minutes), then **Export** saves
+   `TamaLucy.app`. Zip it and AirDrop/send it to her Mac. She drags it into Applications
+   and opens it like any app, with no warnings and no App Store needed.
+3. **On her Mac:** open TamaLucy, sign in with her mailbox code (first screen →
+   *"i already have my fox on another device"*), Settings → **distracting apps** →
+   choose apps, and allow notifications when asked.
+
+To update it later: `npm run build`, Archive and export again, send the new app.
+
 ## TestFlight instead (no cable, installs like a normal app)
 
 Apple treats Screen Time as sensitive, so an app that uses it can go through TestFlight or
@@ -99,4 +137,7 @@ The Dynamic Island part needs no approval.
   session and lifts every block. (A known Screen Time quirk in some builds:
   <https://developer.apple.com/forums/thread/807934>.)
 - **Debugging the web part** → on the Mac, Safari → Settings → Advanced → *Show features for
-  web developers*, then Develop → her iPhone → TamaLucy.
+  web developers*, then Develop → her iPhone (or this Mac) → TamaLucy.
+- **Mac: no "time's up" notification** → System Settings → Notifications → TamaLucy → allow.
+- **Mac: "TamaLucy can't be opened"** on her Mac → it wasn't notarized; export it with
+  *Direct Distribution* (step 2 above), not *Custom* → *Copy App*.
