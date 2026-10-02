@@ -22,7 +22,8 @@ export function StudyScreen({ onBack, initialTab = 'cards', addClass = false }: 
   return (
     <main className="screen">
       <Header title="study" onBack={onBack} />
-      <div className="tabs" role="tablist">
+      {/* on the Mac these live in the sidebar instead */}
+      <div className="tabs study-tabs" role="tablist">
         {(['cards', 'classes', 'exams', 'career'] as StudyTab[]).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
             {t === 'cards' ? 'my cards' : t}

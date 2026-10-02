@@ -182,6 +182,16 @@ on her iPhone and her Mac.
 - **Without a code** the fox just lives on that device. Settings → *backup* still makes
   a code to move it by hand.
 
+### On a Mac
+
+A wide window (the Mac app, or a browser at 900px and up) gets a desktop layout rather
+than a stretched phone screen: a sidebar on the left to get around (the room; classes,
+flashcards, exams, career; album, closet, decor, widget; settings), and the room as a
+dashboard with the focus form right there (no pop-up), today's progress, the needs and
+her bookshelf at a glance. Settings uses two columns, and the focus timer is bigger.
+Narrow the window and it turns back into the compact phone layout, a little companion
+for the corner of the screen.
+
 ### Focus on a Mac
 
 A Mac is where she reads and writes, so leaving the app can't be the thing that ends a

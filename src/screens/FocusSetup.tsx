@@ -14,7 +14,16 @@ import { GIFT } from '../gift.ts'
 
 const PRESETS = [10, 15, 25, 45, 60]
 
-export function FocusSetup({ onClose, onAddClass }: { onClose: () => void; onAddClass: () => void }) {
+interface FormProps {
+  /** The session started. */
+  onStarted?: () => void
+  onAddClass: () => void
+  /** Fewer hints: the form sits in a card on the Mac dashboard, not in its own sheet. */
+  compact?: boolean
+}
+
+/** Pick how long, and what for; the same form in the phone's sheet and on the Mac dashboard. */
+export function FocusForm({ onStarted, onAddClass, compact = false }: FormProps) {
   const game = useGame()
   const mine = activeCourses(game)
   const [minutes, setMinutes] = useState(game.settings.focusMinutes)
@@ -28,11 +37,11 @@ export function FocusSetup({ onClose, onAddClass }: { onClose: () => void; onAdd
     // on the Mac she'll be in other apps, so the fox needs a way to call her back
     if (game.settings.leaveMode === 'free') askToNotify()
     setGame((s) => startFocus(s, Date.now(), minutes, label))
-    onClose()
+    onStarted?.()
   }
 
   return (
-    <Modal onClose={onClose} className="sheet">
+    <>
       <h2>how long shall we focus?</h2>
       <div className="chips">
         {DEBUG && (
@@ -97,14 +106,25 @@ export function FocusSetup({ onClose, onAddClass }: { onClose: () => void; onAdd
       <p className="hint">
         <PixelIcon sprite={ICON_ART.acorn} scale={2} />
         earns {acornsFor(minutes)} acorn{acornsFor(minutes) === 1 ? '' : 's'} for looking after {f}
+        {compact && (minutes >= 45 ? ' · 2 rewards' : minutes >= 15 ? ' · pick from 3 rewards' : '')}
       </p>
-      <p className="hint">
-        <PixelIcon sprite={ICON_ART.gift} scale={2} />
-        {minutes >= 45 ? 'long session: you’ll get 2 rewards!' : minutes >= 15 ? 'pick from 3 rewards · 45+ min = 2 rewards' : 'short session: pick from 2 · 15+ min = 3'}
-      </p>
+      {!compact && (
+        <p className="hint">
+          <PixelIcon sprite={ICON_ART.gift} scale={2} />
+          {minutes >= 45 ? 'long session: you’ll get 2 rewards!' : minutes >= 15 ? 'pick from 3 rewards · 45+ min = 2 rewards' : 'short session: pick from 2 · 15+ min = 3'}
+        </p>
+      )}
       <button className="btn btn-big btn-pink" onClick={start}>
         <PixelIcon sprite={ICON_ART.acorn} scale={3} /> start focusing
       </button>
+    </>
+  )
+}
+
+export function FocusSetup({ onClose, onAddClass }: { onClose: () => void; onAddClass: () => void }) {
+  return (
+    <Modal onClose={onClose} className="sheet">
+      <FocusForm onStarted={onClose} onAddClass={onAddClass} />
     </Modal>
   )
 }

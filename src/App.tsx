@@ -17,6 +17,8 @@ import { SettingsScreen } from './screens/Settings.tsx'
 import { BookModal, FailedModal, MailModal, PostcardModal, PromotionModal } from './screens/Modals.tsx'
 import { DecorScreen } from './screens/Decor.tsx'
 import { WidgetStudio } from './screens/WidgetStudio.tsx'
+import { DesktopShell } from './screens/Shell.tsx'
+import { useWide } from './hooks.ts'
 import { widgetData } from './game/widget.ts'
 import { widgetImages, widgetLook } from './ui/widgetArt.ts'
 import type { Note } from './game/state.ts'
@@ -37,6 +39,7 @@ export default function App() {
   const [failedBlocked, setFailedBlocked] = useState(false)
   const [reward, setReward] = useState<RewardResult | null>(null)
   const [newMail, setNewMail] = useState<Note[]>([])
+  const wide = useWide()
 
   // Letters from far away
   useEffect(
@@ -219,7 +222,8 @@ export default function App() {
   else if (view === 'widget') screen = <WidgetStudio onBack={() => setView('home')} />
   else if (view === 'album') screen = <Album onBack={() => setView('home')} />
   else if (view === 'study' || view === 'classes' || view === 'career' || view === 'exams')
-    screen = <StudyScreen onBack={() => setView('home')} initialTab={view === 'study' ? 'cards' : view} addClass={addClass} />
+    // keyed so the Mac sidebar can switch its tabs
+    screen = <StudyScreen key={view} onBack={() => setView('home')} initialTab={view === 'study' ? 'cards' : view} addClass={addClass} />
   else if (view === 'settings') screen = <SettingsScreen onBack={() => setView('home')} onWidget={() => setView('widget')} />
   else screen = <Home onFocus={openSetup} go={setView} onShelf={openShelf} />
 
@@ -229,9 +233,18 @@ export default function App() {
   const showPostcard = game.postcardToShow && calm && promo == null && !book && view !== 'break' && failedAway == null
   const showMail = newMail.length > 0 && calm && promo == null && !book && !showPostcard && failedAway == null
 
+  // a wide window (the Mac) gets a sidebar; focus, rewards and onboarding take the whole window
+  const inShell = wide && game.onboarded && !game.session && !game.pending && !reward
+
   return (
     <>
-      {screen}
+      {inShell ? (
+        <DesktopShell view={view} go={setView} onFocus={openSetup}>
+          {screen}
+        </DesktopShell>
+      ) : (
+        screen
+      )}
       {setupOpen && !game.session && (
         <FocusSetup
           onClose={() => setSetupOpen(false)}

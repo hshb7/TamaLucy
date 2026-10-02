@@ -318,11 +318,13 @@ button {
 }
 
 /* ── home ────────────────────────────────────────────────────────────────── */
-/* home: on a phone the two wrappers step aside and everything stacks
-   (header, needs, room, focus button…); on a wide screen they become the
-   room column and the sidebar (see the desktop section at the end) */
+/* home: on a phone the wrappers step aside and everything stacks
+   (header, needs, room, focus button, today, notice, menu); on a wide
+   screen they become the dashboard's columns (see the desktop section at
+   the end) */
 .home-main,
-.home-side {
+.home-side,
+.home-cards {
   display: contents;
 }
 .home .home-head {
@@ -331,10 +333,17 @@ button {
 .home .needs {
   order: -1;
 }
-.home .nav {
+.home .today {
   order: 1;
 }
-.need-label {
+.home .letter-card {
+  order: 2;
+}
+.home .nav {
+  order: 3;
+}
+.need-label,
+.card-title {
   display: none;
 }
 .settings-cards {
@@ -2080,50 +2089,308 @@ select:focus {
 /* ── desktop: her Mac, or any wide window ─────────────────────────────────
    Keep in sync with WIDE_QUERY in src/hooks.ts (the room shows in full there). */
 @media (min-width: 900px) and (min-height: 560px) {
+  /* ── the Mac (and any wide window): a sidebar and a dashboard ──────────── */
   .screen:not(.focus) {
     max-width: 760px;
-    padding: 24px 32px 28px;
+    padding: 26px 36px 32px;
   }
   .grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 
-  /* home: the whole room on the left, everything else in a sidebar */
-  .screen.home {
-    max-width: 1320px;
+  /* the shell: sidebar on the left, the screen scrolls on its own beside it */
+  .shell {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    grid-template-rows: auto 1fr;
-    gap: 18px 32px;
-    align-items: start;
+    grid-template-columns: 224px minmax(0, 1fr);
+    height: 100dvh;
   }
-  .home .home-head {
-    grid-column: 1 / -1;
+  .shell-main {
+    min-width: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
-  .home-main {
+  .shell-main .screen {
+    min-height: 100%;
+  }
+  .side-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 12px 14px;
+    background: #fbe8d7;
+    border-right: var(--b) solid var(--line);
+    overflow-y: auto;
+  }
+  .side-fox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 0;
+    background: none;
+    padding: 4px 6px 12px;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .side-fox .portrait {
+    width: 66px;
+    flex: none;
+  }
+  .side-name {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .side-name b {
+    font-family: var(--font-pixel);
+    font-weight: 600;
+    font-size: 21px;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .side-name small {
+    font-family: var(--font-pixel);
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .side-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .side-group + .side-group {
+    margin-top: 12px;
+  }
+  .side-title {
+    margin: 0 0 2px 12px;
+    font-family: var(--font-pixel);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .side-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    border: 0;
+    background: none;
+    margin: 0;
+    padding: 7px 12px;
+    font-family: var(--font-pixel);
+    font-weight: 600;
+    font-size: 16px;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .side-item:hover {
+    background: rgba(91, 58, 49, 0.07);
+  }
+  .side-item.on {
+    background: var(--card);
+    box-shadow: var(--outline);
+  }
+  .side-item .badge {
+    position: static;
+    margin-left: auto;
+  }
+  .side-foot {
+    margin-top: auto;
+    padding-top: 14px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    align-self: center;
+  }
+  .side-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .side-focus {
+    font-size: 16px;
+    padding: 10px 8px;
+  }
+  /* the sidebar does the navigating */
+  .shell .page-head {
+    justify-content: flex-start;
+  }
+  .shell .page-head > .btn,
+  .shell .page-head > span {
+    display: none;
+  }
+  .shell .page-head h1 {
+    font-size: 28px;
+  }
+  .shell .study-tabs {
+    display: none;
+  }
+
+  /* home: a dashboard. room + cards on the left, focus form + needs on the right */
+  .screen.home {
+    max-width: 1360px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 350px;
+    gap: 16px 26px;
+    align-items: start;
+    align-content: start;
+  }
+  .home .home-head {
+    display: none;
+  }
+  /* the left column: notice, room, then the status line beside today's
+     hearts, then the needs beside the bookshelf */
+  .home-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px 14px;
+    align-content: start;
+    min-width: 0;
+  }
+  .home-main > *,
+  .home-cards > * {
+    order: 0;
+  }
+  .home-main > .letter-card {
+    order: -1;
+    grid-column: 1 / -1;
+    margin: var(--b) var(--b) 4px;
+    padding: 10px 14px;
+    animation: none;
   }
   .home-main .room {
-    /* as wide as the column, but never taller than the window */
-    width: min(calc(100% - 2 * var(--b)), calc((100dvh - 250px) * 2));
+    grid-column: 1 / -1;
+    /* as wide as the column, but leave room for the cards under it */
+    width: min(calc(100% - 2 * var(--b)), calc((100dvh - 330px) * 2));
+    justify-self: center;
+  }
+  .home-main .status {
+    text-align: left;
+    margin: 0 0 0 var(--b);
     align-self: center;
+  }
+  .home-main .nav {
+    display: none;
+  }
+  .home-cards {
+    display: contents;
+  }
+  .home-cards > * {
+    margin: var(--b);
+  }
+  .home-cards .today {
+    order: 1;
+    justify-self: end;
+    align-self: center;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0 var(--b) 0 0;
+    font-size: 14px;
+  }
+  .home-cards .today .card-title {
+    display: none;
+  }
+  .home-cards .today p {
+    margin: 0;
+  }
+  .home-cards .needs,
+  .home-cards .shelf-glance {
+    order: 2;
+  }
+  .card-title {
+    display: block;
+    font-family: var(--font-pixel);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+  .home-cards .today {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+  .home-cards .today p {
+    margin: 0;
+  }
+  .shelf-glance {
+    gap: 8px;
+  }
+  .mini-courses {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .mini-courses li {
+    display: grid;
+    grid-template-columns: 7px minmax(0, 1fr) 54px 56px;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+  }
+  .mini-name {
+    font-family: var(--font-pixel);
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mini-courses small {
+    text-align: right;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .shelf-glance .link {
+    align-self: flex-start;
+    padding: 2px 0;
   }
   .home-side {
     display: flex;
     flex-direction: column;
     gap: 14px;
-    align-self: center;
+  }
+  .focus-card {
+    gap: 12px;
+    padding: 16px;
+  }
+  .focus-card h2 {
+    font-size: 19px;
+  }
+  .focus-card .chips {
+    justify-content: flex-start;
+  }
+  .focus-card .chip-btn {
+    min-width: 46px;
+    padding: 6px 8px;
+    font-size: 16px;
+  }
+  .focus-card .stepper-value {
+    font-size: 22px;
+    min-width: 90px;
+  }
+  .focus-card .hint {
+    font-size: 13px;
+  }
+  .focus-card .btn-big {
+    font-size: 19px;
   }
   .home .needs {
     grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 12px 14px;
+    align-content: start;
+    gap: 9px;
+    padding: 14px;
     background: var(--card);
     box-shadow: var(--outline);
-    margin: var(--b);
   }
   .need-label {
     display: block;
@@ -2132,23 +2399,26 @@ select:focus {
     font-family: var(--font-pixel);
     font-size: 14px;
   }
-  /* the menu becomes a toolbar under the room */
-  .home-main .nav {
-    margin-top: 4px;
-    width: calc(100% - 2 * var(--b));
-    max-width: min(100%, calc((100dvh - 250px) * 2));
-    align-self: center;
-    gap: 10px;
-  }
-  .home-main .nav button {
+
+  /* classes: the bookcase beside its words */
+  .shell .bookcase-view {
     flex-direction: row;
-    justify-content: center;
-    gap: 8px;
-    padding: 8px 6px;
+    gap: 26px;
+    padding: 16px 22px;
+  }
+  .shell .bookcase-view canvas {
+    width: 290px;
+    flex: none;
+  }
+  .shell .bookcase-view p {
+    text-align: left;
     font-size: 15px;
   }
-  .home-side .letter-card {
-    animation: none;
+
+  /* the break screen: the room stays a comfortable size */
+  .screen.break .room {
+    width: min(100%, 680px);
+    align-self: center;
   }
 
   /* settings: cards in two columns */
