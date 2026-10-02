@@ -43,7 +43,7 @@ const SOUND: Partial<Record<string, () => void>> = {
 }
 
 /** The room plus everything that makes it tick: effects, sounds, speech and status. */
-export function LivingRoom({ onStudy, onQuiz }: { onStudy: () => void; onQuiz: () => void }) {
+export function LivingRoom({ onStudy, onQuiz, onShelf }: { onStudy: () => void; onQuiz: () => void; onShelf: (add?: boolean) => void }) {
   const game = useGame()
   const now = useNow(1000)
   // on a wide screen the whole room fits, so there's nothing to swipe
@@ -88,6 +88,7 @@ export function LivingRoom({ onStudy, onQuiz }: { onStudy: () => void; onQuiz: (
       sfx.nom()
       say('thank you!! *happy tail wags*')
     } else if (cmd === 'study') onStudy()
+    else if (cmd === 'shelf' || cmd === 'addClass') onShelf(cmd === 'addClass')
     else onQuiz()
   }
 

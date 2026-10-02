@@ -10,7 +10,10 @@ import { PixelCanvas } from '../ui/PixelCanvas.tsx'
 import { drawFox, idleFace, idleTail } from '../ui/foxDraw.ts'
 import { Header } from './Header.tsx'
 import { photoSprite } from '../art/photo.ts'
+import { placeBooks } from '../art/bookcase.ts'
+import { SHELF_LABELS, shelfBooks } from '../game/shelf.ts'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
+import { NEED_ICON_ART } from '../art/items.ts'
 import { pixelatePhoto } from '../ui/photo.ts'
 import { toast } from '../ui/bits.tsx'
 function PhotoSection() {
@@ -79,7 +82,7 @@ function Swatch({ wall, floor }: { wall: string; floor: string }) {
   )
 }
 
-export function DecorScreen({ onBack }: { onBack: () => void }) {
+export function DecorScreen({ onBack, onWidget }: { onBack: () => void; onWidget: () => void }) {
   const game = useGame()
   const walls = unlocked(game.stats.totalMinutes, 'wall')
   const floors = unlocked(game.stats.totalMinutes, 'floor')
@@ -97,6 +100,8 @@ export function DecorScreen({ onBack }: { onBack: () => void }) {
       season: seasonOf(d.getTime()),
       october: isOctober(d.getTime()),
       photo: game.photo ? photoSprite(game.photo) : null,
+      books: placeBooks(shelfBooks(game)),
+      shelfLabels: SHELF_LABELS,
     }
     drawRoom(p, opts)
     drawFox(p, FOX_SPOT.x, FOX_SPOT.y, { pose: 'sit', face: idleFace(t), tail: idleTail(t), equipped: game.equipped })
@@ -115,6 +120,13 @@ export function DecorScreen({ onBack }: { onBack: () => void }) {
         <PixelCanvas w={ROOM_W} h={ROOM_H} draw={preview} fps={8} label="room preview" />
       </div>
       <PhotoSection />
+      <button className="letter-card px-box tone-lav" onClick={onWidget}>
+        <PixelIcon sprite={NEED_ICON_ART.palette} scale={3} />
+        <span>
+          style your widget
+          <small>{game.foxName} on your home screen, in your colours ✿</small>
+        </span>
+      </button>
       <p className="muted center">more wallpapers and floors unlock as {game.foxName}&rsquo;s law career grows</p>
       {(
         [

@@ -5,7 +5,7 @@
 name: TamaLucy
 options:
   deploymentTarget:
-    iOS: "16.2"
+    iOS: "17.0"
     macOS: "13.0"
   createIntermediateGroups: true
 settings:
@@ -19,7 +19,7 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
     TARGETED_DEVICE_FAMILY: "1"
-    IPHONEOS_DEPLOYMENT_TARGET: "16.2"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
 
 targets:
@@ -74,13 +74,14 @@ targets:
             exit 1
           fi
 
-  # the fox in the Dynamic Island and on the lock screen
+  # her fox on the home screen, and in the Dynamic Island and on the lock screen while she focuses
   FocusWidget:
     type: app-extension
     platform: iOS
     sources:
       - path: Widget
       - path: Shared/FocusAttributes.swift
+      - path: Shared/FoxCard.swift
       - path: Shared/Fox.xcassets
     settings:
       base:
@@ -91,8 +92,18 @@ targets:
         CFBundleDisplayName: TamaLucy
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        TLAppGroup: group.$(APP_ID)
+        # the app's pixel font (Pixelify Sans, SIL Open Font License: Widget/Fonts/OFL.txt)
+        UIAppFonts:
+          - PixelifySans-SemiBold.ttf
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widget/Widget.entitlements
+      properties:
+        # reads her widget style and pictures, which the app keeps there
+        com.apple.security.application-groups:
+          - group.$(APP_ID)
 
   # the screen she sees when she opens a blocked app
   ShieldConfiguration:

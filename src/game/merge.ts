@@ -5,14 +5,14 @@
 // make sure nothing she earned is lost when both devices changed things:
 //
 //   - earnings add up (acorns, focus minutes, treats in the pantry...)
-//   - collections are combined (letters, postcards, clothes, flashcards...)
+//   - collections are combined (letters, postcards, clothes, flashcards, classes...)
 //     keeping deletions made on either side
 //   - the fox's needs come from the cloud copy; the game clock then simulates
 //     from its timestamp, so time away is never counted twice
 //   - a running focus session and "what happens when I leave the app" belong
 //     to this device and never travel
 //   - anything else: whichever side changed it wins
-import type { GameState, Note, Postcard, StudyCard, Exam } from './state.ts'
+import type { Course, GameState, Note, Postcard, StudyCard, Exam } from './state.ts'
 
 type Merger = (b: unknown, l: unknown, r: unknown) => unknown
 type Rule = 'local' | 'remote' | 'sum' | 'max' | 'set' | 'deep' | 'lww' | Merger
@@ -41,6 +41,7 @@ const RULES: Record<string, Rule> = {
   'stats.days.*': 'sum',
   'stats.daySessions.*': 'sum',
   'stats.subjects.*': 'sum',
+  'stats.courses.*': 'sum',
   'quiz.rounds': 'sum',
   'quiz.correct': 'sum',
   'quiz.answered': 'sum',
@@ -69,22 +70,26 @@ const RULES: Record<string, Rule> = {
   gifts: 'set',
   examsWished: 'set',
   usedNotes: 'set',
+  booksSeen: 'set',
   notes: byId<Note>((n) => n.id, (pick, l, r) => ({ ...pick, read: l.read || r.read }), newestFirst),
   postcards: byId<Postcard>((p) => `${p.at}:${p.adventure}`, undefined, newestFirst),
   cards: byId<StudyCard>((c) => c.id),
   exams: byId<Exam>((e) => e.id),
+  courses: byId<Course>((c) => c.id),
 
   // objects merged field by field
   stats: 'deep',
   'stats.days': 'deep',
   'stats.daySessions': 'deep',
   'stats.subjects': 'deep',
+  'stats.courses': 'deep',
   quiz: 'deep',
   pantry: 'deep',
   treatsFed: 'deep',
   settings: 'deep',
   decor: 'deep',
   equipped: 'deep',
+  widget: 'deep',
 }
 
 export function merge3(base: GameState, local: GameState, remote: GameState): GameState {

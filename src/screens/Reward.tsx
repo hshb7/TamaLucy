@@ -1,4 +1,4 @@
-import { GIFT_ART, ICON_ART, SOUVENIR_ART, TREAT_ART } from '../art/items.ts'
+import { GIFT_ART, ICON_ART, NEED_ICON_ART, SOUVENIR_ART, TREAT_ART } from '../art/items.ts'
 import { CLOTHING_ART } from '../art/clothes.ts'
 import type { Sprite } from '../art/sprite.ts'
 import { buzz, sfx } from '../audio.ts'
@@ -9,6 +9,8 @@ import { FoxPortrait } from '../ui/FoxPortrait.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
 import { LetterView } from './Modals.tsx'
 import type { View } from '../App.tsx'
+import { courseMinutes, isShelved } from '../game/shelf.ts'
+import { hoursOf } from './Bookshelf.tsx'
 
 export function iconFor(kind: RewardKind | 'souvenir', id: string): Sprite {
   if (kind === 'treat') return TREAT_ART[id]
@@ -53,6 +55,7 @@ export function RewardScreen({ result, setResult, onDone }: Props) {
   const game = useGame()
   const p = game.pending
   const f = game.foxName
+  const course = p?.courseId ? game.courses.find((c) => c.id === p.courseId) : undefined
 
   const take = (kind: RewardKind, choice: string | null) => {
     const r = claim(getGame(), Date.now(), kind, choice)
@@ -103,6 +106,12 @@ export function RewardScreen({ result, setResult, onDone }: Props) {
       {!!p.acorns && p.taken.length === 0 && (
         <p className="pill pill-acorn">
           <PixelIcon sprite={ICON_ART.acorn} scale={2} /> +{p.acorns} acorn{p.acorns === 1 ? '' : 's'} to spend on {f}
+        </p>
+      )}
+      {course && p.taken.length === 0 && (
+        <p className="pill">
+          <PixelIcon sprite={NEED_ICON_ART.books} scale={2} /> {course.name}: {hoursOf(courseMinutes(game, course))}/{course.goalHours} h{' '}
+          {isShelved(game, course) ? 'on the shelf ✿' : course.kind === 'work' ? 'in its binder' : `on the ${course.year} shelf`}
         </p>
       )}
       {p.foundLetter && p.taken.length === 0 && <p className="pill pill-pink">{f} found a secret letter under the rug! it&rsquo;s in your album ♡</p>}

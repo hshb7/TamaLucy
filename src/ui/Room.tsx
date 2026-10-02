@@ -8,6 +8,8 @@ import { unlocked } from '../game/career.ts'
 import { costOf, isBirthday, refillCost } from '../game/logic.ts'
 import { isOctober, seasonOf } from '../game/time.ts'
 import { photoSprite } from '../art/photo.ts'
+import { BOOKCASE, placeBooks } from '../art/bookcase.ts'
+import { SHELF_LABELS, shelfBooks } from '../game/shelf.ts'
 import { TREATS } from '../game/content.ts'
 import { foxMood, lowestNeed, type Activity, type NeedKey } from '../game/needs.ts'
 import type { GameState } from '../game/state.ts'
@@ -17,7 +19,7 @@ import { Brain, PLACE, task, type Task, type TaskKind } from './brain.ts'
 import { DEBUG } from '../debug.ts'
 import { RAIN_CLOUD, THOUGHT, chatBubble, drawFox, idleFace, idleTail, spawn, stepParticles, type Particle } from './foxDraw.ts'
 
-export type RoomCommand = 'refill' | 'study' | 'quiz'
+export type RoomCommand = 'refill' | 'study' | 'quiz' | 'shelf' | 'addClass'
 
 interface Props {
   game: GameState
@@ -76,6 +78,7 @@ const OBJECTS: { id: string; box: Box; gift?: string }[] = [
   { id: 'teddy', box: { x: 31, y: 63, w: 18, h: 18 }, gift: 'teddy' },
   { id: 'cushion', box: { x: 98, y: 85, w: 22, h: 12 }, gift: 'cushion' },
   { id: 'window', box: { x: 3, y: 5, w: 48, h: 44 } },
+  { id: 'bookcase', box: { x: BOOKCASE.x, y: BOOKCASE.y - 10, w: BOOKCASE.w, h: BOOKCASE.h + 8 } },
 ]
 
 const OBJECT_NAMES: Record<string, string> = {
@@ -88,6 +91,7 @@ const OBJECT_NAMES: Record<string, string> = {
   teddy: 'teddy bear',
   cushion: 'cushion',
   window: 'window',
+  bookcase: 'bookcase',
 }
 
 const USER_TASK: Partial<Record<TaskKind, [number, string]>> = {
@@ -234,6 +238,8 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
       october: isOctober(d.getTime()),
       birthday: isBirthday(g, d.getTime()),
       photo: g.photo ? photoSprite(g.photo) : null,
+      books: placeBooks(shelfBooks(g)),
+      shelfLabels: SHELF_LABELS,
     }
     drawRoom(p, opts)
     if (g.adventure) p.sprite(ICON_ART.mail, 60, 84)
@@ -503,6 +509,14 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
         return { title: OBJECT_NAMES.cushion, options: [{ id: 'cushion', label: 'lounge', icon: GIFT_ART.cushion }] }
       case 'window':
         return { title: OBJECT_NAMES.window, options: [{ id: 'window', label: 'look outside' }] }
+      case 'bookcase':
+        return {
+          title: OBJECT_NAMES.bookcase,
+          options: [
+            { id: 'shelf', label: g.courses.length ? 'my classes' : 'set up my classes', icon: NEED_ICON_ART.books },
+            { id: 'addClass', label: 'add a class' },
+          ],
+        }
     }
     return { title: '', options: [] }
   }
@@ -515,7 +529,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
     if (id === 'treats') return setMenu({ ...m, sub: 'treat' })
     const price = priceOf(id)
     if (price > gameRef.current.acorns) return onBroke(price)
-    if (id === 'refill' || id === 'study' || id === 'quiz') return onCommand(id)
+    if (id === 'refill' || id === 'study' || id === 'quiz' || id === 'shelf' || id === 'addClass') return onCommand(id)
     if (id.startsWith('treat:')) return b.ask(userTask('treat', b.x, id.slice(6)))
     b.ask(userTask(id as TaskKind, b.x))
   }

@@ -1436,6 +1436,347 @@ input:focus {
   background: var(--lav);
 }
 
+/* ── bookshelf: her classes and work ─────────────────────────────────────── */
+.bookshelf {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bookcase-view {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.bookcase-view canvas {
+  width: min(100%, 260px);
+  cursor: pointer;
+}
+.bookcase-view p {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+}
+.course-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.course-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) 56px 74px;
+  gap: 10px;
+  align-items: center;
+  border: 0;
+  background: none;
+  padding: 6px 2px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.course-row:active {
+  transform: translateY(1px);
+}
+.course-spine {
+  height: 28px;
+  box-shadow: 0 0 0 2px var(--line);
+}
+.course-name {
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.course-name small {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.course-hours {
+  white-space: nowrap;
+  text-align: right;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+.course-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.course-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.book-preview {
+  width: 40px;
+  flex: none;
+}
+.chips.chips-left {
+  justify-content: flex-start;
+  align-items: center;
+}
+.color-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.color-dot {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  margin: var(--b);
+  box-shadow: var(--outline);
+  cursor: pointer;
+}
+.color-dot.on {
+  box-shadow: var(--outline), 0 0 0 7px var(--pink);
+}
+.hours-input {
+  width: 84px;
+}
+.course-more {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.course-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.course-dot {
+  width: 7px;
+  height: 12px;
+  box-shadow: 0 0 0 2px var(--line);
+}
+.subject-chip.add-chip {
+  background: var(--butter);
+}
+.book-celebration {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+}
+.book-big {
+  width: 64px;
+  margin-bottom: 8px;
+}
+
+/* ── widget studio: her iPhone widget, previewed ──────────────────────────── */
+.phone-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 12px;
+  margin: var(--b);
+  background: linear-gradient(160deg, #f9c4cf 0%, #e9d8f4 50%, #c9e7f5 100%);
+  box-shadow: var(--outline);
+}
+.widget-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+.widget {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  box-shadow: 0 6px 18px rgba(74, 42, 34, 0.18);
+  -webkit-font-smoothing: antialiased;
+}
+.widget-small {
+  flex: none;
+  width: 150px;
+  aspect-ratio: 1;
+}
+.widget-medium {
+  flex: none;
+  width: 320px;
+  max-width: 100%;
+  aspect-ratio: 120 / 56;
+}
+.widget .widget-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.widget-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  padding: 6px 10px;
+  opacity: 0.94;
+}
+.widget-small .widget-card {
+  top: 9px;
+  left: 9px;
+  right: 9px;
+}
+.widget-medium .widget-card {
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  width: 54%;
+  padding: 8px 12px;
+}
+.widget-fox {
+  font-family: var(--font-pixel);
+  font-weight: 600;
+  font-size: 15px;
+}
+.widget-big {
+  font-family: var(--font-pixel);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.1;
+}
+.widget-label {
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.widget-caption {
+  margin-top: auto;
+  font-size: 11px;
+  line-height: 1.3;
+  opacity: 0.8;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.live-preview {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.island {
+  width: 210px;
+  height: 38px;
+  background: #000;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 0 12px;
+  font-family: var(--font-pixel);
+  font-weight: 600;
+  font-size: 15px;
+}
+.island-fox {
+  width: 34px;
+}
+.lock-banner {
+  width: min(100%, 340px);
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 22px;
+  box-shadow: 0 6px 18px rgba(74, 42, 34, 0.18);
+}
+.lock-fox {
+  width: 58px;
+}
+.lock-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.lock-text b {
+  font-family: var(--font-pixel);
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lock-bar {
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.lock-bar span {
+  display: block;
+  width: 40%;
+  height: 100%;
+}
+.lock-time {
+  font-family: var(--font-pixel);
+  font-weight: 600;
+  font-size: 24px;
+}
+.bg-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 6px;
+}
+.bg-swatch {
+  border: 0;
+  margin: var(--b);
+  padding: 8px 4px 6px;
+  background: var(--card);
+  box-shadow: var(--outline);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-pixel);
+  color: var(--ink);
+  cursor: pointer;
+}
+.bg-swatch small {
+  font-size: 12px;
+  line-height: 1.1;
+  text-align: center;
+}
+.bg-swatch.on {
+  background: var(--pink);
+}
+.bg-swatch:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.swatch-fill {
+  display: block;
+  width: 44px;
+  height: 44px;
+  box-shadow: 0 0 0 2px var(--line);
+}
+.steps {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .promo h2 {
   font-size: 22px;
 }

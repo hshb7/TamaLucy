@@ -53,11 +53,13 @@ home screen, works offline, and needs no app store.
 
 **Law school edition**
 - **Career ladder:** every hour of focus moves the fox up: Pre-Law Pup, 1L, 2L, 3L, Law Graduate, Passed the Bar, Associate, Senior Associate, Partner, Judge, Supreme Court Justice. Each promotion gets a celebration and unlocks something (grad cap, tie, judge wig, diploma, gavel, scales of justice, wallpapers).
-- **Subjects:** one-tap chips on the focus screen (Torts, Contracts, Civ Pro, Crim Law, Con Law, Property, Evidence, Legal Writing...), with study time per subject on the career screen. Edit the list in `src/gift.ts`.
+- **Her classes and work, on a big bookcase:** the room has a bookcase with a 2L shelf, a 3L shelf and a work shelf. She adds her own classes (and work: a job, the journal, a clinic) with a name, a spine colour and an hours goal (100 by default), plus any hours from before the app. Each one is a book that fills in, bottom up, as she focuses on it; when she reaches the goal or marks the class finished, it stays on the shelf with gold bands, the fox celebrates and writes her a note. Her classes become the one-tap chips on the focus screen and in flashcards and exams. Tap the bookcase, or Study → *classes*.
+- **Subjects:** until she adds her classes, the focus screen offers default chips (Torts, Contracts, Civ Pro, Crim Law, Con Law, Property, Evidence, Legal Writing...), with study time per subject on the career screen. Edit the list in `src/gift.ts`.
 - **Legal Latin flashcards:** the fox quizzes you on 26 terms (mens rea, stare decisis, res ipsa loquitur...). Tap the fox → *quiz me*, the desk → *flashcards*, or use it during breaks.
 - **Her own flashcards:** cards for her classes (cases, rules, elements), sorted by subject and reviewed as flip cards. Spaced repetition brings each card back right before she'd forget it: a card she knows comes back in 1, 3, 7, then 21 days, and a missed one comes back right away.
 - **Exam countdowns:** add exams with a date. Home counts down the last week, and on the morning of an exam the fox leaves a good-luck note.
 - **Studying together:** during focus the fox sits at its little desk in study glasses with a casebook, cocoa and a banker's lamp. Optional background sound (rain, fireplace or library hum) is generated in the app, with no audio files.
+- **Her widget, her style:** on her iPhone, a home screen widget with the fox in its outfit in front of her wallpaper or a colour, showing today's focus, a class's hours, days to her next exam, her streak or acorns, and a line she writes herself. She styles it (with live previews) in Settings → *your widget*; the Dynamic Island and lock screen use the same colours and outfit.
 - Law-pun notes from the fox ("IRAC. issue: you're tired..."), a Law Library and Courthouse Steps adventure.
 
 **Kind to a busy student**
@@ -159,7 +161,7 @@ Either way it's the same fox everywhere, website or app.
 
 Her mailbox code is her login. The fox lives in the cloud (the same small Supabase
 database as the letters), so signing in on a device is like logging into an account:
-her fox, its needs, acorns, clothes, letters, flashcards, exams and stats are the same
+her fox, its needs, acorns, clothes, letters, flashcards, classes, exams and stats are the same
 on her iPhone and her Mac.
 
 - **Signing in:** on a brand-new install, tap *"i already have my fox on another

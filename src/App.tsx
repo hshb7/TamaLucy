@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { buzz, setSoundEnabled, sfx, unlockAudio } from './audio.ts'
-import { arrive, celebratePromotion, completeFocus, endBreak, failFocus, focusHidden, focusVisible, heartbeat, pendingPromotion, resolveAdventure, simulate, type RewardResult } from './game/logic.ts'
+import { arrive, celebratePromotion, completeFocus, endBreak, failFocus, focusHidden, focusVisible, heartbeat, pendingPromotion, resolveAdventure, shelveBook, simulate, type RewardResult } from './game/logic.ts'
+import { pendingBook } from './game/shelf.ts'
 import { getGame, setGame, useGame } from './game/store.ts'
 import { Toasts, toast } from './ui/bits.tsx'
 import { Onboarding } from './screens/Onboarding.tsx'
@@ -13,20 +14,25 @@ import { Wardrobe } from './screens/Wardrobe.tsx'
 import { Album } from './screens/Album.tsx'
 import { StudyScreen } from './screens/Study.tsx'
 import { SettingsScreen } from './screens/Settings.tsx'
-import { FailedModal, MailModal, PostcardModal, PromotionModal } from './screens/Modals.tsx'
+import { BookModal, FailedModal, MailModal, PostcardModal, PromotionModal } from './screens/Modals.tsx'
 import { DecorScreen } from './screens/Decor.tsx'
+import { WidgetStudio } from './screens/WidgetStudio.tsx'
+import { widgetData } from './game/widget.ts'
+import { widgetImages, widgetLook } from './ui/widgetArt.ts'
 import type { Note } from './game/state.ts'
 import { checkMail, connectMailbox, mailProblem, onNewMail, takeMailLink } from './mail.ts'
 import { startSync, syncFor, syncNow } from './sync.ts'
 import { notify } from './notify.ts'
-import { isNativeApp, native, onNative } from './native.ts'
+import { isNativeApp, native, nativePlatform, onNative } from './native.ts'
 
-export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'study' | 'career' | 'exams' | 'settings'
+export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'study' | 'classes' | 'career' | 'exams' | 'settings' | 'widget'
 
 export default function App() {
   const game = useGame()
   const [view, setView] = useState<View>(() => (getGame().breakEndsAt ? 'break' : 'home'))
   const [setupOpen, setSetupOpen] = useState(false)
+  /** Open the bookshelf straight to "add a class". */
+  const [addClass, setAddClass] = useState(false)
   const [failedAway, setFailedAway] = useState<number | null>(null)
   const [failedBlocked, setFailedBlocked] = useState(false)
   const [reward, setReward] = useState<RewardResult | null>(null)
@@ -69,6 +75,27 @@ export default function App() {
     else if (hadSession.current) native.focusEnded(getGame().pending ? 'done' : 'gaveUp')
     hadSession.current = !!ses
   }, [sesKey]) // only when the session itself starts, moves or ends
+
+  // The iPhone's home screen widget: send it what to show whenever that changes
+  const widgetKey = nativePlatform === 'ios' && game.onboarded ? JSON.stringify({ ...widgetData(game, Date.now()), savedAt: 0, look: widgetLook(game) }) : ''
+  const pictures = useRef<{ look: string; images: ReturnType<typeof widgetImages> } | null>(null)
+  useEffect(() => {
+    if (!widgetKey) return
+    const send = () => {
+      const s = getGame()
+      const look = widgetLook(s)
+      if (pictures.current?.look !== look) pictures.current = { look, images: widgetImages(s) }
+      void native.updateWidget({ ...widgetData(s, Date.now()), ...pictures.current.images })
+    }
+    const id = setTimeout(send, 1500)
+    // and when she leaves, so "last seen" is right
+    const onHide = () => document.visibilityState === 'hidden' && send()
+    document.addEventListener('visibilitychange', onHide)
+    return () => {
+      clearTimeout(id)
+      document.removeEventListener('visibilitychange', onHide)
+    }
+  }, [widgetKey])
 
   // Leaving the app during focus + coming back
   useEffect(() => {
@@ -167,6 +194,10 @@ export default function App() {
   }, [])
 
   const openSetup = () => setSetupOpen(true)
+  const openShelf = (add = false) => {
+    setAddClass(add)
+    setView('classes')
+  }
 
   let screen
   if (!game.onboarded) screen = <Onboarding />
@@ -182,24 +213,34 @@ export default function App() {
         }}
       />
     )
-  else if (view === 'break') screen = <BreakScreen onFocus={openSetup} onHome={() => setView('home')} onStudy={() => setView('study')} />
+  else if (view === 'break') screen = <BreakScreen onFocus={openSetup} onHome={() => setView('home')} onStudy={() => setView('study')} onShelf={openShelf} />
   else if (view === 'wardrobe') screen = <Wardrobe onBack={() => setView('home')} />
-  else if (view === 'decor') screen = <DecorScreen onBack={() => setView('home')} />
+  else if (view === 'decor') screen = <DecorScreen onBack={() => setView('home')} onWidget={() => setView('widget')} />
+  else if (view === 'widget') screen = <WidgetStudio onBack={() => setView('home')} />
   else if (view === 'album') screen = <Album onBack={() => setView('home')} />
-  else if (view === 'study' || view === 'career' || view === 'exams')
-    screen = <StudyScreen onBack={() => setView('home')} initialTab={view === 'study' ? 'cards' : view} />
-  else if (view === 'settings') screen = <SettingsScreen onBack={() => setView('home')} />
-  else screen = <Home onFocus={openSetup} go={setView} />
+  else if (view === 'study' || view === 'classes' || view === 'career' || view === 'exams')
+    screen = <StudyScreen onBack={() => setView('home')} initialTab={view === 'study' ? 'cards' : view} addClass={addClass} />
+  else if (view === 'settings') screen = <SettingsScreen onBack={() => setView('home')} onWidget={() => setView('widget')} />
+  else screen = <Home onFocus={openSetup} go={setView} onShelf={openShelf} />
 
   const calm = !game.session && !game.pending && !reward
   const promo = calm ? pendingPromotion(game) : null
-  const showPostcard = game.postcardToShow && calm && promo == null && view !== 'break' && failedAway == null
-  const showMail = newMail.length > 0 && calm && promo == null && !showPostcard && failedAway == null
+  const book = calm && promo == null && failedAway == null ? pendingBook(game) : null
+  const showPostcard = game.postcardToShow && calm && promo == null && !book && view !== 'break' && failedAway == null
+  const showMail = newMail.length > 0 && calm && promo == null && !book && !showPostcard && failedAway == null
 
   return (
     <>
       {screen}
-      {setupOpen && !game.session && <FocusSetup onClose={() => setSetupOpen(false)} />}
+      {setupOpen && !game.session && (
+        <FocusSetup
+          onClose={() => setSetupOpen(false)}
+          onAddClass={() => {
+            setSetupOpen(false)
+            openShelf(true)
+          }}
+        />
+      )}
       {failedAway != null && (
         <FailedModal
           awayMs={failedAway}
@@ -219,6 +260,7 @@ export default function App() {
           }}
         />
       )}
+      {book && <BookModal key={book.id} course={book} onClose={() => setGame((s) => shelveBook(s, book.id, Date.now()))} />}
       {showPostcard && <PostcardModal card={game.postcardToShow!} fresh />}
       {showMail && <MailModal notes={newMail} onClose={() => setNewMail([])} />}
       <Toasts />

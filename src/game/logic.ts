@@ -16,6 +16,7 @@ import { EFFECTS, SOCIAL, bump, simulate, type Activity } from './needs.ts'
 import { unlocked, rankOf, type UnlockKind } from './career.ts'
 import { dayKey, isOctober, monthDay, seasonOf } from './time.ts'
 import { examsToday } from './study.ts'
+import { celebrateBook, courseForLabel, courseMinutes, shelfName } from './shelf.ts'
 import { BIRTHDAY_NOTE, EXAM_NOTES } from './notes.ts'
 import type { Clothing } from './content.ts'
 
@@ -119,9 +120,10 @@ const rewardable = (c: Clothing, now: number) => !c.career && !c.special && inSe
 export function startFocus(s: GameState, now: number, minutes: number, label: string, rng: Rng = Math.random): GameState {
   // if the fox is out exploring, it hurries home to keep you company
   const next = s.adventure ? resolveAdventure(s, now, rng, true) : s
+  const course = courseForLabel(next, label)
   return {
     ...next,
-    session: { startedAt: now, durationMs: minutes * MIN, endsAt: now + minutes * MIN, label: label.trim(), hiddenAt: null, lastBeat: now, awayMs: 0 },
+    session: { startedAt: now, durationMs: minutes * MIN, endsAt: now + minutes * MIN, label: label.trim(), hiddenAt: null, lastBeat: now, awayMs: 0, ...(course && { courseId: course.id }) },
     breakEndsAt: null,
     settings: { ...next.settings, focusMinutes: minutes },
   }
@@ -205,6 +207,7 @@ export function completeFocus(s: GameState, now: number, rng: Rng = Math.random)
     days,
     daySessions: { ...next.stats.daySessions, [key]: (next.stats.daySessions[key] ?? 0) + 1 },
     subjects: ses.label ? { ...next.stats.subjects, [ses.label]: (next.stats.subjects[ses.label] ?? 0) + minutes } : next.stats.subjects,
+    courses: ses.courseId ? { ...next.stats.courses, [ses.courseId]: (next.stats.courses[ses.courseId] ?? 0) + minutes } : next.stats.courses,
   }
   stats.bestStreak = Math.max(stats.bestStreak, streak(days, now))
   const milestone = SECRET_MILESTONES.includes(stats.sessions) && next.secretsDelivered < GIFT.secretNotes.length
@@ -217,10 +220,12 @@ export function completeFocus(s: GameState, now: number, rng: Rng = Math.random)
     acorns: next.acorns + acorns,
     session: null,
     stats,
+    lastCourse: ses.courseId ?? next.lastCourse,
     pending: {
       acorns,
       minutes,
       label: ses.label,
+      ...(ses.courseId && { courseId: ses.courseId }),
       picksLeft: minutes >= 45 ? 2 : 1,
       choices: minutes >= 15 ? 3 : 2,
       offer: null,
@@ -520,6 +525,18 @@ export function setDecor(s: GameState, patch: { wall?: string; floor?: string })
   if (patch.wall && !isUnlocked(s, 'wall', patch.wall)) return s
   if (patch.floor && !isUnlocked(s, 'floor', patch.floor)) return s
   return { ...s, decor: { ...s.decor, ...patch } }
+}
+
+/** A book just went on the shelf: remember it, and the fox writes about it. */
+export function shelveBook(s: GameState, id: string, now: number): GameState {
+  const c = s.courses.find((x) => x.id === id)
+  if (!c || s.booksSeen.includes(id)) return celebrateBook(s, id)
+  const hours = Math.round(courseMinutes(s, c) / 60)
+  const text =
+    c.kind === 'work'
+      ? `i filed ${c.name} away on the work shelf today. ${hours} hours of hard work! you make it look easy (it isn’t). proud of you.`
+      : `i put ${c.name} on the ${shelfName(c.year)} today, right where i can see it. ${hours} hours! it has gold on the spine and everything. i’m so proud of you.`
+  return addNote(celebrateBook(s, id), { kind: 'fox', text }, now)
 }
 
 /** A promotion is waiting to be celebrated. */

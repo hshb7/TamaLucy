@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { ICON_ART } from '../art/items.ts'
+import { ICON_ART, NEED_ICON_ART } from '../art/items.ts'
+import { BOOK_COLORS } from '../art/bookcase.ts'
+import { activeCourses, courseForLabel, courseMinutes } from '../game/shelf.ts'
+import { hoursOf } from './Bookshelf.tsx'
 import { sfx } from '../audio.ts'
 import { acornsFor, startFocus } from '../game/logic.ts'
 import { askToNotify } from '../notify.ts'
@@ -11,12 +14,14 @@ import { GIFT } from '../gift.ts'
 
 const PRESETS = [10, 15, 25, 45, 60]
 
-export function FocusSetup({ onClose }: { onClose: () => void }) {
+export function FocusSetup({ onClose, onAddClass }: { onClose: () => void; onAddClass: () => void }) {
   const game = useGame()
+  const mine = activeCourses(game)
   const [minutes, setMinutes] = useState(game.settings.focusMinutes)
   const [label, setLabel] = useState('')
   const f = game.foxName
   const strict = game.settings.leaveMode === 'strict'
+  const course = courseForLabel(game, label)
 
   const start = () => {
     sfx.start()
@@ -57,11 +62,21 @@ export function FocusSetup({ onClose }: { onClose: () => void }) {
           what are you working on? <span className="muted">(optional)</span>
         </label>
         <div className="subject-chips">
-          {GIFT.subjects.map((sub) => (
-            <button key={sub} className={`subject-chip ${label === sub ? 'on' : ''}`} onClick={() => setLabel(label === sub ? '' : sub)}>
-              {sub}
-            </button>
-          ))}
+          {mine.length
+            ? mine.map((c) => (
+                <button key={c.id} className={`subject-chip course-chip ${label === c.name ? 'on' : ''}`} onClick={() => setLabel(label === c.name ? '' : c.name)}>
+                  <span className="course-dot" style={{ background: (BOOK_COLORS[c.color] ?? BOOK_COLORS.cherry).spine }} />
+                  {c.name}
+                </button>
+              ))
+            : GIFT.subjects.map((sub) => (
+                <button key={sub} className={`subject-chip ${label === sub ? 'on' : ''}`} onClick={() => setLabel(label === sub ? '' : sub)}>
+                  {sub}
+                </button>
+              ))}
+          <button className="subject-chip add-chip" onClick={onAddClass}>
+            {mine.length ? '+ class' : '+ add my classes'}
+          </button>
         </div>
         <input id="focus-label" value={label} maxLength={40} placeholder="or type anything, e.g. Torts outline" onChange={(e) => setLabel(e.target.value)} />
       </div>
@@ -73,6 +88,12 @@ export function FocusSetup({ onClose }: { onClose: () => void }) {
             ? `study in any app you like. ${f} keeps time and lets you know when it’s done.`
             : `leaving the app pauses the timer until you come back.`}
       </p>
+      {course && (
+        <p className="hint">
+          <PixelIcon sprite={NEED_ICON_ART.books} scale={2} />
+          fills in {course.kind === 'work' ? 'its binder' : `its book on the ${course.year} shelf`} ({hoursOf(courseMinutes(game, course))}/{course.goalHours} h)
+        </p>
+      )}
       <p className="hint">
         <PixelIcon sprite={ICON_ART.acorn} scale={2} />
         earns {acornsFor(minutes)} acorn{acornsFor(minutes) === 1 ? '' : 's'} for looking after {f}

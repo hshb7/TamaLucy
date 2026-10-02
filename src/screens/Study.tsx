@@ -11,23 +11,26 @@ import { Flashcards } from '../ui/Flashcards.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
 import { ReviewCards } from '../ui/ReviewCards.tsx'
 import { CareerPanel } from './Stats.tsx'
+import { BookshelfPanel } from './Bookshelf.tsx'
+import { courseNames } from '../game/shelf.ts'
 import { Header } from './Header.tsx'
 
-export type StudyTab = 'cards' | 'exams' | 'career'
+export type StudyTab = 'cards' | 'classes' | 'exams' | 'career'
 
-export function StudyScreen({ onBack, initialTab = 'cards' }: { onBack: () => void; initialTab?: StudyTab }) {
+export function StudyScreen({ onBack, initialTab = 'cards', addClass = false }: { onBack: () => void; initialTab?: StudyTab; addClass?: boolean }) {
   const [tab, setTab] = useState<StudyTab>(initialTab)
   return (
     <main className="screen">
       <Header title="study" onBack={onBack} />
-      <div className="tabs tabs-3" role="tablist">
-        {(['cards', 'exams', 'career'] as StudyTab[]).map((t) => (
+      <div className="tabs" role="tablist">
+        {(['cards', 'classes', 'exams', 'career'] as StudyTab[]).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
             {t === 'cards' ? 'my cards' : t}
           </button>
         ))}
       </div>
       {tab === 'cards' && <CardsPanel />}
+      {tab === 'classes' && <BookshelfPanel startAdding={addClass && initialTab === 'classes'} />}
       {tab === 'exams' && <ExamsPanel />}
       {tab === 'career' && <CareerPanel />}
     </main>
@@ -35,7 +38,8 @@ export function StudyScreen({ onBack, initialTab = 'cards' }: { onBack: () => vo
 }
 
 function SubjectPicker({ value, onChange, extra = [] }: { value: string; onChange: (s: string) => void; extra?: string[] }) {
-  const all = [...new Set([...GIFT.subjects, ...extra])]
+  const game = useGame()
+  const all = [...new Set([...courseNames(game, GIFT.subjects), ...extra])]
   return (
     <div className="subject-chips">
       {all.map((sub) => (
@@ -60,7 +64,7 @@ function Pips({ box }: { box: number }) {
 function CardsPanel() {
   const game = useGame()
   const now = Date.now()
-  const [subject, setSubject] = useState(GIFT.subjects[0] ?? 'General')
+  const [subject, setSubject] = useState(() => courseNames(game, GIFT.subjects)[0] ?? 'General')
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
   const [review, setReview] = useState<{ subject?: string; all?: boolean } | null>(null)

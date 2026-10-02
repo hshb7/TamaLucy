@@ -121,7 +121,7 @@ function BirthdayField({ value, onChange }: { value: string; onChange: (v: strin
   )
 }
 
-export function SettingsScreen({ onBack }: { onBack: () => void }) {
+export function SettingsScreen({ onBack, onWidget }: { onBack: () => void; onWidget: () => void }) {
   const game = useGame()
   const [tips, setTips] = useState(false)
   const [install, setInstall] = useState(false)
@@ -153,6 +153,16 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
                 ? `needs drain more slowly, and ${game.foxName} never gets more than a little sad.`
                 : `everything is paused. ${game.foxName} won’t get hungry or lonely until you turn this off.`}
           </p>
+        </section>
+
+        <section className="px-box card">
+          <h2>your widget</h2>
+          <p className="muted">
+            {game.foxName} on your iPhone home screen (and in the Dynamic Island while you focus), in your colours, saying what you want.
+          </p>
+          <button className="btn" onClick={onWidget}>
+            style your widget ✿
+          </button>
         </section>
 
         <section className="px-box card">

@@ -11,6 +11,10 @@ import { formatDuration } from '../hooks.ts'
 import { Modal } from '../ui/bits.tsx'
 import { FoxPortrait } from '../ui/FoxPortrait.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
+import { PixelCanvas } from '../ui/PixelCanvas.tsx'
+import { drawBook, seedOf } from '../art/bookcase.ts'
+import { courseMinutes, shelfName } from '../game/shelf.ts'
+import type { Course } from '../game/state.ts'
 
 const PAW = ICON_ART.heart
 
@@ -191,6 +195,36 @@ export function PromotionModal({ rank, onClose }: { rank: number; onClose: () =>
       )}
       <button className="btn btn-pink" onClick={onClose}>
         congratulations! ♡
+      </button>
+    </Modal>
+  )
+}
+
+/** One of her classes just went on the shelf. */
+export function BookModal({ course, onClose }: { course: Course; onClose: () => void }) {
+  const game = useGame()
+  useEffect(() => sfx.fanfare(), [])
+  const work = course.kind === 'work'
+  const hours = Math.round(courseMinutes(game, course) / 60)
+  const reached = courseMinutes(game, course) >= course.goalHours * 60
+  const f = game.foxName
+  const book = (p: Parameters<typeof drawBook>[0], t: number) =>
+    drawBook(p, { id: course.id, shelf: 0, color: course.color, progress: 1, done: true, work, seed: seedOf(course.id), x: 2, y: 3, w: work ? 6 : 5, h: work ? 11 : 10 }, t * 4)
+  return (
+    <Modal onClose={onClose} className="promo">
+      <p className="promo-kicker">{work ? 'all filed away!' : 'a new book on the shelf!'}</p>
+      <div className="book-celebration">
+        <FoxPortrait equipped={game.equipped} cheer className="portrait-m" />
+        <PixelCanvas w={work ? 10 : 9} h={16} draw={book} fps={10} className="book-big" label={`${course.name}, with gold on the spine`} />
+      </div>
+      <h2>{work ? `${course.name}: done and dusted!` : `${course.name} is on the ${shelfName(course.year)}!`}</h2>
+      <p className="center">
+        {reached
+          ? `${hours} hours of focus. ${f} dusted off a spot for it and keeps looking at it proudly ✿`
+          : `you finished ${course.name}! ${f} put it on the shelf, gold on the spine and all ✿`}
+      </p>
+      <button className="btn btn-pink" onClick={onClose}>
+        yay! ♡
       </button>
     </Modal>
   )

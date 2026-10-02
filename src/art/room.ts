@@ -1,6 +1,7 @@
 import { ellipse, type Painter } from './painter.ts'
 import { GIFT_ART, LAW_ART, ROOM_ART, SPECIAL_ART } from './items.ts'
 import { sprite, type Sprite } from './sprite.ts'
+import { BOOKCASE, drawBookcase, type PlacedBook } from './bookcase.ts'
 import type { Season } from '../game/time.ts'
 
 /** The whole room is wider than the screen; the camera pans across it. */
@@ -63,9 +64,15 @@ export interface RoomOptions {
   birthday?: boolean
   /** Her photo, pixelated, for the frame on the study wall. */
   photo?: Sprite | null
+  /** Her classes and work, as books on the bookcase. */
+  books?: readonly PlacedBook[]
+  /** The bookcase's brass plates, top shelf first. */
+  shelfLabels?: readonly string[]
 }
 
 export const PHOTO_SPOT = { x: 158, y: 13 }
+/** The mushroom lamp, on top of the bookcase. */
+const LAMP_SPOT = { x: BOOKCASE.x + 17, y: BOOKCASE.y - 11 }
 export const CAKE_SPOT = { x: 84, y: 84 }
 
 type Wallpaper = { name: string; base: string; a: string; b?: string; kind: 'stripes' | 'gingham' | 'hearts' | 'dots' | 'pinstripe' | 'damask'; trim: string }
@@ -300,13 +307,6 @@ function drawRug(p: Painter, heart: boolean) {
   }
 }
 
-function drawShelf(p: Painter) {
-  p.rect(80, 37, 40, 3, '#a57a5a')
-  p.rect(80, 40, 40, 1, '#7b523d')
-  p.rect(84, 41, 2, 4, '#7b523d')
-  p.rect(114, 41, 2, 4, '#7b523d')
-}
-
 function drawFairyLights(p: Painter, t: number) {
   const colors = ['#ffd76e', '#f59aa6', '#9dcdee', '#c7a8e8', '#b6e0a0']
   for (let x = 0; x < ROOM_W; x++) {
@@ -325,8 +325,8 @@ export function drawGlows(p: Painter, o: RoomOptions) {
   const dark = isNight(o.hour) ? 1 : o.hour >= 19 ? 0.6 : 0
   if (!dark) return
   if (o.gifts.includes('mushroomLamp')) {
-    ellipse(p, 102, 30, 16, 12, '#ffd9a0', 0.12 * dark)
-    ellipse(p, 102, 30, 9, 7, '#ffe6b8', 0.15 * dark)
+    ellipse(p, LAMP_SPOT.x + 5, LAMP_SPOT.y + 4, 16, 12, '#ffd9a0', 0.12 * dark)
+    ellipse(p, LAMP_SPOT.x + 5, LAMP_SPOT.y + 4, 9, 7, '#ffe6b8', 0.15 * dark)
   }
   if (o.gifts.includes('fairyLights')) for (let x = 4; x < ROOM_W; x += 8) ellipse(p, x, 8, 3, 3, '#fff0c0', 0.12 * dark)
   if (o.october) ellipse(p, 38, 40, 9, 6, '#ffb36b', 0.18 * dark)
@@ -342,12 +342,14 @@ export function drawRoom(p: Painter, o: RoomOptions) {
   const law = (id: string) => o.law?.includes(id) ?? false
   drawWallAndFloor(p, o.decor ?? { wall: 'stripes', floor: 'honey' })
   drawWindow(p, o)
-  drawShelf(p)
-  if (has('painting')) p.sprite(GIFT_ART.painting, 92, 12)
+  if (has('painting')) p.sprite(GIFT_ART.painting, 54, 16)
   if (has('fairyLights')) drawFairyLights(p, o.t)
-  if (has('books')) p.sprite(GIFT_ART.books, 83, 27)
-  if (has('mushroomLamp')) p.sprite(GIFT_ART.mushroomLamp, 97, 26)
-  if (has('snowGlobe')) p.sprite(GIFT_ART.snowGlobe, 109, 26)
+  // the bookcase, with her gifts on top
+  drawBookcase(p, o.books ?? [], o.shelfLabels ?? [], o.t)
+  const top = BOOKCASE.y
+  if (has('books')) p.sprite(GIFT_ART.books, BOOKCASE.x + 2, top - GIFT_ART.books.h)
+  if (has('mushroomLamp')) p.sprite(GIFT_ART.mushroomLamp, LAMP_SPOT.x, LAMP_SPOT.y)
+  if (has('snowGlobe')) p.sprite(GIFT_ART.snowGlobe, BOOKCASE.x + 31, top - GIFT_ART.snowGlobe.h)
   if (has('cactus')) p.sprite(GIFT_ART.cactus, 23, 34)
   if (o.october) p.sprite(SPECIAL_ART.jackOLantern, 33, 36)
   if (o.photo) {
@@ -360,7 +362,7 @@ export function drawRoom(p: Painter, o: RoomOptions) {
     p.sprite(o.photo, x + 2, y + 2)
     p.rect(x + w / 2 - 1, y - 3, 2, 3, '#7b523d') // the nail it hangs from
   }
-  if (has('plant')) p.sprite(GIFT_ART.plant, 108, 58)
+  if (has('plant')) p.sprite(GIFT_ART.plant, BOOKCASE.x + BOOKCASE.w, 58)
   // study + bath corner
   if (law('diploma')) p.sprite(LAW_ART.diploma, 140, 18)
   drawClock(p)

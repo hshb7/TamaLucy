@@ -10,13 +10,17 @@ The iPhone app can do the two things a website can't:
 - **The fox in the Dynamic Island** (and on the lock screen) with a live countdown
   while she focuses. Needs an iPhone with a Dynamic Island (iPhone 14 Pro and later,
   every iPhone 15 and later); other iPhones show it on the lock screen.
+- **Her fox on the home screen.** A small or medium widget: the fox in its outfit in front
+  of her wallpaper (or a colour), with today's focus, a class's hours, days to her next
+  exam, her streak or her acorns, plus a line she writes herself. She styles it in the app
+  (Settings → *your widget*, or Decor), and the Dynamic Island uses the same style.
 - **Her distracting apps locked during focus.** She picks them once (Settings →
   *block distracting apps*). While the timer runs they open to a fox screen instead:
   *"Mochi is studying ✿ … back to studying"*. *"use it anyway"* unlocks the app and
   ends the session, and the fox is sad when she comes back. Other apps (her readings,
   notes) keep working.
 
-It uses Apple's Screen Time: she approves it with Face ID, and the app never sees
+The widget and the Dynamic Island need iOS 17 or later. Blocking apps uses Apple's Screen Time: she approves it with Face ID, and the app never sees
 which apps she uses. Nothing about her phone is sent anywhere.
 
 Everything else (the fox, acorns, letters, syncing) is the web app inside, so it's the
@@ -36,6 +40,9 @@ Instead:
   too. The app only notices the apps she picked, and only during focus.
 - **"Time's up!" notifications**, even with the window closed: TamaLucy keeps running in
   the menu bar.
+- **Her iPhone widget on the desktop**, if she likes: macOS 14 or later can show iPhone
+  widgets (right-click the desktop → *Edit Widgets*, with the iPhone on the same Apple
+  Account; System Settings → Desktop & Dock → *Use iPhone widgets*).
 
 ## What's in here
 
@@ -43,7 +50,7 @@ Instead:
 project.yml        the Xcode project, described for XcodeGen (you set APP_ID + team here)
 App/               the iPhone app: a full-screen web view + FocusBridge (Dynamic Island, blocking, haptics)
 Mac/               the Mac app: window, menu bar fox (FocusCenter), the fox over distracting apps
-Widget/            the Live Activity (Dynamic Island + lock screen)
+Widget/            the home screen widget and the Live Activity (Dynamic Island + lock screen)
 Shield/            the fox screen on a blocked app
 ShieldAction/      its buttons ("back to studying" / "use it anyway")
 Monitor/           unlocks her apps when time's up, even if TamaLucy was closed
@@ -79,12 +86,14 @@ You need a Mac with **Xcode 15 or later**, your **paid Apple Developer account**
    (`npm run ios` does steps 2 and 4 in one go.)
 5. **Run it on her iPhone.** Plug her iPhone into the Mac, pick it as the run
    destination at the top of Xcode, and press ▶. Signing is automatic: Xcode registers
-   the app, its four extensions, the App Group and the Family Controls capability for
-   you. The first time, her iPhone asks to turn on **Developer Mode** (Settings →
+   the app, its four extensions, the App Group (the app and the widget share it) and the
+   Family Controls capability for you. The first time, her iPhone asks to turn on **Developer Mode** (Settings →
    Privacy & Security → Developer Mode) and restarts.
 6. **On her phone:** open TamaLucy, sign in with her mailbox code (first screen →
    *"i already have my fox on another device"*), then Settings → **block distracting
    apps** → choose apps. Start a focus session and the fox moves into the Dynamic Island.
+7. **The widget:** touch and hold the home screen → **+** → search *TamaLucy* → small or
+   medium → *Add Widget*. It updates whenever she opens the app.
 
 An app installed from Xcode like this keeps working for a year (your development
 profile's lifetime). Run it from Xcode again to renew it, or to update it after you
@@ -129,6 +138,9 @@ The Dynamic Island part needs no approval.
 - **"the web app isn't built yet"** when building → run `npm run build` in the repo folder.
 - **Signing errors about Family Controls or App Groups** → check `DEVELOPMENT_TEAM` is your
   paid team, then in Xcode select each target → *Signing & Capabilities* → *Try Again*.
+- **The widget shows a plain fox** → open TamaLucy once (it sends the widget its style and
+  pictures). Still plain? The app and the widget must share the App Group: select the
+  FocusWidget target → *Signing & Capabilities* and check *App Groups* lists `group.<APP_ID>`.
 - **No fox in the Dynamic Island** → Settings → TamaLucy → *Live Activities* on. On iPhones
   without a Dynamic Island it appears on the lock screen.
 - **"choose apps" does nothing** → Screen Time must be allowed: Settings → Screen Time →

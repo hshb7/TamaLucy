@@ -5,6 +5,7 @@ import ManagedSettings
 import SwiftUI
 import UIKit
 import UserNotifications
+import WidgetKit
 
 /// Everything the web app asks the iPhone to do (see src/native.ts).
 @MainActor
@@ -23,6 +24,7 @@ final class FocusBridge {
         case "focus.broke": return takeBrokeAt()
         case "blocking.status": return blockingStatus()
         case "blocking.choose": return await chooseApps()
+        case "widget.update": return updateWidget(body)
         case "haptic": haptic(body["style"] as? String ?? "light"); return true
         default: return NSNull()
         }
@@ -169,6 +171,15 @@ final class FocusBridge {
         let center = DeviceActivityCenter()
         center.stopMonitoring([.focus])
         try? center.startMonitoring(.focus, during: schedule)
+    }
+
+    // MARK: - her home screen widget
+
+    /// New words or pictures for the widget (her style, today's focus...): keep them and redraw it.
+    private func updateWidget(_ body: [String: Any]) -> Bool {
+        guard let card = body["card"] as? [String: Any], FoxCardStore.save(card) else { return false }
+        WidgetCenter.shared.reloadAllTimelines()
+        return true
     }
 
     // MARK: - little things

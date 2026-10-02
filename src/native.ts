@@ -4,6 +4,9 @@
 // JS → native: window.webkit.messageHandlers.tamalucy.postMessage({ id, cmd, ...args })
 // native → JS: window.__tamalucyNative.reply(id, result) and .emit(event)
 
+import type { WidgetData } from './game/widget.ts'
+import type { WidgetImages } from './ui/widgetArt.ts'
+
 interface Handler {
   postMessage(msg: unknown): void
 }
@@ -95,6 +98,10 @@ export const native = {
   /** iPhone: Screen Time access + Apple's app picker. Mac: pick apps from /Applications. */
   chooseBlockedApps() {
     return call<BlockingStatus>('blocking.choose', {}, NONE)
+  },
+  /** iPhone: redraw her home screen widget (and the Dynamic Island's fox) with these words and pictures. */
+  updateWidget(card: WidgetData & WidgetImages) {
+    return call<boolean>('widget.update', { card }, false)
   },
   haptic(style: 'light' | 'success' | 'warning') {
     void call<boolean>('haptic', { style }, false)

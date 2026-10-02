@@ -35,7 +35,7 @@ function notice(game: GameState, now: number, unread: number): Notice | null {
   return null
 }
 
-export function Home({ onFocus, go }: { onFocus: () => void; go: (v: View) => void }) {
+export function Home({ onFocus, go, onShelf }: { onFocus: () => void; go: (v: View) => void; onShelf: (add?: boolean) => void }) {
   const game = useGame()
   const now = useNow(1000)
   const [quiz, setQuiz] = useState(false)
@@ -76,7 +76,7 @@ export function Home({ onFocus, go }: { onFocus: () => void; go: (v: View) => vo
 
       {/* wide screens: the room (with the menu under it) on the left, the rest in a sidebar; see .home-main / .home-side */}
       <div className="home-main">
-        <LivingRoom onStudy={onFocus} onQuiz={() => setQuiz(true)} />
+        <LivingRoom onStudy={onFocus} onQuiz={() => setQuiz(true)} onShelf={onShelf} />
         <nav className="nav">
           <button onClick={() => go('wardrobe')}>
             <PixelIcon sprite={ICON_ART.bow} scale={3} />

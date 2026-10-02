@@ -32,6 +32,8 @@ export interface FocusSession {
   lastBeat: number
   /** Total time spent away (gentle mode pauses the timer). */
   awayMs: number
+  /** The class (or work) it counts towards, if the label is one of hers. */
+  courseId?: string
 }
 
 export interface Offer {
@@ -50,6 +52,8 @@ export interface PendingReward {
   foundLetter?: boolean
   /** Acorns this session earned. */
   acorns?: number
+  /** The class (or work) the minutes went to. */
+  courseId?: string
 }
 
 export type CareLevel = 'classic' | 'gentle' | 'paused'
@@ -81,6 +85,43 @@ export interface StudyCard {
   created: number
 }
 
+/**
+ * One of her classes, or a piece of work (a job, the journal, a clinic).
+ * Each one is a book on the bookcase that fills in as she studies for it.
+ */
+export interface Course {
+  id: string
+  name: string
+  kind: 'class' | 'work'
+  /** The shelf a class stands on (SHELVES: 2L, 3L). Work has its own shelf. */
+  year: string
+  /** Spine colour, a key of BOOK_COLORS. */
+  color: string
+  /** Hours of focus that finish its book. */
+  goalHours: number
+  /** Hours she'd already put in before TamaLucy. */
+  priorHours: number
+  /** When she marked it finished (0 = still going). */
+  doneAt: number
+  created: number
+}
+
+export type WidgetShow = 'today' | 'acorns' | 'streak' | 'exam' | 'class'
+export type WidgetPose = 'sit' | 'study' | 'nap'
+
+/** How her iPhone widget (and the Dynamic Island) look. */
+export interface WidgetStyle {
+  /** Background: one of her wallpapers or a plain colour (WIDGET_BACKGROUNDS). */
+  bg: string
+  pose: WidgetPose
+  /** What it shows next to the fox. */
+  show: WidgetShow
+  /** The class whose book it shows (show: 'class'), '' = the one she studied last. */
+  courseId: string
+  /** Her own little line ('' = the fox says how it's doing). */
+  caption: string
+}
+
 export interface Exam {
   id: string
   name: string
@@ -107,6 +148,8 @@ export interface Stats {
   daySessions: Record<string, number>
   /** subject label -> focused minutes */
   subjects: Record<string, number>
+  /** class (or work) id -> focused minutes */
+  courses: Record<string, number>
   bestStreak: number
 }
 
@@ -158,6 +201,13 @@ export interface GameState {
   stats: Stats
   settings: Settings
   cards: StudyCard[]
+  /** Her classes and work: the books on the bookcase. */
+  courses: Course[]
+  /** Books whose finishing was already celebrated. */
+  booksSeen: string[]
+  /** The class she focused on last. */
+  lastCourse: string
+  widget: WidgetStyle
   exams: Exam[]
   /** Exams the fox already wished good luck for. */
   examsWished: string[]
@@ -211,9 +261,13 @@ export function freshState(now: number, rng: () => number = Math.random): GameSt
     usedNotes: [],
     secretsDelivered: 0,
     pets: { windowStart: now, count: 0 },
-    stats: { totalMinutes: 0, sessions: 0, gaveUp: 0, left: 0, days: {}, daySessions: {}, subjects: {}, bestStreak: 0 },
+    stats: { totalMinutes: 0, sessions: 0, gaveUp: 0, left: 0, days: {}, daySessions: {}, subjects: {}, courses: {}, bestStreak: 0 },
     settings: { focusMinutes: 25, breakMinutes: 5, sound: true, graceSeconds: 10, leaveMode: defaultLeaveMode(), care: 'classic', ambient: 'off' },
     cards: [],
+    courses: [],
+    booksSeen: [],
+    lastCourse: '',
+    widget: { bg: 'stripes', pose: 'sit', show: 'today', courseId: '', caption: '' },
     exams: [],
     examsWished: [],
     birthday: GIFT.birthday,
@@ -250,6 +304,7 @@ export function hydrate(raw: Record<string, unknown>, now: number): GameState {
     decor: { ...base.decor, ...parsed.decor },
     settings: { ...base.settings, ...parsed.settings },
     stats: { ...base.stats, ...parsed.stats },
+    widget: { ...base.widget, ...parsed.widget },
   }
 }
 

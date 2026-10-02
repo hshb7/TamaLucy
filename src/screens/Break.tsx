@@ -17,7 +17,7 @@ const TIPS = [
   'grab a little snack',
 ]
 
-export function BreakScreen({ onFocus, onHome, onStudy }: { onFocus: () => void; onHome: () => void; onStudy: () => void }) {
+export function BreakScreen({ onFocus, onHome, onStudy, onShelf }: { onFocus: () => void; onHome: () => void; onStudy: () => void; onShelf: (add?: boolean) => void }) {
   const game = useGame()
   const now = useNow(500)
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)])
@@ -29,7 +29,7 @@ export function BreakScreen({ onFocus, onHome, onStudy }: { onFocus: () => void;
       <h1 className="title">{running ? 'break time ☕' : 'break’s over!'}</h1>
       {running ? <div className="timer timer-light">{formatClock(game.breakEndsAt! - now)}</div> : <p className="lead">ready for another round?</p>}
       <NeedsPanel game={game} />
-      <LivingRoom onStudy={onFocus} onQuiz={() => setQuiz(true)} />
+      <LivingRoom onStudy={onFocus} onQuiz={() => setQuiz(true)} onShelf={onShelf} />
       <p className="muted center">break idea: {tip} · or look after {game.foxName}!</p>
       <div className="stack">
         <button className="btn" onClick={() => setQuiz(true)}>
