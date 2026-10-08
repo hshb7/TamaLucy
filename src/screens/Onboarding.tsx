@@ -3,8 +3,9 @@ import { ICON_ART } from '../art/items.ts'
 import { sfx } from '../audio.ts'
 import { GIFT } from '../gift.ts'
 import { getGame, setGame, useGame } from '../game/store.ts'
-import { MAX_SHELVES, STUDY_PRESETS, applyPreset, shelvesFromNames, tagFor, type StudyPreset } from '../game/studySetup.ts'
-import { TRACKS } from '../game/career.ts'
+import { MAX_SHELVES, STUDY_PRESETS, applyPreset, setRungs, shelvesFromNames, tagFor, type StudyPreset } from '../game/studySetup.ts'
+import { ladder } from '../game/career.ts'
+import { RungsFields } from './Rungs.tsx'
 import { connectMailbox, mailProblem } from '../mail.ts'
 import { syncNow } from '../sync.ts'
 import { FoxPortrait } from '../ui/FoxPortrait.tsx'
@@ -73,15 +74,17 @@ function Join({ onBack, onNew }: { onBack: () => void; onNew: () => void }) {
  * school…), her name for it, and the shelves on the bookcase. Every field is
  * hers to change; nothing is assumed.
  */
-function StudySetup({ fox, onDone }: { fox: string; onDone: (preset: StudyPreset, program: string, shelves: string[]) => void }) {
+function StudySetup({ fox, onDone }: { fox: string; onDone: (preset: StudyPreset, program: string, shelves: string[], rungs: string[]) => void }) {
   const [preset, setPreset] = useState<StudyPreset | null>(null)
   const [program, setProgram] = useState('')
   const [shelves, setShelves] = useState<string[]>(['', '', ''])
+  const [rungs, setRungsLocal] = useState<string[]>([])
   const pick = (p: StudyPreset) => {
     sfx.tap()
     setPreset(p)
     setProgram(p.program)
     setShelves([...p.shelves, '', ''].slice(0, MAX_SHELVES))
+    setRungsLocal([...p.rungs])
   }
   const named = shelves.filter((x) => x.trim())
   return (
@@ -91,7 +94,7 @@ function StudySetup({ fox, onDone }: { fox: string; onDone: (preset: StudyPreset
         className="px-box form"
         onSubmit={(e) => {
           e.preventDefault()
-          if (preset && named.length) onDone(preset, program, shelves)
+          if (preset && named.length) onDone(preset, program, shelves, rungs)
         }}
       >
         <h2>what are you studying?</h2>
@@ -128,9 +131,15 @@ function StudySetup({ fox, onDone }: { fox: string; onDone: (preset: StudyPreset
                 ))}
               </div>
             </div>
-            <p className="muted">
-              every class you add becomes a book on one of these shelves, and fills in as you study for it. {fox} climbs {TRACKS[preset.track].name === 'law' ? 'the law ladder, from 1L to the Supreme Court' : 'from freshman to dean'} as the hours add up. you can change all of this later in settings.
-            </p>
+            <details className="rungs-details">
+              <summary>
+                {fox}&rsquo;s career: <b>{rungs[1] || preset.rungs[1]}</b> → <b>{rungs[rungs.length - 1] || preset.rungs[preset.rungs.length - 1]}</b>{' '}
+                <span className="muted">(tap to rename the rungs)</span>
+              </summary>
+              <p className="muted">every hour you focus moves {fox} up a rung. these are only suggestions: name them after what you&rsquo;re studying.</p>
+              <RungsFields value={rungs} onChange={setRungsLocal} track={preset.track} />
+            </details>
+            <p className="muted">every class you add becomes a book on one of these shelves, and fills in as you study for it. you can change all of this later in settings.</p>
           </>
         )}
         <button className="btn btn-big btn-pink" type="submit" disabled={!preset || !named.length}>
@@ -207,18 +216,18 @@ export function Onboarding() {
     return (
       <StudySetup
         fox={name}
-        onDone={(preset, program, shelves) => {
+        onDone={(preset, program, shelves, rungs) => {
           const now = Date.now()
           setGame((s) => {
             const withPreset = applyPreset(s, preset, now)
-            return { ...withPreset, study: { ...withPreset.study, program: program.trim().slice(0, 30), shelves: shelvesFromNames(shelves, now) } }
+            return setRungs({ ...withPreset, study: { ...withPreset.study, program: program.trim().slice(0, 30), shelves: shelvesFromNames(shelves, now) } }, rungs)
           })
           next()
         }}
       />
     )
 
-  const track = TRACKS[game.study.track]
+  const rungs = ladder(game)
   return (
     <main className="screen onboarding">
       <h1 className="title">how it works</h1>
@@ -227,8 +236,8 @@ export function Onboarding() {
           <PixelIcon sprite={ICON_ART.acorn} scale={3} />
           <p>
             <b>study with {name}.</b> set a timer and stay in the app. if you leave for more than a few seconds, {name} gets
-            distracted and the session doesn&rsquo;t count. every hour you study moves {name} up a career,{' '}
-            {track.name === 'law' ? 'from 1L to the Supreme Court' : 'from freshman to dean'}, and fills in the book for the class you picked.
+            distracted and the session doesn&rsquo;t count. every hour you study moves {name} up a rung, from {rungs[1].title} all the way to{' '}
+            {rungs[rungs.length - 1].title}, and fills in the book for the class you picked.
           </p>
         </li>
         <li className="px-box">

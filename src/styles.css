@@ -1857,6 +1857,38 @@ label.check span {
   display: flex;
   flex-direction: column;
 }
+.rungs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rungs li {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.rungs small {
+  text-align: right;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.rungs input {
+  margin: var(--b) 0;
+  padding: 6px 10px;
+  font-size: 16px;
+}
+.rungs-details summary {
+  cursor: pointer;
+  font-family: var(--font-pixel);
+  font-size: 15px;
+}
+.rungs-details[open] summary {
+  margin-bottom: 8px;
+}
 .presets {
   display: flex;
   flex-wrap: wrap;

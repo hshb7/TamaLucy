@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { freshState, hydrate, type GameState } from './state.ts'
-import { GENERAL_RANKS, LAW_RANKS, currentRank, ladder, unlocked } from './career.ts'
+import { GENERAL_RANKS, LAW_RANKS, RUNGS, currentRank, ladder, shortOf, unlocked } from './career.ts'
 import { adventures } from './content.ts'
 import { addCourse, draftCourse, shelfIndex, shelfTags, workShelf } from './shelf.ts'
-import { STUDY_PRESETS, applyPreset, setShelves, setStudy, shelvesFromNames, tagFor } from './studySetup.ts'
+import { STUDY_PRESETS, applyPreset, setRungs, setShelves, setStudy, shelvesFromNames, tagFor } from './studySetup.ts'
 import { enabledDecks, toggleDeck } from './decks.ts'
 import { parseCardList } from './study.ts'
 
@@ -63,10 +63,10 @@ describe('setting up what she studies', () => {
   it('the two tracks share the rungs but not the titles, prizes or places', () => {
     const law = { ...setUp('law'), stats: { ...freshState(T0).stats, totalMinutes: 3600 } }
     const school = { ...setUp('college'), stats: law.stats }
-    expect(ladder(law)).toBe(LAW_RANKS)
-    expect(ladder(school)).toBe(GENERAL_RANKS)
+    expect(ladder(law)).toEqual(LAW_RANKS)
+    expect(ladder(school).map((r) => r.unlocks)).toEqual(GENERAL_RANKS.map((r) => r.unlocks))
     expect(currentRank(law).title).toBe('Partner')
-    expect(currentRank(school).title).toBe('Doctor')
+    expect(currentRank(school).title).toBe('Lecturer')
     expect(unlocked(law, 'law')).toEqual(['diploma', 'scales'])
     expect(unlocked(school, 'law')).toEqual(['diploma', 'trophy'])
     expect(unlocked(school, 'clothes')).not.toContain('judgeWig')
@@ -79,11 +79,11 @@ describe('setting up what she studies', () => {
     const old = { ...freshState(T0), onboarded: true } as unknown as Record<string, unknown>
     delete old.study
     const s = hydrate(old, T0)
-    expect(s.study).toEqual({ program: '', track: 'general', shelves: [], decks: [], asked: false })
+    expect(s.study).toEqual({ program: '', track: 'general', shelves: [], decks: [], rungs: [], asked: false })
     expect(setStudy(s, { program: 'law' }).study.asked).toBe(true)
     // a save an earlier build stamped with the old law default, never answered: neutral too
     const stamped = { ...old, study: { program: 'law school', track: 'law', shelves: [{ id: '2L', name: '2L', tag: '2L' }], decks: ['legalLatin'], asked: false } }
-    expect(hydrate(stamped, T0).study).toEqual({ program: '', track: 'general', shelves: [], decks: [], asked: false })
+    expect(hydrate(stamped, T0).study).toEqual({ program: '', track: 'general', shelves: [], decks: [], rungs: [], asked: false })
     // but what she chose herself stays
     const chosen = { ...old, study: { ...stamped.study, asked: true } }
     expect(hydrate(chosen, T0).study.track).toBe('law')
@@ -93,6 +93,25 @@ describe('setting up what she studies', () => {
     // a brand-new save waits for the setup screen
     const fresh = hydrate({ ...freshState(T0) } as unknown as Record<string, unknown>, T0)
     expect(fresh.study.shelves).toEqual([])
+  })
+
+  it('the rungs are hers to name', () => {
+    for (const p of STUDY_PRESETS) expect(p.rungs).toHaveLength(RUNGS)
+    const nurse = { ...setUp('nursing'), stats: { ...freshState(T0).stats, totalMinutes: 6600 } }
+    expect(currentRank(nurse).title).toBe('Chief Nursing Officer')
+    expect(currentRank(nurse).short).toBe('CNO')
+    expect(shortOf('RN')).toBe('RN')
+    expect(shortOf('Supercalifragilistic')).toBe('Supercali.')
+    // a rung she leaves blank keeps the plain name; the law extras switch keeps her rungs
+    let s = setRungs(nurse, ['', 'Baby Nurse', ...Array(RUNGS - 2).fill('')])
+    expect(ladder(s)[0].title).toBe('Curious Kit')
+    expect(ladder(s)[1]).toMatchObject({ title: 'Baby Nurse', short: 'Baby Nurse' })
+    expect(ladder(s)[2].title).toBe('Learner')
+    s = setStudy(s, { track: 'law' })
+    expect(ladder(s)[1].title).toBe('Baby Nurse')
+    expect(unlocked({ ...s, stats: nurse.stats }, 'law')).toContain('scales')
+    // no rungs saved yet (an old save): the plain ladder
+    expect(ladder({ study: { ...s.study, rungs: [] } })).toEqual(LAW_RANKS)
   })
 
   it('reads pasted card lists with dashes, colons or tabs', () => {

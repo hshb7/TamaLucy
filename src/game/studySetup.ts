@@ -4,6 +4,7 @@
 // here is assumed: a save that predates this screen gets the law school setup
 // the app shipped with.
 import type { Course, GameState, Shelf, Study, Track } from './state.ts'
+import { GENERAL_RANKS, LAW_RANKS, RUNGS } from './career.ts'
 
 export const MAX_SHELVES = 3
 
@@ -14,17 +15,73 @@ export interface StudyPreset {
   track: Track
   shelves: string[]
   decks: string[]
+  /** The eleven rungs of the fox's career for this kind of student (she can rename any). */
+  rungs: string[]
 }
 
-/** Starting points for the setup screen. She can change every field. */
+const titles = (ranks: readonly { title: string }[]) => ranks.map((r) => r.title)
+
+/** Starting points for the setup screen. She can change every field, every rung included. */
 export const STUDY_PRESETS: StudyPreset[] = [
-  { id: 'law', label: 'law school', program: 'law school', track: 'law', shelves: ['1L', '2L', '3L'], decks: ['legalLatin'] },
-  { id: 'college', label: 'college', program: 'college', track: 'general', shelves: ['year 1', 'year 2', 'year 3'], decks: [] },
-  { id: 'grad', label: 'grad school', program: 'grad school', track: 'general', shelves: ['year 1', 'year 2', 'research'], decks: [] },
-  { id: 'med', label: 'med / nursing', program: 'med school', track: 'general', shelves: ['year 1', 'year 2', 'clinicals'], decks: [] },
-  { id: 'exam', label: 'exam prep', program: 'exam prep', track: 'general', shelves: ['review', 'practice', 'work'], decks: [] },
-  { id: 'other', label: 'something else', program: '', track: 'general', shelves: ['this term', 'next term', 'work'], decks: [] },
+  { id: 'law', label: 'law school', program: 'law school', track: 'law', shelves: ['1L', '2L', '3L'], decks: ['legalLatin'], rungs: titles(LAW_RANKS) },
+  {
+    id: 'college',
+    label: 'college',
+    program: 'college',
+    track: 'general',
+    shelves: ['year 1', 'year 2', 'year 3'],
+    decks: [],
+    rungs: ['Curious Kit', 'Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate', 'Grad Student', 'Teaching Assistant', 'Lecturer', 'Professor', 'Dean'],
+  },
+  {
+    id: 'grad',
+    label: 'grad school',
+    program: 'grad school',
+    track: 'general',
+    shelves: ['year 1', 'year 2', 'research'],
+    decks: [],
+    rungs: ['Curious Kit', 'First-Year', 'Second-Year', 'Candidate', 'Master’s', 'PhD Student', 'Researcher', 'Postdoc', 'Assistant Professor', 'Professor', 'Department Chair'],
+  },
+  {
+    id: 'med',
+    label: 'med school',
+    program: 'med school',
+    track: 'general',
+    shelves: ['year 1', 'year 2', 'clinicals'],
+    decks: [],
+    rungs: ['Curious Kit', 'Pre-Med', 'First-Year', 'Second-Year', 'Clinicals', 'Graduate', 'Intern', 'Resident', 'Chief Resident', 'Attending', 'Chief of Medicine'],
+  },
+  {
+    id: 'nursing',
+    label: 'nursing',
+    program: 'nursing school',
+    track: 'general',
+    shelves: ['year 1', 'year 2', 'clinicals'],
+    decks: [],
+    rungs: ['Curious Kit', 'Pre-Nursing', 'Student Nurse', 'Clinicals', 'Senior Student', 'Graduate Nurse', 'RN', 'Charge Nurse', 'Nurse Practitioner', 'Nurse Manager', 'Chief Nursing Officer'],
+  },
+  {
+    id: 'exam',
+    label: 'exam prep',
+    program: 'exam prep',
+    track: 'general',
+    shelves: ['review', 'practice', 'work'],
+    decks: [],
+    rungs: ['Curious Kit', 'Signed Up', 'Chapter One', 'Halfway There', 'Practice Mode', 'Mock Exam Pro', 'Exam-Ready', 'Passed!', 'Certified', 'Expert', 'Legend'],
+  },
+  { id: 'other', label: 'something else', program: '', track: 'general', shelves: ['this term', 'next term', 'work'], decks: [], rungs: titles(GENERAL_RANKS) },
 ]
+
+/** Clean up eleven rung names; a blank rung keeps the plain ladder's name for it. */
+export function cleanRungs(rungs: readonly string[], track: Track): string[] {
+  const base = track === 'law' ? LAW_RANKS : GENERAL_RANKS
+  return Array.from({ length: RUNGS }, (_, i) => (rungs[i] ?? '').trim().slice(0, 24) || base[i].title)
+}
+
+/** Rename the rungs of the fox's career. */
+export function setRungs(s: GameState, rungs: readonly string[]): GameState {
+  return { ...s, study: { ...s.study, rungs: cleanRungs(rungs, s.study.track), asked: true } }
+}
 
 /** The shelves the app shipped with, before she could name them. */
 const SHIPPED_SHELVES: Shelf[] = [
@@ -34,7 +91,7 @@ const SHIPPED_SHELVES: Shelf[] = [
 ]
 
 /** The full law school setup the app shipped with (the law preset's old shape; tests use it). */
-export const LEGACY_STUDY: Study = { program: 'law school', track: 'law', shelves: SHIPPED_SHELVES, decks: ['legalLatin'], asked: false }
+export const LEGACY_STUDY: Study = { program: 'law school', track: 'law', shelves: SHIPPED_SHELVES, decks: ['legalLatin'], rungs: [], asked: false }
 
 /**
  * A save made before there was a choice gets nothing assumed: the general
@@ -43,7 +100,7 @@ export const LEGACY_STUDY: Study = { program: 'law school', track: 'law', shelve
  */
 export function legacyStudy(courses: readonly Pick<Course, 'year'>[]): Study {
   const used = new Set(courses.map((c) => c.year))
-  return { program: '', track: 'general', shelves: SHIPPED_SHELVES.filter((sh) => used.has(sh.id)), decks: [], asked: false }
+  return { program: '', track: 'general', shelves: SHIPPED_SHELVES.filter((sh) => used.has(sh.id)), decks: [], rungs: [], asked: false }
 }
 
 /** The two letters on a shelf's brass plate: "2L" stays "2L", "Fall 2026" becomes "F2", "clinicals" "CL". */
@@ -75,7 +132,10 @@ export function shelvesFromNames(names: readonly string[], now: number): Shelf[]
 
 /** Apply a preset wholesale (the setup screen's starting point). */
 export function applyPreset(s: GameState, preset: StudyPreset, now: number): GameState {
-  return { ...s, study: { program: preset.program, track: preset.track, shelves: shelvesFromNames(preset.shelves, now), decks: [...preset.decks], asked: true } }
+  return {
+    ...s,
+    study: { program: preset.program, track: preset.track, shelves: shelvesFromNames(preset.shelves, now), decks: [...preset.decks], rungs: [...preset.rungs], asked: true },
+  }
 }
 
 export function setStudy(s: GameState, patch: Partial<Pick<Study, 'program' | 'track' | 'decks'>>): GameState {

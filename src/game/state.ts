@@ -130,6 +130,8 @@ export interface Study {
   shelves: Shelf[]
   /** Built-in flashcard decks she turned on (see decks.ts). */
   decks: string[]
+  /** The eleven rungs of the fox's career, in her words (empty = the plain ladder). */
+  rungs: string[]
   /** She has been asked (onboarding or settings). A save from before the question hasn't. */
   asked: boolean
 }
@@ -296,7 +298,7 @@ export function freshState(now: number, rng: () => number = Math.random): GameSt
     stats: { totalMinutes: 0, sessions: 0, gaveUp: 0, left: 0, days: {}, daySessions: {}, subjects: {}, courses: {}, bestStreak: 0 },
     settings: { focusMinutes: 25, breakMinutes: 5, sound: true, graceSeconds: 10, leaveMode: defaultLeaveMode(), care: 'classic', ambient: 'off' },
     cards: [],
-    study: { program: '', track: 'general', shelves: [], decks: [], asked: false },
+    study: { program: '', track: 'general', shelves: [], decks: [], rungs: [], asked: false },
     courses: [],
     booksSeen: [],
     lastCourse: '',

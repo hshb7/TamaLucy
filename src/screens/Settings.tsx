@@ -16,6 +16,8 @@ import { DECKS, toggleDeck } from '../game/decks.ts'
 import { setStudy } from '../game/studySetup.ts'
 import { shelvesOf } from '../game/shelf.ts'
 import { ShelvesEditor } from './Bookshelf.tsx'
+import { RungsEditor } from './Rungs.tsx'
+import { ladder } from '../game/career.ts'
 
 function Choice<T extends string | number>({ value, options, onChange, format }: { value: T; options: T[]; onChange: (v: T) => void; format?: (v: T) => string }) {
   return (
@@ -55,7 +57,9 @@ function NameField({ label, value, max, onSave }: { label: string; value: string
 function StudiesSection() {
   const game = useGame()
   const [shelves, setShelves] = useState(false)
+  const [rungs, setRungsOpen] = useState(false)
   const [program, setProgram] = useState(game.study.program)
+  const steps = ladder(game)
   const f = game.foxName
   // a deck made for one track is only offered on that track (or if she already has it on)
   const offered = DECKS.filter((d) => !d.track || d.track === game.study.track || game.study.decks.includes(d.id))
@@ -74,10 +78,18 @@ function StudiesSection() {
         />
       </label>
       <h3>{f}&rsquo;s career</h3>
-      <Choice value={game.study.track} options={['general', 'law']} onChange={(v) => setGame((s) => setStudy(s, { track: v }))} format={(v) => (v === 'law' ? 'law: 1L to the Supreme Court' : 'school: freshman to dean')} />
       <p className="muted">
-        {game.study.track === 'law' ? `${f} climbs the law ladder, tells law jokes and visits the law library.` : `${f} climbs from freshman to dean. same hours, same prizes, no law jokes.`}
+        {steps[1].title} → {steps[Math.floor(steps.length / 2)].title} → {steps[steps.length - 1].title}
       </p>
+      <button className="btn btn-small" onClick={() => setRungsOpen(true)}>
+        rename the rungs
+      </button>
+      <label className="check">
+        <input type="checkbox" checked={game.study.track === 'law'} onChange={(e) => setGame((s) => setStudy(s, { track: e.target.checked ? 'law' : 'general' }))} />
+        <span>
+          law school extras <small className="muted">law decor for the room, law jokes, the law library and courthouse trips, the Legal Latin deck</small>
+        </span>
+      </label>
       <h3>the bookshelf</h3>
       <p className="muted">
         {shelvesOf(game)
@@ -105,6 +117,7 @@ function StudiesSection() {
         )
       })}
       {shelves && <ShelvesEditor onClose={() => setShelves(false)} />}
+      {rungs && <RungsEditor onClose={() => setRungsOpen(false)} />}
     </section>
   )
 }

@@ -60,43 +60,67 @@ export const LAW_RANKS: Rank[] = [
   { title: 'Supreme Court Justice', short: 'Justice', min: 6600, unlocks: [{ kind: 'wall', id: 'damask', label: 'golden damask wallpaper' }] },
 ]
 
+/** The plain ladder (no field of study assumed); her setup gives the rungs their names. */
 export const GENERAL_RANKS: Rank[] = [
   { title: 'Curious Kit', short: 'Kit', min: 0, unlocks: [] },
-  { title: 'Freshman', short: 'Fresh.', min: 60, unlocks: [{ kind: 'wall', id: 'gingham', label: 'mint gingham wallpaper' }] },
-  { title: 'Sophomore', short: 'Soph.', min: 240, unlocks: [{ kind: 'floor', id: 'checker', label: 'milk checker floor' }] },
-  { title: 'Junior', short: 'Junior', min: 540, unlocks: [{ kind: 'clothes', id: 'necktie', label: 'a smart necktie' }] },
+  { title: 'Beginner', short: 'Beginner', min: 60, unlocks: [{ kind: 'wall', id: 'gingham', label: 'mint gingham wallpaper' }] },
+  { title: 'Learner', short: 'Learner', min: 240, unlocks: [{ kind: 'floor', id: 'checker', label: 'milk checker floor' }] },
+  { title: 'Apprentice', short: 'Apprentice', min: 540, unlocks: [{ kind: 'clothes', id: 'necktie', label: 'a smart necktie' }] },
   {
-    title: 'Graduate',
-    short: 'Grad',
+    title: 'Regular',
+    short: 'Regular',
     min: 900,
     unlocks: [
       { kind: 'clothes', id: 'gradCap', label: 'a graduation cap' },
       { kind: 'law', id: 'diploma', label: 'a framed diploma' },
     ],
   },
-  { title: 'Master’s Student', short: 'Master’s', min: 1380, unlocks: [{ kind: 'wall', id: 'dots', label: 'lavender dots wallpaper' }] },
-  { title: 'Researcher', short: 'Research', min: 1980, unlocks: [{ kind: 'floor', id: 'carpet', label: 'cloud carpet' }] },
+  { title: 'Dedicated', short: 'Dedicated', min: 1380, unlocks: [{ kind: 'wall', id: 'dots', label: 'lavender dots wallpaper' }] },
+  { title: 'Scholar', short: 'Scholar', min: 1980, unlocks: [{ kind: 'floor', id: 'carpet', label: 'cloud carpet' }] },
   {
-    title: 'PhD Candidate',
-    short: 'PhD cand.',
+    title: 'Expert',
+    short: 'Expert',
     min: 2700,
     unlocks: [
       { kind: 'wall', id: 'library', label: 'library wallpaper' },
       { kind: 'floor', id: 'walnut', label: 'walnut floor' },
     ],
   },
-  { title: 'Doctor', short: 'Dr.', min: 3600, unlocks: [{ kind: 'law', id: 'trophy', label: 'a shiny trophy' }] },
-  { title: 'Professor', short: 'Prof.', min: 4800, unlocks: [{ kind: 'law', id: 'globe', label: 'a globe for the desk' }] },
-  { title: 'Dean', short: 'Dean', min: 6600, unlocks: [{ kind: 'wall', id: 'damask', label: 'golden damask wallpaper' }] },
+  { title: 'Mentor', short: 'Mentor', min: 3600, unlocks: [{ kind: 'law', id: 'trophy', label: 'a shiny trophy' }] },
+  { title: 'Master', short: 'Master', min: 4800, unlocks: [{ kind: 'law', id: 'globe', label: 'a globe for the desk' }] },
+  { title: 'Legend', short: 'Legend', min: 6600, unlocks: [{ kind: 'wall', id: 'damask', label: 'golden damask wallpaper' }] },
 ]
+
+/** How many rungs a ladder has (every preset and her own list match this). */
+export const RUNGS = GENERAL_RANKS.length
 
 export const TRACKS: Record<Track, { name: string; ranks: Rank[]; top: string }> = {
   law: { name: 'law', ranks: LAW_RANKS, top: 'the highest court in the land. legendary.' },
-  general: { name: 'school', ranks: GENERAL_RANKS, top: 'dean of the whole school. legendary.' },
+  general: { name: 'school', ranks: GENERAL_RANKS, top: 'the top of the ladder. legendary.' },
 }
 
-/** The ladder the fox is on. */
-export const ladder = (s: Pick<GameState, 'study'>): Rank[] => TRACKS[s.study.track]?.ranks ?? GENERAL_RANKS
+/** A short form for a chip: the title itself when it's short, else initials ("Chief Nursing Officer" → "CNO"). */
+export function shortOf(title: string): string {
+  const t = title.trim()
+  if (t.length <= 10) return t
+  const words = t.split(/\s+/).filter((w) => /[a-z0-9]/i.test(w))
+  if (words.length >= 2) return words.map((w) => w[0].toUpperCase()).join('').slice(0, 4)
+  return t.slice(0, 9) + '.'
+}
+
+/**
+ * The ladder the fox is on: the track's rungs (hours and prizes), named the
+ * way she named them. A rung she left as the track's own keeps its short form.
+ */
+export function ladder(s: Pick<GameState, 'study'>): Rank[] {
+  const base = TRACKS[s.study.track]?.ranks ?? GENERAL_RANKS
+  const rungs = s.study.rungs
+  if (rungs?.length !== base.length) return base
+  return base.map((r, i) => {
+    const title = rungs[i].trim() || r.title
+    return title === r.title ? r : { ...r, title, short: shortOf(title) }
+  })
+}
 
 export const FREE_WALLS = ['stripes', 'hearts']
 export const FREE_FLOORS = ['honey']

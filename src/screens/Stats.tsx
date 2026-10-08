@@ -27,7 +27,7 @@ export function CareerPanel() {
   return (
     <>
       <section className="px-box card">
-        <p className="eyebrow">{game.foxName}&rsquo;s {game.study.track === 'law' ? 'law career' : 'career'}</p>
+        <p className="eyebrow">{game.foxName}&rsquo;s career{game.study.program ? ` in ${game.study.program}` : ''}</p>
         <h2>
           <PixelIcon sprite={game.study.track === 'law' ? NEED_ICON_ART.gavel : NEED_ICON_ART.books} scale={2} /> {CAREER[r].title}
         </h2>
