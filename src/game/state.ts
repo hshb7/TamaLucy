@@ -5,6 +5,7 @@ import type { Needs } from './needs.ts'
 import { LAW_RANKS, rankIn } from './career.ts'
 import { defaultLeaveMode } from './device.ts'
 import { legacyStudy } from './studySetup.ts'
+import { adoptCards } from './shelf.ts'
 
 export interface Note {
   id: string
@@ -80,6 +81,9 @@ export interface StudyCard {
   id: string
   front: string
   back: string
+  /** The class it's for (a Course id). Cards from before classes, or with no class, have none. */
+  courseId?: string
+  /** The class's name when the card was made, or 'General': what to call it if the class is gone. */
   subject: string
   box: number
   due: number
@@ -151,6 +155,8 @@ export interface Exam {
   name: string
   /** local YYYY-MM-DD */
   date: string
+  /** The class it's for (a Course id), if any. */
+  courseId?: string
   subject: string
 }
 
@@ -323,7 +329,7 @@ export function hydrate(raw: Record<string, unknown>, now: number): GameState {
   const parsed = migrate(raw)
   const base = freshState(now)
   // forward-compatible merge: new fields get defaults
-  return {
+  return adoptCards({
     ...base,
     ...parsed,
     needs: { ...base.needs, ...parsed.needs },
@@ -335,7 +341,7 @@ export function hydrate(raw: Record<string, unknown>, now: number): GameState {
     // until she has been asked, nothing is assumed: a save from before the question (or one an
     // earlier build stamped with the old law default) starts neutral and the home screen asks
     study: parsed.study?.asked ? { ...base.study, ...parsed.study } : parsed.onboarded ? legacyStudy(parsed.courses ?? []) : base.study,
-  }
+  })
 }
 
 /** Upgrade saves from older versions of the app. */

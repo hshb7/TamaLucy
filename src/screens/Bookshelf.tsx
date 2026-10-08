@@ -21,6 +21,7 @@ import {
   type CourseDraft,
 } from '../game/shelf.ts'
 import { MAX_SHELVES, newShelf, setShelves, tagFor } from '../game/studySetup.ts'
+import { cardsIn, dueCards } from '../game/study.ts'
 import type { Course, GameState, Shelf } from '../game/state.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { Modal, toast } from '../ui/bits.tsx'
@@ -126,6 +127,8 @@ function CourseRow({ game, course, onEdit }: { game: GameState; course: Course; 
   const min = courseMinutes(game, course)
   const done = isShelved(game, course)
   const color = BOOK_COLORS[course.color] ?? BOOK_COLORS.cherry
+  const cards = cardsIn(game, { courseId: course.id }).length
+  const due = cards ? dueCards(game, Date.now(), { courseId: course.id }).length : 0
   return (
     <li>
       <button className="course-row" onClick={onEdit} aria-label={`edit ${course.name}`}>
@@ -135,6 +138,7 @@ function CourseRow({ game, course, onEdit }: { game: GameState; course: Course; 
           <small>
             {done ? (course.doneAt ? 'finished ✿ on the shelf' : 'hours reached ✿ on the shelf') : `${Math.round(bookProgress(game, course) * 100)}% filled in`}
             {course.kind === 'work' ? ' · work' : ''}
+            {cards ? ` · ${cards} card${cards === 1 ? '' : 's'}${due ? `, ${due} due` : ''}` : ''}
           </small>
         </span>
         <span className="subject-bar course-bar">

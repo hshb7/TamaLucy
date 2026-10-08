@@ -50,7 +50,7 @@ describe('her flashcards', () => {
     expect(dueCards(s, T0 + DAY)).toHaveLength(1)
     s = reviewCard(s, id, false, T0 + DAY)
     expect(s.cards[0].box).toBe(1)
-    expect(dueCards(s, T0 + DAY, 'Contracts')).toHaveLength(0)
+    expect(dueCards(s, T0 + DAY, { subject: 'Contracts' })).toHaveLength(0)
     expect(deleteCard(s, id).cards).toHaveLength(0)
   })
 })

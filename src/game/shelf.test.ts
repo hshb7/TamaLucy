@@ -19,6 +19,8 @@ import {
   updateCourse,
 } from './shelf.ts'
 import { placeBooks } from '../art/bookcase.ts'
+import { addCard, addExam, cardCourse, cardLabel, cardPiles, dueCards, updateCard } from './study.ts'
+import { adoptCards, deleteCourse } from './shelf.ts'
 import { LEGACY_STUDY } from './studySetup.ts'
 
 const MIN = 60_000
@@ -125,5 +127,41 @@ describe('her classes and work', () => {
     // never past the end of the shelf
     const lots = placeBooks(shelfBooks(withClasses(...'ABCDEFGHIJKLMNOP'.split(''))))
     expect(lots.length).toBeLessThan(16)
+  })
+
+  it('files flashcards and exams by class', () => {
+    let s = withClasses('Evidence', 'Tax')
+    const [ev, tax] = s.courses
+    s = addCard(s, { front: 'hearsay', back: 'an out-of-court statement…', courseId: ev.id }, T0)
+    s = addCard(s, { front: 'basis', back: 'what you paid', courseId: tax.id }, T0 + 1)
+    s = addCard(s, { front: 'loose', back: 'no class' }, T0 + 2)
+    // a card from before classes, named after one, is adopted by the class when the save loads
+    s = adoptCards({ ...s, cards: [...s.cards, { id: 'old', front: 'relevance', back: '401', subject: 'evidence', box: 1, due: T0, created: T0 }] })
+    expect(s.cards[0]).toMatchObject({ courseId: ev.id, subject: 'Evidence' })
+    expect(cardCourse(s, s.cards[3])?.name).toBe('Evidence')
+    expect(cardLabel(s, s.cards[2])).toBe('general')
+    expect(cardPiles(s, T0).map((p) => `${p.label}:${p.cards.length}`)).toEqual(['Evidence:2', 'Tax:1', 'general:1'])
+    expect(dueCards(s, T0, { courseId: ev.id })).toHaveLength(2)
+    // renaming the class keeps the cards; moving a card re-files it
+    s = updateCourse(s, ev.id, { name: 'Evidence II' })
+    expect(cardLabel(s, s.cards[0])).toBe('Evidence II')
+    s = updateCard(s, s.cards[2].id, { courseId: tax.id })
+    expect(cardPiles(s, T0).map((p) => `${p.label}:${p.cards.length}`)).toEqual(['Evidence II:2', 'Tax:2'])
+    // an exam for the class
+    s = addExam(s, { name: '', date: '2026-12-10', courseId: tax.id }, T0)
+    expect(s.exams).toEqual([]) // needs a name
+    s = addExam(s, { name: 'Tax final', date: '2026-12-10', courseId: tax.id }, T0)
+    expect(s.exams[0]).toMatchObject({ courseId: tax.id, subject: 'Tax' })
+    // deleting a class keeps its cards and exams, filed under its name
+    s = deleteCourse(s, tax.id)
+    expect(s.cards.filter((c) => c.subject === 'Tax')).toHaveLength(2)
+    expect(s.cards.some((c) => c.courseId === tax.id)).toBe(false)
+    expect(s.exams[0]).toMatchObject({ subject: 'Tax' })
+    expect(s.exams[0].courseId).toBeUndefined()
+    expect(cardPiles(s, T0).map((p) => p.label)).toEqual(['Evidence II', 'Tax'])
+    // adding the class back adopts them again
+    s = addCourse(s, { ...draftCourse(s, 'class'), name: 'tax' }, T0 + 9)
+    expect(cardPiles(s, T0).map((p) => `${p.label}:${p.cards.length}`)).toEqual(['Evidence II:2', 'tax:2'])
+    expect(s.exams[0].courseId).toBe(s.courses[1].id)
   })
 })

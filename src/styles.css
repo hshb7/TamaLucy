@@ -1955,6 +1955,11 @@ select:focus {
   align-items: baseline;
   justify-content: space-between;
 }
+.deck-head .course-dot {
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}
 .deck-head small {
   font-family: var(--font-body);
   font-size: 13px;

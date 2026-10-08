@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { sfx } from '../audio.ts'
 import { finishReview } from '../game/logic.ts'
-import { dueCards, reviewCard } from '../game/study.ts'
+import { cardLabel, cardsIn, dueCards, reviewCard, type CardGroup } from '../game/study.ts'
 import type { StudyCard } from '../game/state.ts'
 import { getGame, setGame, useGame } from '../game/store.ts'
 import { Modal } from './bits.tsx'
@@ -11,11 +11,11 @@ import { FoxPortrait } from './FoxPortrait.tsx'
  * Flip-card review of her own cards. Cards she knows move up a box and come
  * back later; misses come back again at the end of this round.
  */
-export function ReviewCards({ subject, practiceAll, onClose }: { subject?: string; practiceAll?: boolean; onClose: () => void }) {
+export function ReviewCards({ group, practiceAll, onClose }: { group?: CardGroup; practiceAll?: boolean; onClose: () => void }) {
   const game = useGame()
   const [queue, setQueue] = useState<StudyCard[]>(() => {
     const s = getGame()
-    const pool = practiceAll ? s.cards.filter((c) => !subject || c.subject === subject) : dueCards(s, Date.now(), subject)
+    const pool = practiceAll ? cardsIn(s, group) : dueCards(s, Date.now(), group)
     return pool.slice(0, 25)
   })
   const [flipped, setFlipped] = useState(false)
@@ -73,7 +73,7 @@ export function ReviewCards({ subject, practiceAll, onClose }: { subject?: strin
       <div className="quiz-top">
         <FoxPortrait equipped={game.equipped} face={flipped ? 'happy' : 'open'} className="portrait-s" />
         <p className="muted">
-          {queue.length} to go{card.subject ? ` · ${card.subject}` : ''}
+          {queue.length} to go · {cardLabel(game, card)}
         </p>
       </div>
       <button className={`flip-card px-box ${flipped ? 'flipped' : ''}`} onClick={() => setFlipped(true)} aria-live="polite">

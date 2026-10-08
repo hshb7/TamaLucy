@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { NEED_ICON_ART } from '../art/items.ts'
 import { sfx } from '../audio.ts'
-import { GIFT } from '../gift.ts'
-import { addCard, addCards, addExam, cardSubjects, daysUntil, deleteCard, deleteExam, dueCards, parseCardList, updateCard, whenLabel } from '../game/study.ts'
+import { BOOK_COLORS } from '../art/bookcase.ts'
+import { addCard, addCards, addExam, cardCourse, cardPiles, daysUntil, deleteCard, deleteExam, dueCards, parseCardList, updateCard, whenLabel, type CardGroup } from '../game/study.ts'
 import type { StudyCard } from '../game/state.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { dayKey } from '../game/time.ts'
@@ -13,12 +13,12 @@ import { PixelIcon } from '../ui/PixelIcon.tsx'
 import { ReviewCards } from '../ui/ReviewCards.tsx'
 import { CareerPanel } from './Stats.tsx'
 import { BookshelfPanel } from './Bookshelf.tsx'
-import { courseNames } from '../game/shelf.ts'
+import { lastCourse, shelfIndex } from '../game/shelf.ts'
 import { Header } from './Header.tsx'
 
 export type StudyTab = 'cards' | 'classes' | 'exams' | 'career'
 
-export function StudyScreen({ onBack, initialTab = 'cards', addClass = false }: { onBack: () => void; initialTab?: StudyTab; addClass?: boolean }) {
+export function StudyScreen({ onBack, initialTab = 'cards', addClass = false, onAddClass }: { onBack: () => void; initialTab?: StudyTab; addClass?: boolean; onAddClass?: () => void }) {
   const [tab, setTab] = useState<StudyTab>(initialTab)
   return (
     <main className="screen">
@@ -31,25 +31,34 @@ export function StudyScreen({ onBack, initialTab = 'cards', addClass = false }: 
           </button>
         ))}
       </div>
-      {tab === 'cards' && <CardsPanel />}
+      {tab === 'cards' && <CardsPanel onAddClass={onAddClass} />}
       {tab === 'classes' && <BookshelfPanel startAdding={addClass && initialTab === 'classes'} />}
-      {tab === 'exams' && <ExamsPanel />}
+      {tab === 'exams' && <ExamsPanel onAddClass={onAddClass} />}
       {tab === 'career' && <CareerPanel />}
     </main>
   )
 }
 
-function SubjectPicker({ value, onChange, extra = [] }: { value: string; onChange: (s: string) => void; extra?: string[] }) {
+/** Which class a card or exam is for: her classes in bookcase order, or "general". '' = general. */
+function ClassPicker({ value, onChange, onAddClass }: { value: string; onChange: (courseId: string) => void; onAddClass?: () => void }) {
   const game = useGame()
-  // her classes (or any chips the giver suggested), plus the one picked now, so "General" is visible before she has classes
-  const all = [...new Set([...courseNames(game, GIFT.subjects), ...extra, value].filter(Boolean))]
+  const classes = [...game.courses].sort((a, b) => Number(!!a.doneAt) - Number(!!b.doneAt) || shelfIndex(game, a) - shelfIndex(game, b) || a.created - b.created)
   return (
     <div className="subject-chips">
-      {all.map((sub) => (
-        <button key={sub} type="button" className={`subject-chip ${value === sub ? 'on' : ''}`} onClick={() => onChange(sub)}>
-          {sub}
+      {classes.map((c) => (
+        <button key={c.id} type="button" className={`subject-chip course-chip ${value === c.id ? 'on' : ''}`} onClick={() => onChange(c.id)}>
+          <span className="course-dot" style={{ background: (BOOK_COLORS[c.color] ?? BOOK_COLORS.cherry).spine }} />
+          {c.name}
         </button>
       ))}
+      <button type="button" className={`subject-chip ${value === '' ? 'on' : ''}`} onClick={() => onChange('')}>
+        general
+      </button>
+      {onAddClass && (
+        <button type="button" className="subject-chip add-chip" onClick={onAddClass}>
+          {classes.length ? '+ class' : '+ add my classes'}
+        </button>
+      )}
     </div>
   )
 }
@@ -64,28 +73,30 @@ function Pips({ box }: { box: number }) {
   )
 }
 
-function CardsPanel() {
+function CardsPanel({ onAddClass }: { onAddClass?: () => void }) {
   const game = useGame()
   const now = Date.now()
-  const [subject, setSubject] = useState(() => courseNames(game, GIFT.subjects)[0] ?? 'General')
+  // new cards go to the class she studied last
+  const [courseId, setCourseId] = useState(() => lastCourse(game)?.id ?? '')
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
-  const [review, setReview] = useState<{ subject?: string; all?: boolean } | null>(null)
+  const [review, setReview] = useState<{ group?: CardGroup; all?: boolean } | null>(null)
   const [deck, setDeck] = useState<Deck | null>(null)
   const [bulk, setBulk] = useState(false)
   const decks = enabledDecks(game)
   const [editing, setEditing] = useState<StudyCard | null>(null)
   const due = dueCards(game, now)
-  const subjects = cardSubjects(game)
+  const piles = cardPiles(game, now)
+  const pickedName = game.courses.find((c) => c.id === courseId)?.name ?? 'general'
 
   const add = (e: React.FormEvent) => {
     e.preventDefault()
     if (!front.trim() || !back.trim()) return
-    setGame((s) => addCard(s, { front, back, subject }, Date.now()))
+    setGame((s) => addCard(s, { front, back, courseId: courseId || undefined }, Date.now()))
     setFront('')
     setBack('')
     sfx.sparkle()
-    toast(`card added to ${subject} ✿`)
+    toast(`card added to ${pickedName} ✿`)
   }
 
   return (
@@ -115,7 +126,10 @@ function CardsPanel() {
 
       <form className="px-box card form" onSubmit={add}>
         <h2>add a card</h2>
-        <SubjectPicker value={subject} onChange={setSubject} extra={subjects} />
+        <div className="field">
+          <span>for which class?</span>
+          <ClassPicker value={courseId} onChange={setCourseId} onAddClass={onAddClass} />
+        </div>
         <label>
           front
           <input id="card-front" value={front} maxLength={120} placeholder="a term, a case, a question" onChange={(e) => setFront(e.target.value)} />
@@ -132,39 +146,34 @@ function CardsPanel() {
         </button>
       </form>
 
-      {subjects.map((sub) => {
-        const cards = game.cards.filter((c) => c.subject === sub)
-        const subDue = cards.filter((c) => c.due <= now).length
-        return (
-          <section key={sub} className="deck">
-            <div className="deck-head">
-              <h2 className="section-title">
-                {sub} <small>· {cards.length}</small>
-              </h2>
-              {cards.length > 0 && (
-                <button className="link" onClick={() => setReview(subDue ? { subject: sub } : { subject: sub, all: true })}>
-                  {subDue ? `review ${subDue} due` : 'practise'}
-                </button>
-              )}
-            </div>
-            <ul className="list">
-              {cards.map((c) => (
+      {piles.map((pile) => (
+        <section key={pile.key} className="deck">
+          <div className="deck-head">
+            <h2 className="section-title">
+              {pile.course && <span className="course-dot" style={{ background: (BOOK_COLORS[pile.course.color] ?? BOOK_COLORS.cherry).spine }} />}
+              {pile.label} <small>· {pile.cards.length}</small>
+            </h2>
+            <button className="link" onClick={() => setReview(pile.due ? { group: pile.group } : { group: pile.group, all: true })}>
+              {pile.due ? `review ${pile.due} due` : 'practise'}
+            </button>
+          </div>
+          <ul className="list">
+            {pile.cards.map((c) => (
                 <li key={c.id}>
-                  <button className="list-item px-box study-card" onClick={() => setEditing(c)}>
-                    <span className="list-title">{c.front}</span>
-                    <span className="list-sub">{c.back}</span>
-                    <Pips box={c.box} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )
-      })}
+                <button className="list-item px-box study-card" onClick={() => setEditing(c)}>
+                  <span className="list-title">{c.front}</span>
+                  <span className="list-sub">{c.back}</span>
+                  <Pips box={c.box} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
 
-      {review && <ReviewCards subject={review.subject} practiceAll={review.all} onClose={() => setReview(null)} />}
+      {review && <ReviewCards group={review.group} practiceAll={review.all} onClose={() => setReview(null)} />}
       {deck && <Flashcards deck={deck} onClose={() => setDeck(null)} />}
-      {bulk && <BulkAdd subject={subject} onClose={() => setBulk(false)} />}
+      {bulk && <BulkAdd courseId={courseId} onClose={() => setBulk(false)} onAddClass={onAddClass} />}
       {editing && <EditCard card={editing} onClose={() => setEditing(null)} />}
     </>
   )
@@ -174,13 +183,13 @@ function EditCard({ card, onClose }: { card: StudyCard; onClose: () => void }) {
   const game = useGame()
   const [front, setFront] = useState(card.front)
   const [back, setBack] = useState(card.back)
-  const [subject, setSubject] = useState(card.subject)
+  const [courseId, setCourseId] = useState(cardCourse(game, card)?.id ?? '')
   const [sure, setSure] = useState(false)
   return (
     <Modal onClose={onClose}>
       <h2>edit card</h2>
       <div className="form">
-        <SubjectPicker value={subject} onChange={setSubject} extra={cardSubjects(game)} />
+        <ClassPicker value={courseId} onChange={setCourseId} />
         <label>
           front
           <input id="edit-front" value={front} maxLength={120} onChange={(e) => setFront(e.target.value)} />
@@ -205,7 +214,7 @@ function EditCard({ card, onClose }: { card: StudyCard; onClose: () => void }) {
           className="btn btn-pink"
           disabled={!front.trim() || !back.trim()}
           onClick={() => {
-            setGame((s) => updateCard(s, card.id, { front: front.trim(), back: back.trim(), subject }))
+            setGame((s) => updateCard(s, card.id, { front: front.trim(), back: back.trim(), courseId }))
             onClose()
           }}
         >
@@ -216,19 +225,20 @@ function EditCard({ card, onClose }: { card: StudyCard; onClose: () => void }) {
   )
 }
 
-function ExamsPanel() {
+function ExamsPanel({ onAddClass }: { onAddClass?: () => void }) {
   const game = useGame()
   const now = Date.now()
   const [name, setName] = useState('')
   const [date, setDate] = useState(() => dayKey(now + 7 * 86_400_000))
-  const [subject, setSubject] = useState('')
+  const [courseId, setCourseId] = useState('')
+  const picked = game.courses.find((c) => c.id === courseId)
   const upcoming = game.exams.filter((e) => daysUntil(e.date, now) >= 0)
   const past = game.exams.filter((e) => daysUntil(e.date, now) < 0).reverse()
   const paused = game.settings.care === 'paused'
 
   const add = (e: React.FormEvent) => {
     e.preventDefault()
-    setGame((s) => addExam(s, { name: name || (subject ? `${subject} exam` : ''), date, subject }, Date.now()))
+    setGame((s) => addExam(s, { name: name || (picked ? `${picked.name} exam` : ''), date, courseId: courseId || undefined }, Date.now()))
     setName('')
     sfx.sparkle()
   }
@@ -263,8 +273,11 @@ function ExamsPanel() {
           when
           <input id="exam-date" type="date" value={date} min={dayKey(now)} onChange={(e) => setDate(e.target.value)} />
         </label>
-        <SubjectPicker value={subject} onChange={(s) => setSubject(subject === s ? '' : s)} />
-        <button className="btn btn-pink" type="submit" disabled={!date || (!name.trim() && !subject)}>
+        <div className="field">
+          <span>for which class?</span>
+          <ClassPicker value={courseId} onChange={setCourseId} onAddClass={onAddClass} />
+        </div>
+        <button className="btn btn-pink" type="submit" disabled={!date || (!name.trim() && !picked)}>
           add exam
         </button>
       </form>
@@ -304,16 +317,17 @@ function ExamsPanel() {
 }
 
 /** Many cards at once: one per line, "front — back" (or a dash, a colon, or a tab between them). */
-function BulkAdd({ subject, onClose }: { subject: string; onClose: () => void }) {
+function BulkAdd({ courseId, onClose, onAddClass }: { courseId: string; onClose: () => void; onAddClass?: () => void }) {
   const game = useGame()
   const [text, setText] = useState('')
-  const [sub, setSub] = useState(subject)
+  const [picked, setPicked] = useState(courseId)
   const parsed = parseCardList(text)
+  const pickedName = game.courses.find((c) => c.id === picked)?.name ?? 'general'
   return (
     <Modal onClose={onClose} className="sheet">
       <h2>paste a list</h2>
       <p className="muted">one card per line, with a dash, a colon or a tab between the front and the back. from your notes, a spreadsheet, anywhere.</p>
-      <SubjectPicker value={sub} onChange={setSub} extra={cardSubjects(game)} />
+      <ClassPicker value={picked} onChange={setPicked} onAddClass={onAddClass} />
       <textarea
         value={text}
         rows={8}
@@ -331,9 +345,9 @@ function BulkAdd({ subject, onClose }: { subject: string; onClose: () => void })
           className="btn btn-pink"
           disabled={!parsed.length}
           onClick={() => {
-            setGame((s) => addCards(s, parsed, sub, Date.now()))
+            setGame((s) => addCards(s, parsed, picked || undefined, Date.now()))
             sfx.sparkle()
-            toast(`${parsed.length} cards added to ${sub} ✿`)
+            toast(`${parsed.length} cards added to ${pickedName} ✿`)
             onClose()
           }}
         >

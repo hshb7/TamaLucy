@@ -223,7 +223,7 @@ export default function App() {
   else if (view === 'album') screen = <Album onBack={() => setView('home')} />
   else if (view === 'study' || view === 'classes' || view === 'career' || view === 'exams')
     // keyed so the Mac sidebar can switch its tabs
-    screen = <StudyScreen key={view} onBack={() => setView('home')} initialTab={view === 'study' ? 'cards' : view} addClass={addClass} />
+    screen = <StudyScreen key={view} onBack={() => setView('home')} initialTab={view === 'study' ? 'cards' : view} addClass={addClass} onAddClass={() => openShelf(true)} />
   else if (view === 'settings') screen = <SettingsScreen onBack={() => setView('home')} onWidget={() => setView('widget')} />
   else screen = <Home onFocus={openSetup} go={setView} onShelf={openShelf} />
 

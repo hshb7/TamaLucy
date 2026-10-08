@@ -55,7 +55,25 @@ export function addCourse(s: GameState, draft: CourseDraft, now: number): GameSt
   const d = clean(draft) as CourseDraft
   if (!d.name) return s
   const c: Course = { ...d, id: uid(now, s.courses.length), doneAt: 0, created: now }
-  return { ...s, courses: [...s.courses, c] }
+  // cards and exams she had named after it are its now
+  return adoptCards({ ...s, courses: [...s.courses, c] })
+}
+
+/**
+ * Cards and exams with no class but named after one (from before classes, or
+ * from a class that was deleted and added back) are filed under that class.
+ */
+export function adoptCards(s: GameState): GameState {
+  const byName = new Map(s.courses.map((c) => [c.name.trim().toLowerCase(), c.id]))
+  const adopt = <T extends { courseId?: string; subject: string }>(x: T): T => {
+    if (x.courseId && s.courses.some((c) => c.id === x.courseId)) return x
+    const id = byName.get(x.subject.trim().toLowerCase())
+    return id ? { ...x, courseId: id } : x
+  }
+  const cards = s.cards.map(adopt)
+  const exams = s.exams.map(adopt)
+  const changed = cards.some((c, i) => c !== s.cards[i]) || exams.some((e, i) => e !== s.exams[i])
+  return changed ? { ...s, cards, exams } : s
 }
 
 export function updateCourse(s: GameState, id: string, patch: Partial<CourseDraft>): GameState {
@@ -64,8 +82,15 @@ export function updateCourse(s: GameState, id: string, patch: Partial<CourseDraf
   return { ...s, courses: s.courses.map((c) => (c.id === id ? { ...c, ...p } : c)) }
 }
 
+/** Take a class off the shelf. Its cards and exams stay, filed under its name. */
 export function deleteCourse(s: GameState, id: string): GameState {
-  return { ...s, courses: s.courses.filter((c) => c.id !== id) }
+  const gone = s.courses.find((c) => c.id === id)
+  const detach = <T extends { courseId?: string; subject: string }>(x: T): T => {
+    if (x.courseId !== id) return x
+    const { courseId: _dropped, ...rest } = x
+    return { ...rest, subject: gone?.name ?? x.subject } as T
+  }
+  return { ...s, courses: s.courses.filter((c) => c.id !== id), cards: s.cards.map(detach), exams: s.exams.map(detach) }
 }
 
 /** She finished the class (or wrapped up the job): its book goes on the shelf, whatever the hours. */
