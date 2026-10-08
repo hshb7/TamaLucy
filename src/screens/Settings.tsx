@@ -57,6 +57,8 @@ function StudiesSection() {
   const [shelves, setShelves] = useState(false)
   const [program, setProgram] = useState(game.study.program)
   const f = game.foxName
+  // a deck made for one track is only offered on that track (or if she already has it on)
+  const offered = DECKS.filter((d) => !d.track || d.track === game.study.track || game.study.decks.includes(d.id))
   return (
     <section className={`px-box card ${game.study.asked ? '' : 'nudge-card'}`} id="my-studies">
       <h2>my studies</h2>
@@ -86,8 +88,12 @@ function StudiesSection() {
         rename or rearrange the shelves
       </button>
       <h3>quiz decks</h3>
-      <p className="muted">your own flashcards always come first. these are extras {f} can quiz you on, if they fit.</p>
-      {DECKS.map((d) => {
+      {offered.length ? (
+        <p className="muted">your own flashcards always come first. these are extras {f} can quiz you on, if they fit.</p>
+      ) : (
+        <p className="muted">your own flashcards are the quiz. there are no extra decks for your track yet.</p>
+      )}
+      {offered.map((d) => {
         const on = game.study.decks.includes(d.id)
         return (
           <label key={d.id} className="check">
