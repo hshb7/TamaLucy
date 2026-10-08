@@ -58,7 +58,7 @@ function StudiesSection() {
   const [program, setProgram] = useState(game.study.program)
   const f = game.foxName
   return (
-    <section className="px-box card">
+    <section className={`px-box card ${game.study.asked ? '' : 'nudge-card'}`} id="my-studies">
       <h2>my studies</h2>
       <label>
         what are you studying?

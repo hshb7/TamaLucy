@@ -36,7 +36,7 @@ describe('setting up what she studies', () => {
     expect(college.study.track).toBe('general')
     expect(enabledDecks(college)).toEqual([])
     const switched = setStudy(toggleDeck(college, 'legalLatin'), { track: 'law', program: '  the bar  ' })
-    expect(switched.study).toMatchObject({ track: 'law', program: 'the bar', decks: ['legalLatin'] })
+    expect(switched.study).toMatchObject({ track: 'law', program: 'the bar', decks: ['legalLatin'], asked: true })
   })
 
   it('puts new classes on her shelves, and work on the shelf that sounds like work', () => {
@@ -80,6 +80,8 @@ describe('setting up what she studies', () => {
     delete old.study
     const s = hydrate(old, T0)
     expect(s.study).toEqual(LEGACY_STUDY)
+    expect(s.study.asked).toBe(false)
+    expect(setStudy(s, { program: 'law' }).study.asked).toBe(true)
     expect(shelfTags(s)).toEqual(['2L', '3L', 'WK'])
     // a brand-new save waits for the setup screen
     const fresh = hydrate({ ...freshState(T0) } as unknown as Record<string, unknown>, T0)

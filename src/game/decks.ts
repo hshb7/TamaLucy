@@ -26,5 +26,5 @@ export function enabledDecks(s: GameState): Deck[] {
 export function toggleDeck(s: GameState, id: string): GameState {
   if (!deckById(id)) return s
   const decks = s.study.decks.includes(id) ? s.study.decks.filter((d) => d !== id) : [...s.study.decks, id]
-  return { ...s, study: { ...s.study, decks } }
+  return { ...s, study: { ...s.study, decks, asked: true } }
 }

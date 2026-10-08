@@ -1787,6 +1787,9 @@ input:focus {
 }
 
 /* ── study setup: shelves, presets, checkboxes ───────────────────────────── */
+.nudge-card {
+  background: var(--lav);
+}
 .shelf-tag {
   font-family: var(--font-pixel);
   font-size: 12px;

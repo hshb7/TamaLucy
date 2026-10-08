@@ -36,6 +36,8 @@ export const LEGACY_STUDY: Study = {
     { id: 'work', name: 'work', tag: 'WK' },
   ],
   decks: ['legalLatin'],
+  // the home screen asks her to look it over once
+  asked: false,
 }
 
 /** The two letters on a shelf's brass plate: "2L" stays "2L", "Fall 2026" becomes "F2", "clinicals" "CL". */
@@ -67,11 +69,11 @@ export function shelvesFromNames(names: readonly string[], now: number): Shelf[]
 
 /** Apply a preset wholesale (the setup screen's starting point). */
 export function applyPreset(s: GameState, preset: StudyPreset, now: number): GameState {
-  return { ...s, study: { program: preset.program, track: preset.track, shelves: shelvesFromNames(preset.shelves, now), decks: [...preset.decks] } }
+  return { ...s, study: { program: preset.program, track: preset.track, shelves: shelvesFromNames(preset.shelves, now), decks: [...preset.decks], asked: true } }
 }
 
 export function setStudy(s: GameState, patch: Partial<Pick<Study, 'program' | 'track' | 'decks'>>): GameState {
-  const next = { ...s.study, ...patch }
+  const next = { ...s.study, ...patch, asked: true }
   next.program = next.program.trim().slice(0, 30)
   return { ...s, study: next }
 }
@@ -94,7 +96,7 @@ export function setShelves(s: GameState, shelves: readonly Shelf[]): GameState {
   if (!clean.length) return s
   const ids = new Set(clean.map((x) => x.id))
   const courses: Course[] = s.courses.map((c) => (ids.has(c.year) ? c : { ...c, year: clean[0].id }))
-  return { ...s, courses, study: { ...s.study, shelves: clean } }
+  return { ...s, courses, study: { ...s.study, shelves: clean, asked: true } }
 }
 
 export function newShelf(name: string, now: number): Shelf {

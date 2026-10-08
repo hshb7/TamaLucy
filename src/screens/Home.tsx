@@ -31,6 +31,7 @@ function notice(game: GameState, now: number, unread: number): Notice | null {
   const mail = game.notes.find((n) => n.kind === 'post' && !n.read)
   if (mail) return { text: 'you’ve got mail! ✉', sub: mail.signed ? `a letter from ${mail.signed}` : 'a letter came for you ✿', icon: ICON_ART.mail, go: 'album', tone: 'pink' }
   if (unread) return { text: unread === 1 ? 'a letter is waiting for you!' : `${unread} letters are waiting for you!`, sub: 'tap to open ✿', icon: ICON_ART.mail, go: 'album', tone: 'pink' }
+  if (!game.study.asked) return { text: `tell ${f} what you’re studying`, sub: 'your classes, the shelves, the fox’s career: set it up your way', icon: NEED_ICON_ART.books, go: 'settings', tone: 'lav' }
   const soon = upcomingExams(game, now)[0]
   if (soon && daysUntil(soon.date, now) <= 7) return { text: `${soon.name} ${whenLabel(daysUntil(soon.date, now))}`, sub: `${f} is counting down with you`, icon: NEED_ICON_ART.gavel, go: 'exams', tone: 'lav' }
   const due = dueCards(game, now).length
