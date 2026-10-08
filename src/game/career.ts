@@ -108,9 +108,12 @@ export function shortOf(title: string): string {
   return t.slice(0, 9) + '.'
 }
 
+/** Hand-made short forms for the titles the app ships with, whichever ladder they came from. */
+const KNOWN_SHORTS = new Map([...LAW_RANKS, ...GENERAL_RANKS].map((r) => [r.title, r.short]))
+
 /**
  * The ladder the fox is on: the track's rungs (hours and prizes), named the
- * way she named them. A rung she left as the track's own keeps its short form.
+ * way she named them.
  */
 export function ladder(s: Pick<GameState, 'study'>): Rank[] {
   const base = TRACKS[s.study.track]?.ranks ?? GENERAL_RANKS
@@ -118,7 +121,7 @@ export function ladder(s: Pick<GameState, 'study'>): Rank[] {
   if (rungs?.length !== base.length) return base
   return base.map((r, i) => {
     const title = rungs[i].trim() || r.title
-    return title === r.title ? r : { ...r, title, short: shortOf(title) }
+    return title === r.title ? r : { ...r, title, short: KNOWN_SHORTS.get(title) ?? shortOf(title) }
   })
 }
 

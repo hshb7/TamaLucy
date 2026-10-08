@@ -109,6 +109,7 @@ describe('setting up what she studies', () => {
     expect(ladder(s)[2].title).toBe('Learner')
     s = setStudy(s, { track: 'law' })
     expect(ladder(s)[1].title).toBe('Baby Nurse')
+    expect(ladder(s)[0].short).toBe('Kit') // a shipped title keeps its short form on either ladder
     expect(unlocked({ ...s, stats: nurse.stats }, 'law')).toContain('scales')
     // no rungs saved yet (an old save): the plain ladder
     expect(ladder({ study: { ...s.study, rungs: [] } })).toEqual(LAW_RANKS)
