@@ -1,16 +1,18 @@
 import { ICON_ART, NEED_ICON_ART } from '../art/items.ts'
-import { CAREER, rankOf } from '../game/career.ts'
+import { TRACKS, ladder, rankOf } from '../game/career.ts'
 import { dayKey, streak } from '../game/logic.ts'
 import { useGame } from '../game/store.ts'
 import { formatMinutes } from '../hooks.ts'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
 
-/** The fox's law career, focus stats and study time per subject. */
+/** The fox's career, focus stats and study time per subject. */
 export function CareerPanel() {
   const game = useGame()
   const now = Date.now()
   const s = game.stats
-  const r = rankOf(s.totalMinutes)
+  const CAREER = ladder(game)
+  const track = TRACKS[game.study.track]
+  const r = rankOf(game)
   const next = CAREER[r + 1]
   const lo = CAREER[r].min
   const pct = next ? Math.round(((s.totalMinutes - lo) / (next.min - lo)) * 100) : 100
@@ -25,15 +27,15 @@ export function CareerPanel() {
   return (
     <>
       <section className="px-box card">
-        <p className="eyebrow">{game.foxName}&rsquo;s law career</p>
+        <p className="eyebrow">{game.foxName}&rsquo;s {game.study.track === 'law' ? 'law career' : 'career'}</p>
         <h2>
-          <PixelIcon sprite={NEED_ICON_ART.gavel} scale={2} /> {CAREER[r].title}
+          <PixelIcon sprite={game.study.track === 'law' ? NEED_ICON_ART.gavel : NEED_ICON_ART.books} scale={2} /> {CAREER[r].title}
         </h2>
         <div className="xp">
           <span style={{ width: `${pct}%` }} />
         </div>
         <p className="muted">
-          {next ? `${formatMinutes(next.min - s.totalMinutes)} of focus until ${next.title}` : 'the highest court in the land. legendary.'}
+          {next ? `${formatMinutes(next.min - s.totalMinutes)} of focus until ${next.title}` : track.top}
         </p>
         <ol className="ladder">
           {CAREER.map((rank, i) => (

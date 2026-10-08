@@ -40,12 +40,12 @@ export interface Question {
 }
 
 /** A round of `n` questions, each with four choices. */
-export function makeRound(n = 8, rng: () => number = Math.random): Question[] {
-  const shuffled = <T,>(a: T[]) => a.map((x) => [rng(), x] as const).sort((p, q) => p[0] - q[0]).map(([, x]) => x)
-  return shuffled(CARDS)
-    .slice(0, n)
+export function makeRound(n = 8, rng: () => number = Math.random, deck: readonly Card[] = CARDS): Question[] {
+  const shuffled = <T,>(a: readonly T[]) => a.map((x) => [rng(), x] as const).sort((p, q) => p[0] - q[0]).map(([, x]) => x)
+  return shuffled(deck)
+    .slice(0, Math.min(n, deck.length))
     .map((card) => {
-      const wrong = shuffled(CARDS.filter((c) => c !== card)).slice(0, 3).map((c) => c.meaning)
+      const wrong = shuffled(deck.filter((c) => c !== card)).slice(0, 3).map((c) => c.meaning)
       const choices = shuffled([card.meaning, ...wrong])
       return { card, choices, answer: choices.indexOf(card.meaning) }
     })

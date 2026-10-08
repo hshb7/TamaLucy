@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { sfx } from '../audio.ts'
-import { ADVENTURES } from '../game/content.ts'
+import { adventures } from '../game/content.ts'
 import { doActivity, doCare, refillBowl, refillCost } from '../game/logic.ts'
 import { statusLine, tapLine } from '../game/lines.ts'
 import type { Activity } from '../game/needs.ts'
@@ -14,9 +14,9 @@ const LINES: Partial<Record<string, string[]>> = {
   chat: [
     'and then the squirrel said...',
     'did you know foxes can hear a mouse under the snow?',
-    'what’s your favourite class? mine is snack law.',
+    'what’s your favourite class? mine is snack science.',
     'tell me about your day!',
-    'i have a theory about the rule against perpetuities.',
+    'i have a theory about where lost socks go.',
   ],
   brush: ['ooh, that’s the spot', 'so fluffy now!'],
   dance: ['♪ ♫ ♪', 'look at my moves!'],
@@ -24,10 +24,16 @@ const LINES: Partial<Record<string, string[]>> = {
   bath: ['i’m... tolerating this.', 'bubbles!!', 'do i have to?'],
   treat: ['yum!!', 'for me?!'],
   nap: ['just five minutes...', '*yawn*'],
-  read: ['"the reasonable fox standard"... hmm', 'so many footnotes...'],
+  read: ['chapter seven... hmm', 'so many footnotes...'],
   teddy: ['mr. bear is my best friend (after you)'],
   window: ['the sky is so pretty today'],
   cushion: ['ahh, comfy'],
+}
+
+/** The law track's versions. */
+const LAW_LINES: Partial<Record<string, string[]>> = {
+  chat: ['what’s your favourite class? mine is snack law.', 'i have a theory about the rule against perpetuities.', 'tell me about your day!'],
+  read: ['"the reasonable fox standard"... hmm', 'so many footnotes...'],
 }
 
 const SOUND: Partial<Record<string, () => void>> = {
@@ -63,7 +69,7 @@ export function LivingRoom({ onStudy, onQuiz, onShelf }: { onStudy: () => void; 
     SOUND[t.kind]?.()
     if (t.kind === 'pet') say(tapLine(getGame(), Date.now()))
     else {
-      const lines = LINES[t.kind]
+      const lines = (getGame().study.track === 'law' && LAW_LINES[t.kind]) || LINES[t.kind]
       if (lines) say(lines[Math.floor(Math.random() * lines.length)])
     }
   }
@@ -92,7 +98,7 @@ export function LivingRoom({ onStudy, onQuiz, onShelf }: { onStudy: () => void; 
     else onQuiz()
   }
 
-  const adv = game.adventure && ADVENTURES.find((a) => a.id === game.adventure!.id)
+  const adv = game.adventure && adventures(game).find((a) => a.id === game.adventure!.id)
   return (
     <>
       <Room game={game} bubble={bubble} onStart={onStart} onDone={onDone} onCommand={onCommand} onBroke={onBroke} wide={wide} onWake={() => say(tapLine(getGame(), Date.now()))} onStatus={setStatus} />

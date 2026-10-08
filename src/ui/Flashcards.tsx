@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { sfx } from '../audio.ts'
 import { makeRound } from '../game/flashcards.ts'
+import type { Deck } from '../game/decks.ts'
 import { finishQuiz } from '../game/logic.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { Modal } from './bits.tsx'
 import { FoxPortrait } from './FoxPortrait.tsx'
 
-/** Legal Latin flashcards, quizzed by the fox. */
-export function Flashcards({ onClose }: { onClose: () => void }) {
+/** A built-in deck (Legal Latin…), quizzed by the fox, multiple choice. */
+export function Flashcards({ deck, onClose }: { deck: Deck; onClose: () => void }) {
   const game = useGame()
-  const [round, setRound] = useState(() => makeRound(8))
+  const [round, setRound] = useState(() => makeRound(8, Math.random, deck.cards))
   const [i, setI] = useState(0)
   const [picked, setPicked] = useState<number | null>(null)
   const [score, setScore] = useState(0)
@@ -47,7 +48,13 @@ export function Flashcards({ onClose }: { onClose: () => void }) {
           {score}/{round.length}!
         </h2>
         <p className="center">
-          {great ? `${f} is deeply impressed. objection overruled!` : score >= round.length / 2 ? `nice work, counsellor! ${f} had fun.` : `${f} thinks those were tricky ones. again?`}
+          {great
+            ? game.study.track === 'law'
+              ? `${f} is deeply impressed. objection overruled!`
+              : `${f} is deeply impressed. top of the class!`
+            : score >= round.length / 2
+              ? `nice work${game.study.track === 'law' ? ', counsellor' : ''}! ${f} had fun.`
+              : `${f} thinks those were tricky ones. again?`}
         </p>
         <p className="muted center">best round: {Math.max(game.quiz.best, score)}/{round.length}</p>
         <div className="row">
@@ -57,7 +64,7 @@ export function Flashcards({ onClose }: { onClose: () => void }) {
           <button
             className="btn btn-pink"
             onClick={() => {
-              setRound(makeRound(8))
+              setRound(makeRound(8, Math.random, deck.cards))
               setI(0)
               setPicked(null)
               setScore(0)

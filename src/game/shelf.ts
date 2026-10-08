@@ -4,15 +4,30 @@
 // good, with gold on the spine.
 
 import { BOOK_COLORS, seedOf, type ShelfBook } from '../art/bookcase.ts'
-import type { Course, GameState } from './state.ts'
+import type { Course, GameState, Shelf } from './state.ts'
 
-/** The bookcase's two class shelves, one per year of law school. Work has the bottom shelf. */
-export const SHELVES = ['2L', '3L'] as const
-export const WORK_SHELF = 'work'
-/** The brass plates on the bookcase, top to bottom. */
-export const SHELF_LABELS = [...SHELVES, WORK_SHELF]
-/** Her example: 100 hours of studying for a class puts its book on the shelf. */
+/** 100 hours of studying for a class puts its book on the shelf for good (she can change it per class). */
 export const DEFAULT_GOAL_HOURS = 100
+
+/** The bookcase's shelves, top to bottom, as she set them up. */
+export const shelvesOf = (s: Pick<GameState, 'study'>): Shelf[] => s.study.shelves
+
+/** The brass plates on the bookcase, top shelf first. */
+export const shelfTags = (s: Pick<GameState, 'study'>): string[] => shelvesOf(s).map((sh) => sh.tag)
+
+/** Which shelf (0-based row) a class stands on; a class whose shelf is gone stands on the top one. */
+export function shelfIndex(s: Pick<GameState, 'study'>, c: Pick<Course, 'year'>): number {
+  const i = shelvesOf(s).findIndex((sh) => sh.id === c.year)
+  return i < 0 ? 0 : i
+}
+
+export const shelfOf = (s: Pick<GameState, 'study'>, c: Pick<Course, 'year'>): Shelf | undefined => shelvesOf(s)[shelfIndex(s, c)]
+
+/** The shelf she'd probably want for a new piece of work: one she named work/job/clinic…, else the bottom one. */
+export function workShelf(s: Pick<GameState, 'study'>): Shelf | undefined {
+  const all = shelvesOf(s)
+  return all.find((sh) => /work|job|clinic|journal|research|project/i.test(sh.name)) ?? all[all.length - 1]
+}
 
 const uid = (now: number, n: number) => `${now.toString(36)}${n.toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`
 
@@ -21,7 +36,7 @@ export type CourseDraft = Pick<Course, 'name' | 'kind' | 'year' | 'color' | 'goa
 /** A sensible start for a new class: the shelf she used last and a colour not on it yet. */
 export function draftCourse(s: GameState, kind: Course['kind']): CourseDraft {
   const last = [...s.courses].reverse().find((c) => c.kind === 'class')
-  const year = kind === 'work' ? WORK_SHELF : (last?.year ?? SHELVES[0])
+  const year = (kind === 'work' ? workShelf(s)?.id : (shelfOf(s, last ?? { year: '' })?.id ?? shelvesOf(s)[0]?.id)) ?? ''
   const taken = new Set(s.courses.filter((c) => c.year === year).map((c) => c.color))
   const colors = Object.keys(BOOK_COLORS)
   const color = colors.find((c) => !taken.has(c)) ?? colors[s.courses.length % colors.length]
@@ -33,7 +48,6 @@ const clean = (d: Partial<CourseDraft>): Partial<CourseDraft> => {
   if (d.name !== undefined) out.name = d.name.trim().slice(0, 40)
   if (d.goalHours !== undefined) out.goalHours = Math.max(1, Math.min(1000, Math.round(d.goalHours) || DEFAULT_GOAL_HOURS))
   if (d.priorHours !== undefined) out.priorHours = Math.max(0, Math.min(1000, Math.round(d.priorHours) || 0))
-  if (d.kind === 'work') out.year = WORK_SHELF
   return out
 }
 
@@ -116,15 +130,17 @@ export function lastCourse(s: GameState): Course | null {
   return s.courses.find((c) => c.id === s.lastCourse) ?? activeCourses(s)[0] ?? null
 }
 
-export function shelfName(year: string) {
-  return year === WORK_SHELF ? 'work' : `${year} shelf`
+/** "the 2L shelf", "the work shelf"… for the fox's notes. */
+export function shelfName(s: Pick<GameState, 'study'>, c: Pick<Course, 'year'>) {
+  const sh = shelfOf(s, c)
+  return sh ? `${sh.name} shelf` : 'shelf'
 }
 
 /** Her classes and work as books for the bookcase, in the order she added them. */
 export function shelfBooks(s: GameState): ShelfBook[] {
   return s.courses.map((c) => ({
     id: c.id,
-    shelf: c.kind === 'work' ? 2 : Math.max(0, SHELVES.indexOf(c.year as (typeof SHELVES)[number])),
+    shelf: shelfIndex(s, c),
     color: c.color,
     progress: bookProgress(s, c),
     done: isShelved(s, c),

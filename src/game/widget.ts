@@ -29,8 +29,8 @@ export const WIDGET_BACKGROUNDS: Record<string, WidgetBackground> = {
   hearts: { name: 'butter hearts', wall: 'hearts', ...LIGHT, accent: '#e4819a' },
   gingham: { name: 'mint gingham', wall: 'gingham', ...LIGHT, accent: '#5f9a63' },
   dots: { name: 'lavender dots', wall: 'dots', ...LIGHT, accent: '#9a7cc4' },
-  library: { name: 'law library', wall: 'library', ink: '#4a2a22', card: '#f7eed8', accent: '#3f5c4a' },
-  damask: { name: 'justice gold', wall: 'damask', ...LIGHT, accent: '#a57a3a' },
+  library: { name: 'library', wall: 'library', ink: '#4a2a22', card: '#f7eed8', accent: '#3f5c4a' },
+  damask: { name: 'golden damask', wall: 'damask', ...LIGHT, accent: '#a57a3a' },
   cream: { name: 'cream', color: '#fff4e8', ...LIGHT, accent: '#e4819a' },
   blush: { name: 'blush', color: '#fbd3dd', ...LIGHT, accent: '#e4819a' },
   matcha: { name: 'matcha', color: '#cfe2c1', ...LIGHT, accent: '#5f9a63' },
@@ -57,7 +57,7 @@ export const SHOWS: { id: WidgetShow; label: string }[] = [
 export function widgetBackgroundUnlocked(s: GameState, id: string): boolean {
   const bg = WIDGET_BACKGROUNDS[id]
   if (!bg) return false
-  return !bg.wall || unlocked(s.stats.totalMinutes, 'wall').includes(bg.wall)
+  return !bg.wall || unlocked(s, 'wall').includes(bg.wall)
 }
 
 export function setWidgetStyle(s: GameState, patch: Partial<WidgetStyle>): GameState {

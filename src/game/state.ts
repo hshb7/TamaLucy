@@ -2,8 +2,9 @@ import type { Slot } from '../art/clothes.ts'
 import type { RewardKind } from './content.ts'
 import { GIFT } from '../gift.ts'
 import type { Needs } from './needs.ts'
-import { rankOf } from './career.ts'
+import { LAW_RANKS, rankIn } from './career.ts'
 import { defaultLeaveMode } from './device.ts'
+import { LEGACY_STUDY } from './studySetup.ts'
 
 export interface Note {
   id: string
@@ -93,7 +94,7 @@ export interface Course {
   id: string
   name: string
   kind: 'class' | 'work'
-  /** The shelf a class stands on (SHELVES: 2L, 3L). Work has its own shelf. */
+  /** The shelf it stands on (a Shelf id from study.shelves). */
   year: string
   /** Spine colour, a key of BOOK_COLORS. */
   color: string
@@ -104,6 +105,27 @@ export interface Course {
   /** When she marked it finished (0 = still going). */
   doneAt: number
   created: number
+}
+
+/** The career the fox climbs: law (1L to the Supreme Court) or school in general (freshman to dean). */
+export type Track = 'law' | 'general'
+
+/** A shelf on the bookcase: her name for it and the two letters on its brass plate. */
+export interface Shelf {
+  id: string
+  name: string
+  tag: string
+}
+
+/** What she's studying: set up when the app is new, changeable in settings. */
+export interface Study {
+  /** In her words: "law school", "nursing", "the CPA"… ('' = not said). */
+  program: string
+  track: Track
+  /** Top to bottom, up to 3. Each class (Course.year) sits on one of them. */
+  shelves: Shelf[]
+  /** Built-in flashcard decks she turned on (see decks.ts). */
+  decks: string[]
 }
 
 export type WidgetShow = 'today' | 'acorns' | 'streak' | 'exam' | 'class'
@@ -201,6 +223,8 @@ export interface GameState {
   stats: Stats
   settings: Settings
   cards: StudyCard[]
+  /** What she's studying: the fox's career track, the bookcase's shelves, quiz decks. */
+  study: Study
   /** Her classes and work: the books on the bookcase. */
   courses: Course[]
   /** Books whose finishing was already celebrated. */
@@ -264,6 +288,7 @@ export function freshState(now: number, rng: () => number = Math.random): GameSt
     stats: { totalMinutes: 0, sessions: 0, gaveUp: 0, left: 0, days: {}, daySessions: {}, subjects: {}, courses: {}, bestStreak: 0 },
     settings: { focusMinutes: 25, breakMinutes: 5, sound: true, graceSeconds: 10, leaveMode: defaultLeaveMode(), care: 'classic', ambient: 'off' },
     cards: [],
+    study: { program: '', track: 'general', shelves: [], decks: [] },
     courses: [],
     booksSeen: [],
     lastCourse: '',
@@ -305,6 +330,8 @@ export function hydrate(raw: Record<string, unknown>, now: number): GameState {
     settings: { ...base.settings, ...parsed.settings },
     stats: { ...base.stats, ...parsed.stats },
     widget: { ...base.widget, ...parsed.widget },
+    // saves from before she could choose were the law school edition
+    study: parsed.study ? { ...base.study, ...parsed.study } : parsed.onboarded ? LEGACY_STUDY : base.study,
   }
 }
 
@@ -319,7 +346,7 @@ export function migrate(raw: Record<string, unknown>): GameState {
       ...(rest as unknown as GameState),
       v: 2,
       needs: { hunger: tummy, energy: 85, fun: happiness, hygiene: 85, social: happiness },
-      rankSeen: rankOf(total),
+      rankSeen: rankIn(LAW_RANKS, total),
     }
   }
   return raw as unknown as GameState

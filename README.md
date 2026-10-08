@@ -51,11 +51,17 @@ home screen, works offline, and needs no app store.
 - **While you're away** the fox looks after itself (a full bowl buys it about a day), but it still gets sad after about 2 days and depressed around day 3. The room turns grey, the fox curls up under a rain cloud, and it leaves "while you were away..." letters.
 - The window follows the real time of day, and the fox sleeps in its basket at night.
 
-**Law school edition**
-- **Career ladder:** every hour of focus moves the fox up: Pre-Law Pup, 1L, 2L, 3L, Law Graduate, Passed the Bar, Associate, Senior Associate, Partner, Judge, Supreme Court Justice. Each promotion gets a celebration and unlocks something (grad cap, tie, judge wig, diploma, gavel, scales of justice, wallpapers).
-- **Her classes and work, on a big bookcase:** the room has a bookcase with a 2L shelf, a 3L shelf and a work shelf. She adds her own classes (and work: a job, the journal, a clinic) with a name, a spine colour and an hours goal (100 by default), plus any hours from before the app. Each one is a book that fills in, bottom up, as she focuses on it; when she reaches the goal or marks the class finished, it stays on the shelf with gold bands, the fox celebrates and writes her a note. Her classes become the one-tap chips on the focus screen and in flashcards and exams. Tap the bookcase, or Study → *classes*.
-- **Subjects:** until she adds her classes, the focus screen offers default chips (Torts, Contracts, Civ Pro, Crim Law, Con Law, Property, Evidence, Legal Writing...), with study time per subject on the career screen. Edit the list in `src/gift.ts`.
-- **Legal Latin flashcards:** the fox quizzes you on 26 terms (mens rea, stare decisis, res ipsa loquitur...). Tap the fox → *quiz me*, the desk → *flashcards*, or use it during breaks.
+**Set up for what she's studying (nothing assumed)**
+- **Onboarding asks what she's studying:** law school, college, grad school, med/nursing, exam prep or something else. That picks a starting point she can change on the spot: what to call it, and the names of the shelves on the bookcase (a year, a term, "work"… up to three, each with its two-letter brass plate).
+- **Her classes are the subjects.** No seeded list: the chips on the focus screen, in flashcards and in exams are the classes she added. (A giver can still suggest chips in `src/gift.ts`; they disappear once she has classes.)
+- **Two career tracks for the fox:** *law* (Pre-Law Pup → 1L → … → Supreme Court Justice, with the law decor, law jokes, the law library and courthouse adventures) or *school* (Curious Kit → Freshman → … → Dean, with a trophy and a globe instead of the gavel and scales, and no law jokes). Same hours, same rungs.
+- **Quiz decks are opt-in.** Her own cards always come first; the built-in Legal Latin deck is a toggle in settings. She can also paste a whole list of cards at once (one per line, "front — back").
+- **Settings → my studies** changes any of it later: what she's studying, the track, the shelves, the decks.
+
+**Law school edition** (the *law* track)
+- **Career ladder:** every hour of focus moves the fox up: Pre-Law Pup, 1L, 2L, 3L, Law Graduate, Passed the Bar, Associate, Senior Associate, Partner, Judge, Supreme Court Justice. Each promotion gets a celebration and unlocks something (grad cap, tie, judge wig, diploma, gavel, scales of justice, wallpapers). On the *school* track the same rungs are Freshman to Dean.
+- **Her classes and work, on a big bookcase:** the room has a bookcase with the shelves she named (for a law student, say, 2L, 3L and work). She adds her own classes (and work: a job, the journal, a clinic) with a name, a spine colour and an hours goal (100 by default), plus any hours from before the app. Each one is a book that fills in, bottom up, as she focuses on it; when she reaches the goal or marks the class finished, it stays on the shelf with gold bands, the fox celebrates and writes her a note. Her classes become the one-tap chips on the focus screen and in flashcards and exams. Tap the bookcase, or Study → *classes*.
+- **Legal Latin flashcards** (a deck she can switch on): the fox quizzes you on 26 terms (mens rea, stare decisis, res ipsa loquitur...). Tap the fox → *quiz me*, the desk → *flashcards*, or use it during breaks.
 - **Her own flashcards:** cards for her classes (cases, rules, elements), sorted by subject and reviewed as flip cards. Spaced repetition brings each card back right before she'd forget it: a card she knows comes back in 1, 3, 7, then 21 days, and a missed one comes back right away.
 - **Exam countdowns:** add exams with a date. Home counts down the last week, and on the morning of an exam the fox leaves a good-luck note.
 - **Studying together:** during focus the fox sits at its little desk in study glasses with a casebook, cocoa and a banker's lamp. Optional background sound (rain, fireplace or library hum) is generated in the app, with no audio files.
@@ -97,7 +103,7 @@ export const GIFT = {
   secretNotes: [],            // your own letters, see below
   birthday: '',               // 'MM-DD' for the birthday surprise
   birthdayLetter: '',         // your letter for her birthday (optional)
-  subjects: [...],            // subject chips on the focus screen
+  subjects: [],               // optional subject chips, until she adds her classes
 }
 ```
 

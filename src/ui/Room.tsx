@@ -9,7 +9,7 @@ import { costOf, isBirthday, refillCost } from '../game/logic.ts'
 import { isOctober, seasonOf } from '../game/time.ts'
 import { photoSprite } from '../art/photo.ts'
 import { BOOKCASE, placeBooks } from '../art/bookcase.ts'
-import { SHELF_LABELS, shelfBooks } from '../game/shelf.ts'
+import { shelfBooks, shelfTags } from '../game/shelf.ts'
 import { TREATS } from '../game/content.ts'
 import { foxMood, lowestNeed, type Activity, type NeedKey } from '../game/needs.ts'
 import type { GameState } from '../game/state.ts'
@@ -105,7 +105,7 @@ const USER_TASK: Partial<Record<TaskKind, [number, string]>> = {
   eat: [4500, 'eating from the bowl'],
   bath: [7500, 'having a bath'],
   nap: [20_000, 'taking a nap'],
-  read: [7000, 'reading your casebooks'],
+  read: [7000, 'reading your books'],
   ball: [5000, 'playing with the ball'],
   yarn: [5000, 'batting the yarn around'],
   teddy: [5000, 'cuddling the teddy bear'],
@@ -231,7 +231,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
       t,
       gloom,
       decor: g.decor,
-      law: unlocked(g.stats.totalMinutes, 'law'),
+      law: unlocked(g, 'law'),
       bowl: g.bowl,
       hide: doing === 'ball' ? ['ball'] : doing === 'yarn' ? ['yarn'] : [],
       season: seasonOf(d.getTime()),
@@ -239,7 +239,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
       birthday: isBirthday(g, d.getTime()),
       photo: g.photo ? photoSprite(g.photo) : null,
       books: placeBooks(shelfBooks(g)),
-      shelfLabels: SHELF_LABELS,
+      shelfLabels: shelfTags(g),
     }
     drawRoom(p, opts)
     if (g.adventure) p.sprite(ICON_ART.mail, 60, 84)
@@ -493,7 +493,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
           title: OBJECT_NAMES.desk,
           options: [
             { id: 'study', label: 'study together', icon: ICON_ART.acorn },
-            { id: 'read', label: 'read casebooks' },
+            { id: 'read', label: g.study.track === 'law' ? 'read casebooks' : 'read textbooks' },
             { id: 'quiz', label: 'flashcards', icon: NEED_ICON_ART.card },
           ],
         }

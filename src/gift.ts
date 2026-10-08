@@ -39,8 +39,12 @@ const DEFAULTS = {
   birthday: '',
   /** Optional letter delivered on her birthday (the fox writes one if this is empty). */
   birthdayLetter: '',
-  /** One-tap subject chips on the focus screen (study time is tracked per subject). */
-  subjects: ['Torts', 'Contracts', 'Civ Pro', 'Crim Law', 'Con Law', 'Property', 'Evidence', 'Legal Writing', 'Reading', 'Outlining', 'Bar Prep'],
+  /**
+   * Optional: subject chips to suggest on the focus screen until she adds her
+   * own classes (which replace them). Empty by default: she sets up her classes
+   * in the app, and nothing about what she studies is assumed.
+   */
+  subjects: [] as string[],
 }
 
 let local: Partial<typeof DEFAULTS> | undefined

@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { NEED_ICON_ART } from '../art/items.ts'
 import { sfx } from '../audio.ts'
 import { GIFT } from '../gift.ts'
-import { addCard, addExam, cardSubjects, daysUntil, deleteCard, deleteExam, dueCards, updateCard, whenLabel } from '../game/study.ts'
+import { addCard, addCards, addExam, cardSubjects, daysUntil, deleteCard, deleteExam, dueCards, parseCardList, updateCard, whenLabel } from '../game/study.ts'
 import type { StudyCard } from '../game/state.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { dayKey } from '../game/time.ts'
 import { Modal, toast } from '../ui/bits.tsx'
 import { Flashcards } from '../ui/Flashcards.tsx'
+import { enabledDecks, type Deck } from '../game/decks.ts'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
 import { ReviewCards } from '../ui/ReviewCards.tsx'
 import { CareerPanel } from './Stats.tsx'
@@ -40,7 +41,8 @@ export function StudyScreen({ onBack, initialTab = 'cards', addClass = false }: 
 
 function SubjectPicker({ value, onChange, extra = [] }: { value: string; onChange: (s: string) => void; extra?: string[] }) {
   const game = useGame()
-  const all = [...new Set([...courseNames(game, GIFT.subjects), ...extra])]
+  // her classes (or any chips the giver suggested), plus the one picked now, so "General" is visible before she has classes
+  const all = [...new Set([...courseNames(game, GIFT.subjects), ...extra, value].filter(Boolean))]
   return (
     <div className="subject-chips">
       {all.map((sub) => (
@@ -69,7 +71,9 @@ function CardsPanel() {
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
   const [review, setReview] = useState<{ subject?: string; all?: boolean } | null>(null)
-  const [latin, setLatin] = useState(false)
+  const [deck, setDeck] = useState<Deck | null>(null)
+  const [bulk, setBulk] = useState(false)
+  const decks = enabledDecks(game)
   const [editing, setEditing] = useState<StudyCard | null>(null)
   const due = dueCards(game, now)
   const subjects = cardSubjects(game)
@@ -101,9 +105,11 @@ function CardsPanel() {
               {due.length ? `review ${due.length} due` : 'practise all'}
             </button>
           )}
-          <button className="btn" onClick={() => setLatin(true)}>
-            legal latin quiz
-          </button>
+          {decks.map((d) => (
+            <button key={d.id} className="btn" onClick={() => setDeck(d)}>
+              {d.name.toLowerCase()} quiz
+            </button>
+          ))}
         </div>
       </section>
 
@@ -112,14 +118,17 @@ function CardsPanel() {
         <SubjectPicker value={subject} onChange={setSubject} extra={subjects} />
         <label>
           front
-          <input id="card-front" value={front} maxLength={120} placeholder="e.g. Palsgraf v. Long Island R.R." onChange={(e) => setFront(e.target.value)} />
+          <input id="card-front" value={front} maxLength={120} placeholder="a term, a case, a question" onChange={(e) => setFront(e.target.value)} />
         </label>
         <label>
           back
-          <textarea id="card-back" value={back} maxLength={400} rows={3} placeholder="e.g. duty is owed only to foreseeable plaintiffs" onChange={(e) => setBack(e.target.value)} />
+          <textarea id="card-back" value={back} maxLength={400} rows={3} placeholder="the answer" onChange={(e) => setBack(e.target.value)} />
         </label>
         <button className="btn btn-pink" type="submit" disabled={!front.trim() || !back.trim()}>
           add card
+        </button>
+        <button type="button" className="link" onClick={() => setBulk(true)}>
+          paste a whole list instead →
         </button>
       </form>
 
@@ -154,7 +163,8 @@ function CardsPanel() {
       })}
 
       {review && <ReviewCards subject={review.subject} practiceAll={review.all} onClose={() => setReview(null)} />}
-      {latin && <Flashcards onClose={() => setLatin(false)} />}
+      {deck && <Flashcards deck={deck} onClose={() => setDeck(null)} />}
+      {bulk && <BulkAdd subject={subject} onClose={() => setBulk(false)} />}
       {editing && <EditCard card={editing} onClose={() => setEditing(null)} />}
     </>
   )
@@ -247,7 +257,7 @@ function ExamsPanel() {
         <h2>add an exam</h2>
         <label>
           what
-          <input id="exam-name" value={name} maxLength={40} placeholder="e.g. Torts final" onChange={(e) => setName(e.target.value)} />
+          <input id="exam-name" value={name} maxLength={40} placeholder="e.g. the final" onChange={(e) => setName(e.target.value)} />
         </label>
         <label>
           when
@@ -290,5 +300,46 @@ function ExamsPanel() {
         </p>
       )}
     </>
+  )
+}
+
+/** Many cards at once: one per line, "front — back" (or a dash, a colon, or a tab between them). */
+function BulkAdd({ subject, onClose }: { subject: string; onClose: () => void }) {
+  const game = useGame()
+  const [text, setText] = useState('')
+  const [sub, setSub] = useState(subject)
+  const parsed = parseCardList(text)
+  return (
+    <Modal onClose={onClose} className="sheet">
+      <h2>paste a list</h2>
+      <p className="muted">one card per line, with a dash, a colon or a tab between the front and the back. from your notes, a spreadsheet, anywhere.</p>
+      <SubjectPicker value={sub} onChange={setSub} extra={cardSubjects(game)} />
+      <textarea
+        value={text}
+        rows={8}
+        placeholder={'mitochondria — the powerhouse of the cell\nosmosis: water moving across a membrane'}
+        onChange={(e) => setText(e.target.value)}
+        aria-label="cards, one per line"
+      />
+      <p className="muted">{parsed.length ? `${parsed.length} card${parsed.length === 1 ? '' : 's'} ready` : 'nothing to add yet'}</p>
+      <div className="row">
+        <button type="button" className="btn" onClick={onClose}>
+          cancel
+        </button>
+        <button
+          type="button"
+          className="btn btn-pink"
+          disabled={!parsed.length}
+          onClick={() => {
+            setGame((s) => addCards(s, parsed, sub, Date.now()))
+            sfx.sparkle()
+            toast(`${parsed.length} cards added to ${sub} ✿`)
+            onClose()
+          }}
+        >
+          add {parsed.length || ''} cards
+        </button>
+      </div>
+    </Modal>
   )
 }

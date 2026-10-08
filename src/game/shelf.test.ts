@@ -19,10 +19,11 @@ import {
   updateCourse,
 } from './shelf.ts'
 import { placeBooks } from '../art/bookcase.ts'
+import { LEGACY_STUDY } from './studySetup.ts'
 
 const MIN = 60_000
 const T0 = new Date(2026, 9, 1, 9, 0, 0).getTime()
-const base = (): GameState => ({ ...freshState(T0), onboarded: true })
+const base = (): GameState => ({ ...freshState(T0), onboarded: true, study: LEGACY_STUDY })
 
 function withClasses(...names: string[]): GameState {
   let s = base()
@@ -44,9 +45,9 @@ describe('her classes and work', () => {
     expect(next.color).not.toBe(c.color)
   })
 
-  it('puts work on its own shelf', () => {
+  it('puts work on the work shelf by default', () => {
     let s = base()
-    s = addCourse(s, { ...draftCourse(s, 'work'), name: 'Law Review', year: '3L' }, T0)
+    s = addCourse(s, { ...draftCourse(s, 'work'), name: 'Law Review' }, T0)
     expect(s.courses[0]).toMatchObject({ kind: 'work', year: 'work', goalHours: 50 })
     expect(shelfBooks(s)[0]).toMatchObject({ shelf: 2, work: true })
   })

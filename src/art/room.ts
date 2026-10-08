@@ -53,7 +53,7 @@ export interface RoomOptions {
   t: number // ms, for animation
   gloom: number // 0 (fine) .. 1 (depressed): greys out the room
   decor?: Decor
-  /** Career-unlocked law decor (diploma, gavel, scales). */
+  /** Career-unlocked decor for the study corner (diploma, gavel, scales, trophy, globe). */
   law?: readonly string[]
   /** Food portions in the bowl (0-3). */
   bowl?: number
@@ -83,8 +83,8 @@ export const WALLPAPERS: Record<string, Wallpaper> = {
   hearts: { name: 'butter hearts', base: '#fff2cf', a: '#f7c3cc', kind: 'hearts', trim: '#d9a86a' },
   gingham: { name: 'mint gingham', base: '#e6f2e2', a: '#d2e7cd', b: '#bfdcb9', kind: 'gingham', trim: '#9dbb8f' },
   dots: { name: 'lavender dots', base: '#eee4f9', a: '#d9c7f1', kind: 'dots', trim: '#a996c9' },
-  library: { name: 'law library', base: '#3f5c4a', a: '#486a55', b: '#c9a45a', kind: 'pinstripe', trim: '#6b4a33' },
-  damask: { name: 'justice gold', base: '#f7eed8', a: '#e8d19b', b: '#d9b86c', kind: 'damask', trim: '#a57a3a' },
+  library: { name: 'library', base: '#3f5c4a', a: '#486a55', b: '#c9a45a', kind: 'pinstripe', trim: '#6b4a33' },
+  damask: { name: 'golden damask', base: '#f7eed8', a: '#e8d19b', b: '#d9b86c', kind: 'damask', trim: '#a57a3a' },
 }
 
 export const FLOORS: Record<string, Floor> = {
@@ -369,7 +369,9 @@ export function drawRoom(p: Painter, o: RoomOptions) {
   p.sprite(ROOM_ART.desk, DESK.x, DESK.y)
   p.sprite(ROOM_ART.casebooks, DESK.x + 3, DESK.y - 10)
   if (law('scales')) p.sprite(LAW_ART.scales, DESK.x + 16, DESK.y - 11)
+  if (law('trophy')) p.sprite(LAW_ART.trophy, DESK.x + 16, DESK.y - 11)
   if (law('gavel')) p.sprite(LAW_ART.gavel, DESK.x + 4, DESK.y - 7)
+  if (law('globe')) p.sprite(LAW_ART.globe, DESK.x + 3, DESK.y - 20)
   p.sprite(ROOM_ART.lamp, DESK.x + 28, DESK.y - 11)
   p.sprite(ROOM_ART.tub, TUB.x, TUB.y)
   drawRug(p, has('heartRug'))

@@ -26,7 +26,8 @@ import {
   toggleWear,
 } from './logic.ts'
 import { migrate } from './state.ts'
-import { rankOf, unlocked, CAREER } from './career.ts'
+import { LAW_RANKS, rankIn, rankOf, unlocked } from './career.ts'
+import { LEGACY_STUDY } from './studySetup.ts'
 
 const HOUR = 3_600_000
 const MIN = 60_000
@@ -39,7 +40,8 @@ const seq = (...vals: number[]) => {
 
 const FULL = { hunger: 80, energy: 80, fun: 80, hygiene: 80, social: 80 }
 function ready(overrides: Partial<GameState> = {}): GameState {
-  return { ...freshState(T0, seq(0.1, 0.5)), onboarded: true, needs: { ...FULL }, bowl: 0, ...overrides }
+  // these tests were written for the law school edition
+  return { ...freshState(T0, seq(0.1, 0.5)), onboarded: true, study: LEGACY_STUDY, needs: { ...FULL }, bowl: 0, ...overrides }
 }
 const mood = (s: GameState) => moodOf(moodValue(s.needs))
 
@@ -192,13 +194,14 @@ describe('rewards', () => {
 })
 
 describe('law career', () => {
+  const at = (totalMinutes: number) => ({ study: LEGACY_STUDY, stats: { ...freshState(0).stats, totalMinutes } })
   it('climbs ranks with focus time and unlocks decor + outfits', () => {
-    expect(rankOf(0)).toBe(0)
-    expect(CAREER[rankOf(60)].title).toBe('1L')
-    expect(CAREER[rankOf(6600)].title).toBe('Supreme Court Justice')
-    expect(unlocked(0, 'wall')).not.toContain('gingham')
-    expect(unlocked(60, 'wall')).toContain('gingham')
-    expect(unlocked(4800, 'clothes')).toContain('judgeWig')
+    expect(rankOf(at(0))).toBe(0)
+    expect(LAW_RANKS[rankOf(at(60))].title).toBe('1L')
+    expect(LAW_RANKS[rankOf(at(6600))].title).toBe('Supreme Court Justice')
+    expect(unlocked(at(0), 'wall')).not.toContain('gingham')
+    expect(unlocked(at(60), 'wall')).toContain('gingham')
+    expect(unlocked(at(4800), 'clothes')).toContain('judgeWig')
   })
 
   it('announces a promotion once', () => {
@@ -233,7 +236,7 @@ describe('save migration', () => {
     expect(s.v).toBe(2)
     expect(s.needs.hunger).toBe(20)
     expect(s.needs.social).toBe(40)
-    expect(s.rankSeen).toBe(rankOf(300)) // no retroactive promotion spam
+    expect(s.rankSeen).toBe(rankIn(LAW_RANKS, 300)) // no retroactive promotion spam
     expect('happiness' in s).toBe(false)
   })
 })

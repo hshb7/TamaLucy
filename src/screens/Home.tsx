@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ICON_ART, NEED_ICON_ART, SPECIAL_ART } from '../art/items.ts'
 import { BOOK_COLORS } from '../art/bookcase.ts'
 import type { Sprite } from '../art/sprite.ts'
-import { CAREER, rankOf } from '../game/career.ts'
+import { currentRank } from '../game/career.ts'
 import { dayKey, isBirthday, streak } from '../game/logic.ts'
 import { activeCourses, bookProgress, courseMinutes } from '../game/shelf.ts'
 import { daysUntil, dueCards, examsToday, upcomingExams, whenLabel } from '../game/study.ts'
@@ -85,7 +85,7 @@ export function Home({ onFocus, go, onShelf }: { onFocus: () => void; go: (v: Vi
   const today = game.stats.days[dayKey(now)] ?? 0
   const todaySessions = game.stats.daySessions[dayKey(now)] ?? 0
   const st = streak(game.stats.days, now)
-  const rank = CAREER[rankOf(game.stats.totalMinutes)]
+  const rank = currentRank(game)
   const note = notice(game, now, unread)
 
   // The phone stacks everything in its own order (the wrappers below step aside,
@@ -97,7 +97,7 @@ export function Home({ onFocus, go, onShelf }: { onFocus: () => void; go: (v: Vi
         <div className="home-name">
           <h1>{game.foxName}</h1>
           <button className="chip chip-btn-plain" onClick={() => go('career')} title={rank.title}>
-            <PixelIcon sprite={NEED_ICON_ART.gavel} scale={1} /> {rank.short}
+            <PixelIcon sprite={game.study.track === 'law' ? NEED_ICON_ART.gavel : NEED_ICON_ART.books} scale={1} /> {rank.short}
           </button>
         </div>
         <div className="home-badges">

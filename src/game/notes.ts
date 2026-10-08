@@ -32,6 +32,18 @@ export const GENERAL_NOTES = [
   'whatever happens today, you’re still my favourite.',
 ]
 
+// Study notes for any kind of student.
+export const STUDY_NOTES = [
+  'i highlighted your whole textbook. every word. they all seemed important.',
+  'i read your notes upside down. still looked very smart.',
+  'hypothesis: you are brilliant. method: i watched you study. conclusion: confirmed.',
+  'i tried to read one of your chapters. i am now taking a very long nap.',
+  'a study found that students with a fox do 100% better. the study was me. the sample size was you.',
+  'pop quiz: who is doing great? (it\u2019s you. you can check my answer key.)',
+  'i made a flashcard that says "you\u2019ve got this." front and back.',
+  'every page you read today is a page you don\u2019t have to read tomorrow. i checked the math.',
+]
+
 // Law school edition. Terms of art used correctly, puns used shamelessly.
 export const LAW_NOTES = [
   'i briefed a case today. fox v. snack bowl. holding: the bowl should never be empty. very persuasive.',
@@ -58,8 +70,9 @@ export const BIRTHDAY_NOTE =
 export const EXAM_NOTES = [
   'good luck on {exam} today, {name}! you know this stuff. read every question twice and trust yourself. i\u2019m so proud of you already.',
   'it\u2019s {exam} day!! deep breath. you\u2019ve done the work. i\u2019ll be right here with a snack when you\u2019re done.',
-  '{exam} today. objection to nerves: sustained. go get \u2018em, counsellor.',
 ]
+
+export const LAW_EXAM_NOTES = ['{exam} today. objection to nerves: sustained. go get \u2018em, counsellor.']
 
 export const MORNING_NOTES = [
   'good morning, {name}! i woke up early to cheer you on. (then i napped a bit.)',

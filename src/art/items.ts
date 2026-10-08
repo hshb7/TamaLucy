@@ -592,8 +592,34 @@ export const ROOM_ART: Record<string, Sprite> = {
   ball: sprite(['..ooo..', '.orrwo.', 'orrrwro', 'owwwwwo', 'ouuwggo', '.ouwgo.', '..ooo..']),
 }
 
-/** Law decor, unlocked by the fox's career. */
+/** Study-corner decor, unlocked by the fox's career (law or general track). */
 export const LAW_ART: Record<string, Sprite> = {
+  trophy: sprite([
+    'o...ooooo...o',
+    'oy.oyyyyyo.yo',
+    'oy.oyYyYyo.yo',
+    '.ooYyyyyyYoo.',
+    '...oyyyyyo...',
+    '....oyyyo....',
+    '.....oyo.....',
+    '.....oYo.....',
+    '....ooYoo....',
+    '...oNNNNNo...',
+    '...ooooooo...',
+  ]),
+  globe: sprite([
+    '....oooo....',
+    '..ooUuGUoo..',
+    '.oUuGGGuUUo.',
+    '.oUGGuUUGUo.',
+    'ooUuUGGuUUoo',
+    '.oUUGGGUuUo.',
+    '.oUuUGuUGUo.',
+    '..ooUUUGoo..',
+    '....oooo....',
+    '.....oo.....',
+    '...oNNNNo...',
+  ]),
   diploma: sprite([
     'ooooooooooooooo',
     'onnnnnnnnnnnnno',

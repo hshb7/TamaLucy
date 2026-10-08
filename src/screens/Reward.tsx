@@ -2,7 +2,7 @@ import { GIFT_ART, ICON_ART, NEED_ICON_ART, SOUVENIR_ART, TREAT_ART } from '../a
 import { CLOTHING_ART } from '../art/clothes.ts'
 import type { Sprite } from '../art/sprite.ts'
 import { buzz, sfx } from '../audio.ts'
-import { ADVENTURES, CLOTHES, GIFTS, REWARD_INFO, REWARD_KINDS, TREATS, byId, type RewardKind } from '../game/content.ts'
+import { ADVENTURES, CLOTHES, GIFTS, REWARD_INFO, REWARD_KINDS, TREATS, adventures, byId, type RewardKind } from '../game/content.ts'
 import { available, cancelOffer, claim, offer, startBreak, type RewardResult } from '../game/logic.ts'
 import { getGame, setGame, useGame } from '../game/store.ts'
 import { FoxPortrait } from '../ui/FoxPortrait.tsx'
@@ -33,7 +33,7 @@ function optionInfo(kind: RewardKind, id: string) {
   if (kind === 'treat') return byId(TREATS, id)!
   if (kind === 'gift') return byId(GIFTS, id)!
   if (kind === 'clothes') return byId(CLOTHES, id)!
-  const a = ADVENTURES.find((x) => x.id === id)!
+  const a = adventures(getGame()).find((x) => x.id === id)!
   return { id, name: a.place, blurb: a.verb }
 }
 
@@ -195,7 +195,7 @@ function RewardResultView({ result, picksLeft, onNext, onDone }: { result: Rewar
       break
     }
     case 'adventure': {
-      const a = ADVENTURES.find((x) => x.id === result.id)!
+      const a = adventures(getGame()).find((x) => x.id === result.id)!
       const mins = Math.round((result.returnsAt - Date.now()) / 60000)
       body = (
         <>

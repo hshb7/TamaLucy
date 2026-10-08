@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { drawWallAndFloor } from '../art/room.ts'
 import type { Painter } from '../art/painter.ts'
 import { sfx } from '../audio.ts'
-import { CAREER, unlockRank } from '../game/career.ts'
+import { ladder, unlockRank } from '../game/career.ts'
 import { setGame, useGame } from '../game/store.ts'
 import type { GameState } from '../game/state.ts'
 import { daysUntil } from '../game/study.ts'
@@ -92,7 +92,8 @@ export function WidgetStudio({ onBack }: { onBack: () => void }) {
         <div className="bg-swatches">
           {Object.entries(WIDGET_BACKGROUNDS).map(([id, bg]) => {
             const open = widgetBackgroundUnlocked(game, id)
-            const rank = bg.wall ? unlockRank('wall', bg.wall) : -1
+            const rank = bg.wall ? unlockRank(game, 'wall', bg.wall) : -1
+            const CAREER = ladder(game)
             return (
               <button
                 key={id}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { GIFT_ART, SOUVENIR_ART, TREAT_ART } from '../art/items.ts'
-import { ADVENTURES, GIFTS, TREATS } from '../game/content.ts'
+import { GIFTS, TREATS, adventures } from '../game/content.ts'
 import { readNote } from '../game/logic.ts'
 import type { Note, Postcard } from '../game/state.ts'
 import { setGame, useGame } from '../game/store.ts'
@@ -69,10 +69,10 @@ export function Album({ onBack }: { onBack: () => void }) {
       {tab === 'trips' && (
         <>
           <p className="muted center">
-            {new Set(game.postcards.map((p) => p.adventure)).size}/{ADVENTURES.length} places visited
+            {new Set(game.postcards.map((p) => p.adventure)).size}/{adventures(game).length} places visited
           </p>
           <div className="grid">
-            {ADVENTURES.map((a) => {
+            {adventures(game).map((a) => {
               const cards = game.postcards.filter((p) => p.adventure === a.id)
               return (
                 <button key={a.id} className={`tile px-box ${cards.length ? '' : 'locked'}`} disabled={!cards.length} onClick={() => setCard(cards[0])}>

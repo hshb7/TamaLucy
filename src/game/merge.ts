@@ -12,7 +12,7 @@
 //   - a running focus session and "what happens when I leave the app" belong
 //     to this device and never travel
 //   - anything else: whichever side changed it wins
-import type { Course, GameState, Note, Postcard, StudyCard, Exam } from './state.ts'
+import type { Course, GameState, Note, Postcard, Shelf, StudyCard, Exam } from './state.ts'
 
 type Merger = (b: unknown, l: unknown, r: unknown) => unknown
 type Rule = 'local' | 'remote' | 'sum' | 'max' | 'set' | 'deep' | 'lww' | Merger
@@ -76,6 +76,8 @@ const RULES: Record<string, Rule> = {
   cards: byId<StudyCard>((c) => c.id),
   exams: byId<Exam>((e) => e.id),
   courses: byId<Course>((c) => c.id),
+  'study.shelves': byId<Shelf>((sh) => sh.id),
+  'study.decks': 'set',
 
   // objects merged field by field
   stats: 'deep',
@@ -90,6 +92,7 @@ const RULES: Record<string, Rule> = {
   decor: 'deep',
   equipped: 'deep',
   widget: 'deep',
+  study: 'deep',
 }
 
 export function merge3(base: GameState, local: GameState, remote: GameState): GameState {

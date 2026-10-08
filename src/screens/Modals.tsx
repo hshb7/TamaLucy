@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { sfx } from '../audio.ts'
 import { ICON_ART, LAW_ART, SOUVENIR_ART } from '../art/items.ts'
 import { CLOTHING_ART } from '../art/clothes.ts'
-import { CAREER } from '../game/career.ts'
-import { ADVENTURES } from '../game/content.ts'
+import { ladder } from '../game/career.ts'
+import { adventures } from '../game/content.ts'
 import { dismissPostcard, readNote } from '../game/logic.ts'
 import type { Note, Postcard } from '../game/state.ts'
 import { setGame, useGame } from '../game/store.ts'
@@ -37,7 +37,8 @@ export function LetterView({ note, foxName }: { note: Note; foxName: string }) {
 }
 
 export function PostcardView({ card, foxName }: { card: Postcard; foxName: string }) {
-  const a = ADVENTURES.find((x) => x.id === card.adventure)!
+  const game = useGame()
+  const a = adventures(game).find((x) => x.id === card.adventure)!
   return (
     <article className="postcard px-box">
       <div className="postcard-top">
@@ -172,7 +173,7 @@ export function LockTips({ onClose }: { onClose: () => void }) {
 export function PromotionModal({ rank, onClose }: { rank: number; onClose: () => void }) {
   const game = useGame()
   useEffect(() => sfx.fanfare(), [])
-  const r = CAREER[rank]
+  const r = ladder(game)[rank]
   const hours = Math.round(game.stats.totalMinutes / 6) / 10
   return (
     <Modal onClose={onClose} className="promo">
@@ -217,7 +218,7 @@ export function BookModal({ course, onClose }: { course: Course; onClose: () => 
         <FoxPortrait equipped={game.equipped} cheer className="portrait-m" />
         <PixelCanvas w={work ? 10 : 9} h={16} draw={book} fps={10} className="book-big" label={`${course.name}, with gold on the spine`} />
       </div>
-      <h2>{work ? `${course.name}: done and dusted!` : `${course.name} is on the ${shelfName(course.year)}!`}</h2>
+      <h2>{work ? `${course.name}: done and dusted!` : `${course.name} is on the ${shelfName(game, course)}!`}</h2>
       <p className="center">
         {reached
           ? `${hours} hours of focus. ${f} dusted off a spot for it and keeps looking at it proudly ✿`

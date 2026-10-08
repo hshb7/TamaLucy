@@ -3,6 +3,8 @@ import { ICON_ART } from '../art/items.ts'
 import { sfx } from '../audio.ts'
 import { GIFT } from '../gift.ts'
 import { getGame, setGame, useGame } from '../game/store.ts'
+import { MAX_SHELVES, STUDY_PRESETS, applyPreset, shelvesFromNames, tagFor, type StudyPreset } from '../game/studySetup.ts'
+import { TRACKS } from '../game/career.ts'
 import { connectMailbox, mailProblem } from '../mail.ts'
 import { syncNow } from '../sync.ts'
 import { FoxPortrait } from '../ui/FoxPortrait.tsx'
@@ -60,6 +62,79 @@ function Join({ onBack, onNew }: { onBack: () => void; onNew: () => void }) {
         {problem && <p className="error">{problem}</p>}
         <button type="button" className="link" onClick={onBack}>
           ← back
+        </button>
+      </form>
+    </main>
+  )
+}
+
+/**
+ * What she's studying: a preset to start from (law school, college, grad
+ * school…), her name for it, and the shelves on the bookcase. Every field is
+ * hers to change; nothing is assumed.
+ */
+function StudySetup({ fox, onDone }: { fox: string; onDone: (preset: StudyPreset, program: string, shelves: string[]) => void }) {
+  const [preset, setPreset] = useState<StudyPreset | null>(null)
+  const [program, setProgram] = useState('')
+  const [shelves, setShelves] = useState<string[]>(['', '', ''])
+  const pick = (p: StudyPreset) => {
+    sfx.tap()
+    setPreset(p)
+    setProgram(p.program)
+    setShelves([...p.shelves, '', ''].slice(0, MAX_SHELVES))
+  }
+  const named = shelves.filter((x) => x.trim())
+  return (
+    <main className="screen onboarding">
+      <FoxPortrait equipped={{}} face="open" className="portrait-m" />
+      <form
+        className="px-box form"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (preset && named.length) onDone(preset, program, shelves)
+        }}
+      >
+        <h2>what are you studying?</h2>
+        <div className="presets">
+          {STUDY_PRESETS.map((p) => (
+            <button key={p.id} type="button" className={`chip-btn ${preset?.id === p.id ? 'on' : ''}`} onClick={() => pick(p)}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+        {preset && (
+          <>
+            <label>
+              call it whatever you like <span className="muted">(optional)</span>
+              <input value={program} maxLength={30} placeholder="e.g. nursing, the bar, my master’s" onChange={(e) => setProgram(e.target.value)} />
+            </label>
+            <div className="field">
+              <span>
+                the shelves on {fox}&rsquo;s bookcase <span className="muted">(a year, a term, “work”… up to {MAX_SHELVES})</span>
+              </span>
+              <div className="setup-shelves">
+                {shelves.map((name, i) => (
+                  <div key={i} className="row-shelf">
+                    <span className="shelf-no">{i + 1}</span>
+                    <input
+                      value={name}
+                      maxLength={24}
+                      placeholder={i === 0 ? 'e.g. year 1' : 'leave empty for fewer shelves'}
+                      aria-label={`shelf ${i + 1}`}
+                      onChange={(e) => setShelves(shelves.map((x, j) => (j === i ? e.target.value : x)))}
+                    />
+                    <span className="shelf-tag">{name.trim() ? tagFor(name) : '··'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <p className="muted">
+              every class you add becomes a book on one of these shelves, and fills in as you study for it. {fox} climbs {TRACKS[preset.track].name === 'law' ? 'the law ladder, from 1L to the Supreme Court' : 'from freshman to dean'} as the hours add up. you can change all of this later in settings.
+            </p>
+          </>
+        )}
+        <button className="btn btn-big btn-pink" type="submit" disabled={!preset || !named.length}>
+          {preset ? 'that’s me' : 'pick one to start'}
         </button>
       </form>
     </main>
@@ -127,6 +202,23 @@ export function Onboarding() {
     )
 
   const name = fox.trim()
+
+  if (step === 2)
+    return (
+      <StudySetup
+        fox={name}
+        onDone={(preset, program, shelves) => {
+          const now = Date.now()
+          setGame((s) => {
+            const withPreset = applyPreset(s, preset, now)
+            return { ...withPreset, study: { ...withPreset.study, program: program.trim().slice(0, 30), shelves: shelvesFromNames(shelves, now) } }
+          })
+          next()
+        }}
+      />
+    )
+
+  const track = TRACKS[game.study.track]
   return (
     <main className="screen onboarding">
       <h1 className="title">how it works</h1>
@@ -135,7 +227,8 @@ export function Onboarding() {
           <PixelIcon sprite={ICON_ART.acorn} scale={3} />
           <p>
             <b>study with {name}.</b> set a timer and stay in the app. if you leave for more than a few seconds, {name} gets
-            distracted and the session doesn&rsquo;t count. every hour you study moves {name} up a law career, from 1L to the Supreme Court.
+            distracted and the session doesn&rsquo;t count. every hour you study moves {name} up a career,{' '}
+            {track.name === 'law' ? 'from 1L to the Supreme Court' : 'from freshman to dean'}, and fills in the book for the class you picked.
           </p>
         </li>
         <li className="px-box">

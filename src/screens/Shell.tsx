@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { ICON_ART, NEED_ICON_ART } from '../art/items.ts'
 import { sprite, type Sprite } from '../art/sprite.ts'
-import { CAREER, rankOf } from '../game/career.ts'
+import { currentRank } from '../game/career.ts'
 import { streak } from '../game/logic.ts'
 import { useGame } from '../game/store.ts'
 import { useNow } from '../hooks.ts'
@@ -80,7 +80,7 @@ interface Props {
 export function DesktopShell({ view, go, onFocus, children }: Props) {
   const game = useGame()
   const now = useNow(60_000)
-  const rank = CAREER[rankOf(game.stats.totalMinutes)]
+  const rank = currentRank(game)
   const unread = game.notes.filter((n) => !n.read).length
   const st = streak(game.stats.days, now)
   return (

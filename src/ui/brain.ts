@@ -134,7 +134,7 @@ export class Brain {
       if (this.ready('ball', t)) fun.push(task('ball', SPOTS.ball.x, 6000, 'playing with the ball'))
       if (has('yarn') && this.ready('yarn', t)) fun.push(task('yarn', SPOTS.yarn.x, 6000, 'batting the yarn around'))
       if (this.ready('window', t, 90_000)) fun.push(task('window', SPOTS.window.x, 6000, 'watching the sky'))
-      if (this.ready('read', t, 90_000)) fun.push(task('read', SPOTS.desk.x, 8000, 'reading your casebooks'))
+      if (this.ready('read', t, 90_000)) fun.push(task('read', SPOTS.desk.x, 8000, 'reading your books'))
       if (fun.length) return fun[Math.floor(Math.random() * fun.length)]
     }
     if (Math.random() < 0.55) {

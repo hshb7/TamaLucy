@@ -6,9 +6,6 @@ import { photoSprite } from '../art/photo.ts'
 import { sfx } from '../audio.ts'
 import { unlocked } from '../game/career.ts'
 import {
-  SHELF_LABELS,
-  SHELVES,
-  WORK_SHELF,
   addCourse,
   bookProgress,
   courseMinutes,
@@ -16,11 +13,15 @@ import {
   draftCourse,
   finishCourse,
   isShelved,
+  shelfIndex,
+  shelfTags,
+  shelvesOf,
   shelfBooks,
   updateCourse,
   type CourseDraft,
 } from '../game/shelf.ts'
-import type { Course, GameState } from '../game/state.ts'
+import { MAX_SHELVES, newShelf, setShelves, tagFor } from '../game/studySetup.ts'
+import type { Course, GameState, Shelf } from '../game/state.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { Modal, toast } from '../ui/bits.tsx'
 import { PixelCanvas } from '../ui/PixelCanvas.tsx'
@@ -36,14 +37,13 @@ const offset = (p: Painter, dx: number, dy: number): Painter => ({
 // the bit of the room around the bookcase
 const VIEW = { x: BOOKCASE.x - 6, y: BOOKCASE.y - 14, w: BOOKCASE.w + 12, h: BOOKCASE.h + 16 }
 
-const inShelf = (c: Course, label: string) =>
-  label === WORK_SHELF ? c.kind === 'work' : c.kind === 'class' && (c.year === label || (label === SHELVES[0] && !(SHELVES as readonly string[]).includes(c.year)))
-
 /** Her classes and work: the bookcase up close, a list per shelf, and adding/editing. */
 export function BookshelfPanel({ startAdding = false }: { startAdding?: boolean }) {
   const game = useGame()
   const [editing, setEditing] = useState<{ course?: Course; kind: Course['kind'] } | null>(startAdding ? { kind: 'class' } : null)
+  const [shelves, setShelvesOpen] = useState(false)
   const books = placeBooks(shelfBooks(game))
+  const all = shelvesOf(game)
 
   const draw = (p: Painter, t: number) => {
     drawRoom(offset(p, VIEW.x, VIEW.y), {
@@ -52,10 +52,10 @@ export function BookshelfPanel({ startAdding = false }: { startAdding?: boolean 
       t,
       gloom: 0,
       decor: game.decor,
-      law: unlocked(game.stats.totalMinutes, 'law'),
+      law: unlocked(game, 'law'),
       photo: game.photo ? photoSprite(game.photo) : null,
       books,
-      shelfLabels: SHELF_LABELS,
+      shelfLabels: shelfTags(game),
     })
   }
   const tap = (x: number, y: number) => {
@@ -83,11 +83,22 @@ export function BookshelfPanel({ startAdding = false }: { startAdding?: boolean 
           + add work
         </button>
       </div>
-      {SHELF_LABELS.map((label) => {
-        const list = game.courses.filter((c) => inShelf(c, label))
+      {!all.length && (
+        <section className="px-box card shelf-card">
+          <h2>no shelves yet</h2>
+          <p className="muted">name a shelf or two (a year, a term, “work”…) and your classes will have somewhere to stand.</p>
+          <button className="btn btn-pink" onClick={() => setShelvesOpen(true)}>
+            set up the shelves
+          </button>
+        </section>
+      )}
+      {all.map((shelf, i) => {
+        const list = game.courses.filter((c) => shelfIndex(game, c) === i)
         return (
-          <section key={label} className="px-box card shelf-card">
-            <h2>{label === WORK_SHELF ? 'work' : `${label} shelf`}</h2>
+          <section key={shelf.id} className="px-box card shelf-card">
+            <h2>
+              {shelf.name} shelf <small className="shelf-tag">{shelf.tag}</small>
+            </h2>
             {list.length ? (
               <ul className="course-list">
                 {list.map((c) => (
@@ -95,16 +106,18 @@ export function BookshelfPanel({ startAdding = false }: { startAdding?: boolean 
                 ))}
               </ul>
             ) : (
-              <p className="muted">
-                {label === WORK_SHELF
-                  ? 'a job, the journal, a clinic, moot court... anything you focus on outside class gets a binder here.'
-                  : `nothing on the ${label} shelf yet.`}
-              </p>
+              <p className="muted">nothing on the {shelf.name} shelf yet.</p>
             )}
           </section>
         )
       })}
+      {all.length > 0 && (
+        <button className="link" onClick={() => setShelvesOpen(true)}>
+          rename or rearrange the shelves →
+        </button>
+      )}
       {editing && <CourseEditor course={editing.course} kind={editing.kind} onClose={() => setEditing(null)} />}
+      {shelves && <ShelvesEditor onClose={() => setShelvesOpen(false)} />}
     </div>
   )
 }
@@ -119,7 +132,10 @@ function CourseRow({ game, course, onEdit }: { game: GameState; course: Course; 
         <span className="course-spine" style={{ background: `linear-gradient(90deg, ${color.dark} 0 30%, ${color.spine} 30% 75%, ${color.light} 75%)` }} />
         <span className="course-name">
           {course.name}
-          <small>{done ? (course.doneAt ? 'finished ✿ on the shelf' : 'hours reached ✿ on the shelf') : `${Math.round(bookProgress(game, course) * 100)}% filled in`}</small>
+          <small>
+            {done ? (course.doneAt ? 'finished ✿ on the shelf' : 'hours reached ✿ on the shelf') : `${Math.round(bookProgress(game, course) * 100)}% filled in`}
+            {course.kind === 'work' ? ' · work' : ''}
+          </small>
         </span>
         <span className="subject-bar course-bar">
           <span style={{ width: `${Math.round(bookProgress(game, course) * 100)}%`, background: color.spine, boxShadow: `inset 0 -3px 0 0 ${color.dark}` }} />
@@ -137,6 +153,7 @@ const GOALS = [25, 50, 100, 150]
 /** Add or edit one class (or piece of work). */
 export function CourseEditor({ course, kind, onClose }: { course?: Course; kind: Course['kind']; onClose: () => void }) {
   const game = useGame()
+  const shelves = shelvesOf(game)
   const [d, setD] = useState<CourseDraft>(() =>
     course
       ? { name: course.name, kind: course.kind, year: course.year, color: course.color, goalHours: course.goalHours, priorHours: course.priorHours }
@@ -146,13 +163,14 @@ export function CourseEditor({ course, kind, onClose }: { course?: Course; kind:
   const set = (patch: Partial<CourseDraft>) => setD((x) => ({ ...x, ...patch }))
   const work = d.kind === 'work'
   const live = course && game.courses.find((c) => c.id === course.id)
+  const shelf = shelves[shelfIndex(game, d)]
 
   const save = (e: React.FormEvent) => {
     e.preventDefault()
     if (!d.name.trim()) return
     setGame((s) => (course ? updateCourse(s, course.id, d) : addCourse(s, d, Date.now())))
     sfx.sparkle()
-    if (!course) toast(work ? `${d.name.trim()} has a binder on the work shelf ✿` : `${d.name.trim()} is on the ${d.year} shelf ✿ pick it when you focus`)
+    if (!course) toast(work ? `${d.name.trim()} has a binder on the ${shelf?.name ?? ''} shelf ✿` : `${d.name.trim()} is on the ${shelf?.name ?? ''} shelf ✿ pick it when you focus`)
     onClose()
   }
 
@@ -172,21 +190,24 @@ export function CourseEditor({ course, kind, onClose }: { course?: Course; kind:
         </div>
         <label>
           {work ? 'what is it?' : 'class name'}
-          <input value={d.name} maxLength={40} autoFocus={!course} placeholder={work ? 'e.g. Law Review, clinic, firm job' : 'e.g. Evidence'} onChange={(e) => set({ name: e.target.value })} />
+          <input value={d.name} maxLength={40} autoFocus={!course} placeholder={work ? 'e.g. my job, the journal, a clinic' : 'e.g. Evidence'} onChange={(e) => set({ name: e.target.value })} />
         </label>
         <div className="field">
           <span>shelf</span>
           <div className="chips chips-left">
-            {SHELVES.map((y) => (
-              <button key={y} type="button" className={`chip-btn ${!work && d.year === y ? 'on' : ''}`} onClick={() => set({ kind: 'class', year: y })}>
-                {y}
+            {shelves.map((sh) => (
+              <button key={sh.id} type="button" className={`chip-btn ${d.year === sh.id ? 'on' : ''}`} onClick={() => set({ year: sh.id })}>
+                {sh.name}
               </button>
             ))}
-            <button type="button" className={`chip-btn ${work ? 'on' : ''}`} onClick={() => set({ kind: 'work', year: WORK_SHELF })}>
-              work
-            </button>
           </div>
         </div>
+        <label className="check">
+          <input type="checkbox" checked={work} onChange={(e) => set({ kind: e.target.checked ? 'work' : 'class', goalHours: e.target.checked && d.goalHours === 100 ? 50 : d.goalHours })} />
+          <span>
+            it&rsquo;s work, not a class <small className="muted">(a binder instead of a book)</small>
+          </span>
+        </label>
         <div className="field">
           <span>colour</span>
           <div className="color-dots">
@@ -273,6 +294,82 @@ export function CourseEditor({ course, kind, onClose }: { course?: Course; kind:
           </div>
         )}
       </form>
+    </Modal>
+  )
+}
+
+/** Name the bookcase's shelves (a year, a term, "work"…), up to three. */
+export function ShelvesEditor({ onClose }: { onClose: () => void }) {
+  const game = useGame()
+  const [rows, setRows] = useState<Shelf[]>(() => shelvesOf(game).map((sh) => ({ ...sh })))
+  const [touched, setTouched] = useState<Set<string>>(new Set())
+  const update = (id: string, patch: Partial<Shelf>) =>
+    setRows((rs) =>
+      rs.map((r) => {
+        if (r.id !== id) return r
+        const next = { ...r, ...patch }
+        // the plate follows the name until she edits the plate herself
+        if (patch.name !== undefined && !touched.has(id)) next.tag = tagFor(patch.name)
+        return next
+      }),
+    )
+  const ok = rows.length > 0 && rows.every((r) => r.name.trim())
+  const moving = (id: string) => game.courses.filter((c) => c.year === id).length
+
+  return (
+    <Modal onClose={onClose} className="sheet">
+      <h2>the shelves</h2>
+      <p className="muted">one for each year, term, or whatever you like. the two letters are what&rsquo;s on the little brass plate.</p>
+      <ul className="shelf-rows">
+        {rows.map((r, i) => (
+          <li key={r.id}>
+            <span className="shelf-no">{i + 1}</span>
+            <input value={r.name} maxLength={24} placeholder="e.g. year 2, spring, work" aria-label={`shelf ${i + 1} name`} onChange={(e) => update(r.id, { name: e.target.value })} />
+            <input
+              className="tag-input"
+              value={r.tag}
+              maxLength={2}
+              aria-label={`shelf ${i + 1} plate`}
+              onChange={(e) => {
+                setTouched((t) => new Set(t).add(r.id))
+                update(r.id, { tag: e.target.value.toUpperCase() })
+              }}
+            />
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label={`remove shelf ${r.name || i + 1}`}
+              disabled={rows.length === 1}
+              onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))}
+              title={moving(r.id) ? `its ${moving(r.id)} book${moving(r.id) === 1 ? '' : 's'} move to the top shelf` : undefined}
+            >
+              ×
+            </button>
+          </li>
+        ))}
+      </ul>
+      {rows.length < MAX_SHELVES && (
+        <button type="button" className="link" onClick={() => setRows((rs) => [...rs, newShelf('', Date.now())])}>
+          + add a shelf
+        </button>
+      )}
+      <div className="row">
+        <button type="button" className="btn" onClick={onClose}>
+          cancel
+        </button>
+        <button
+          type="button"
+          className="btn btn-pink"
+          disabled={!ok}
+          onClick={() => {
+            setGame((s) => setShelves(s, rows))
+            sfx.sparkle()
+            onClose()
+          }}
+        >
+          save shelves
+        </button>
+      </div>
     </Modal>
   )
 }

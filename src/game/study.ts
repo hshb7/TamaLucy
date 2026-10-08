@@ -18,6 +18,24 @@ export function addCard(s: GameState, card: { front: string; back: string; subje
   return { ...s, cards: [...s.cards, c] }
 }
 
+/** Lines like "front — back", "front - back", "front: back" or "front<tab>back"; anything else is skipped. */
+export function parseCardList(text: string): { front: string; back: string }[] {
+  const out: { front: string; back: string }[] = []
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^(.+?)\s*(?:\t|\s[—–-]\s|:\s|—)\s*(.+)$/.exec(line.trim())
+    if (!m) continue
+    const front = m[1].trim().slice(0, 120)
+    const back = m[2].trim().slice(0, 400)
+    if (front && back) out.push({ front, back })
+  }
+  return out
+}
+
+/** Several cards for one subject at once. */
+export function addCards(s: GameState, list: { front: string; back: string }[], subject: string, now: number): GameState {
+  return list.reduce((acc, c, i) => addCard(acc, { ...c, subject }, now + i), s)
+}
+
 export function updateCard(s: GameState, id: string, patch: Partial<Pick<StudyCard, 'front' | 'back' | 'subject'>>): GameState {
   return { ...s, cards: s.cards.map((c) => (c.id === id ? { ...c, ...patch } : c)) }
 }

@@ -1786,6 +1786,92 @@ input:focus {
   gap: 6px;
 }
 
+/* ── study setup: shelves, presets, checkboxes ───────────────────────────── */
+.shelf-tag {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  padding: 1px 6px;
+  background: var(--butter);
+  box-shadow: 0 0 0 2px var(--line);
+  color: var(--ink);
+  margin-left: 6px;
+}
+.shelf-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.shelf-rows li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 58px 40px;
+  gap: 8px;
+  align-items: center;
+}
+.shelf-rows input {
+  margin: var(--b) 0;
+  min-width: 0;
+}
+.shelf-no {
+  font-family: var(--font-pixel);
+  color: var(--ink-soft);
+  text-align: center;
+}
+.tag-input {
+  text-align: center;
+  font-family: var(--font-pixel);
+  text-transform: uppercase;
+}
+.shelf-rows .icon-btn {
+  width: 36px;
+  height: 36px;
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shelf-rows .icon-btn:disabled {
+  opacity: 0.35;
+}
+label.check {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  cursor: pointer;
+}
+label.check input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--pink-deep);
+}
+label.check span {
+  display: flex;
+  flex-direction: column;
+}
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.setup-shelves {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.setup-shelves .row-shelf {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 52px;
+  gap: 8px;
+  align-items: center;
+}
+
 .promo h2 {
   font-size: 22px;
 }

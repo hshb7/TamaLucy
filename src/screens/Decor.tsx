@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { FOX_SPOT, FLOORS, ROOM_H, ROOM_W, WALLPAPERS, drawAtmosphere, drawRoom, drawWallAndFloor } from '../art/room.ts'
 import type { Painter } from '../art/painter.ts'
 import { sfx } from '../audio.ts'
-import { CAREER, unlockRank, unlocked } from '../game/career.ts'
+import { ladder, unlockRank, unlocked } from '../game/career.ts'
 import { setDecor } from '../game/logic.ts'
 import { isOctober, seasonOf } from '../game/time.ts'
 import { setGame, useGame } from '../game/store.ts'
@@ -11,7 +11,7 @@ import { drawFox, idleFace, idleTail } from '../ui/foxDraw.ts'
 import { Header } from './Header.tsx'
 import { photoSprite } from '../art/photo.ts'
 import { placeBooks } from '../art/bookcase.ts'
-import { SHELF_LABELS, shelfBooks } from '../game/shelf.ts'
+import { shelfBooks, shelfTags } from '../game/shelf.ts'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
 import { NEED_ICON_ART } from '../art/items.ts'
 import { pixelatePhoto } from '../ui/photo.ts'
@@ -84,8 +84,8 @@ function Swatch({ wall, floor }: { wall: string; floor: string }) {
 
 export function DecorScreen({ onBack, onWidget }: { onBack: () => void; onWidget: () => void }) {
   const game = useGame()
-  const walls = unlocked(game.stats.totalMinutes, 'wall')
-  const floors = unlocked(game.stats.totalMinutes, 'floor')
+  const walls = unlocked(game, 'wall')
+  const floors = unlocked(game, 'floor')
 
   const preview = (p: Painter, t: number) => {
     const d = new Date()
@@ -95,13 +95,13 @@ export function DecorScreen({ onBack, onWidget }: { onBack: () => void; onWidget
       t,
       gloom: 0,
       decor: game.decor,
-      law: unlocked(game.stats.totalMinutes, 'law'),
+      law: unlocked(game, 'law'),
       bowl: game.bowl,
       season: seasonOf(d.getTime()),
       october: isOctober(d.getTime()),
       photo: game.photo ? photoSprite(game.photo) : null,
       books: placeBooks(shelfBooks(game)),
-      shelfLabels: SHELF_LABELS,
+      shelfLabels: shelfTags(game),
     }
     drawRoom(p, opts)
     drawFox(p, FOX_SPOT.x, FOX_SPOT.y, { pose: 'sit', face: idleFace(t), tail: idleTail(t), equipped: game.equipped })
@@ -109,8 +109,8 @@ export function DecorScreen({ onBack, onWidget }: { onBack: () => void; onWidget
   }
 
   const lock = (kind: 'wall' | 'floor', id: string) => {
-    const r = unlockRank(kind, id)
-    return r >= 0 ? `at ${CAREER[r].short}` : ''
+    const r = unlockRank(game, kind, id)
+    return r >= 0 ? `at ${ladder(game)[r].short}` : ''
   }
 
   return (

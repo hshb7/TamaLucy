@@ -2,7 +2,7 @@ import { CLOTHING_ART } from '../art/clothes.ts'
 import { sfx } from '../audio.ts'
 import { CLOTHES } from '../game/content.ts'
 import { ownsClothing, toggleWear } from '../game/logic.ts'
-import { CAREER, unlockRank } from '../game/career.ts'
+import { ladder, unlockRank } from '../game/career.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { FoxPortrait } from '../ui/FoxPortrait.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
@@ -21,15 +21,15 @@ export function Wardrobe({ onBack }: { onBack: () => void }) {
       <Header title="closet" onBack={onBack} />
       <FoxPortrait equipped={game.equipped} className="portrait-l" hearts={Object.keys(game.equipped).length > 0} />
       <p className="muted center">
-        {CLOTHES.filter((c) => ownsClothing(game, c.id)).length}/{CLOTHES.length} collected · tap to wear or take off
+        {CLOTHES.filter((c) => ownsClothing(game, c.id)).length}/{CLOTHES.filter((c) => !c.career || ownsClothing(game, c.id) || unlockRank(game, 'clothes', c.id) >= 0).length} collected · tap to wear or take off
       </p>
       {SLOTS.map(([slot, title]) => (
         <section key={slot}>
           <h2 className="section-title">{title}</h2>
           <div className="grid">
-            {CLOTHES.filter((c) => c.slot === slot).map((c) => {
+            {CLOTHES.filter((c) => c.slot === slot && (!c.career || ownsClothing(game, c.id) || unlockRank(game, 'clothes', c.id) >= 0)).map((c) => {
               const owned = ownsClothing(game, c.id)
-              const r = c.career ? unlockRank('clothes', c.id) : -1
+              const r = c.career ? unlockRank(game, 'clothes', c.id) : -1
               const on = game.equipped[slot] === c.id
               return (
                 <button
@@ -44,7 +44,7 @@ export function Wardrobe({ onBack }: { onBack: () => void }) {
                 >
                   <PixelIcon sprite={CLOTHING_ART[c.id].sprite} scale={3} className={owned ? '' : 'silhouette'} />
                   <span>{owned ? c.name : c.career ? c.name : '???'}</span>
-                  {!owned && r >= 0 && <small>unlocks at {CAREER[r].short}</small>}
+                  {!owned && r >= 0 && <small>unlocks at {ladder(game)[r].short}</small>}
                 </button>
               )
             })}

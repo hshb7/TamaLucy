@@ -12,6 +12,10 @@ import { MailboxSection } from './Mailbox.tsx'
 import { resetSync } from '../sync.ts'
 import { isNativeApp, native, nativePlatform, type BlockingStatus } from '../native.ts'
 import { toast } from '../ui/bits.tsx'
+import { DECKS, toggleDeck } from '../game/decks.ts'
+import { setStudy } from '../game/studySetup.ts'
+import { shelvesOf } from '../game/shelf.ts'
+import { ShelvesEditor } from './Bookshelf.tsx'
 
 function Choice<T extends string | number>({ value, options, onChange, format }: { value: T; options: T[]; onChange: (v: T) => void; format?: (v: T) => string }) {
   return (
@@ -44,6 +48,58 @@ function NameField({ label, value, max, onSave }: { label: string; value: string
         onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
       />
     </label>
+  )
+}
+
+/** What she's studying: the fox's career track, the shelves, the built-in quiz decks. Nothing here is assumed. */
+function StudiesSection() {
+  const game = useGame()
+  const [shelves, setShelves] = useState(false)
+  const [program, setProgram] = useState(game.study.program)
+  const f = game.foxName
+  return (
+    <section className="px-box card">
+      <h2>my studies</h2>
+      <label>
+        what are you studying?
+        <input
+          value={program}
+          maxLength={30}
+          placeholder="e.g. law school, nursing, the CPA"
+          onChange={(e) => setProgram(e.target.value)}
+          onBlur={() => setGame((s) => setStudy(s, { program }))}
+          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+        />
+      </label>
+      <h3>{f}&rsquo;s career</h3>
+      <Choice value={game.study.track} options={['general', 'law']} onChange={(v) => setGame((s) => setStudy(s, { track: v }))} format={(v) => (v === 'law' ? 'law: 1L to the Supreme Court' : 'school: freshman to dean')} />
+      <p className="muted">
+        {game.study.track === 'law' ? `${f} climbs the law ladder, tells law jokes and visits the law library.` : `${f} climbs from freshman to dean. same hours, same prizes, no law jokes.`}
+      </p>
+      <h3>the bookshelf</h3>
+      <p className="muted">
+        {shelvesOf(game)
+          .map((sh) => sh.name)
+          .join(' · ')}
+      </p>
+      <button className="btn btn-small" onClick={() => setShelves(true)}>
+        rename or rearrange the shelves
+      </button>
+      <h3>quiz decks</h3>
+      <p className="muted">your own flashcards always come first. these are extras {f} can quiz you on, if they fit.</p>
+      {DECKS.map((d) => {
+        const on = game.study.decks.includes(d.id)
+        return (
+          <label key={d.id} className="check">
+            <input type="checkbox" checked={on} onChange={() => setGame((s) => toggleDeck(s, d.id))} />
+            <span>
+              {d.name} <small className="muted">· {d.cards.length} cards · {d.blurb}</small>
+            </span>
+          </label>
+        )
+      })}
+      {shelves && <ShelvesEditor onClose={() => setShelves(false)} />}
+    </section>
   )
 }
 
@@ -154,6 +210,8 @@ export function SettingsScreen({ onBack, onWidget }: { onBack: () => void; onWid
                 : `everything is paused. ${game.foxName} won’t get hungry or lonely until you turn this off.`}
           </p>
         </section>
+
+        <StudiesSection />
 
         <section className="px-box card">
           <h2>your widget</h2>

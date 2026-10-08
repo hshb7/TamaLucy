@@ -1,4 +1,5 @@
 import type { Slot } from '../art/clothes.ts'
+import type { GameState } from './state.ts'
 
 export interface Item {
   id: string
@@ -56,8 +57,8 @@ export const CLOTHES: Clothing[] = [
   { id: 'pumpkinHat', slot: 'head', name: 'Pumpkin hat', blurb: 'october only! spooky and cute.', season: 'october' },
   { id: 'earmuffs', slot: 'head', name: 'Earmuffs', blurb: 'a winter exclusive. toasty ears.', season: 'winter' },
   { id: 'partyHat', slot: 'head', name: 'Party hat', blurb: 'from your birthday ♡', special: true },
-  { id: 'necktie', slot: 'neck', name: 'Law-firm tie', blurb: 'dress for the job you want.', career: true },
-  { id: 'gradCap', slot: 'head', name: 'Grad cap', blurb: 'juris doctor fox.', career: true },
+  { id: 'necktie', slot: 'neck', name: 'Smart necktie', blurb: 'dress for the job you want.', career: true },
+  { id: 'gradCap', slot: 'head', name: 'Grad cap', blurb: 'you did it, graduate.', career: true },
   { id: 'judgeWig', slot: 'head', name: 'Judge wig', blurb: 'order in the court!', career: true },
 ]
 
@@ -139,24 +140,24 @@ export const ADVENTURES: AdventureDef[] = [
   },
   {
     id: 'library',
-    place: 'the Law Library',
-    verb: 'reading in the law library',
+    place: 'the Old Library',
+    verb: 'reading in the library',
     souvenir: 'bookmark',
     souvenirName: 'Flower bookmark',
     stories: [
-      'i snuck into the law library and read a whole casebook. i have many questions about adverse possession. i made you a bookmark!',
-      'the librarian owl said i was very quiet (i was napping on the reporters). i pressed a flower between the pages for you.',
+      'i snuck into the library and read a whole textbook. i have many questions about chapter four. i made you a bookmark!',
+      'the librarian owl said i was very quiet (i was napping on the encyclopedias). i pressed a flower between the pages for you.',
     ],
   },
   {
     id: 'courthouse',
-    place: 'the Courthouse Steps',
-    verb: 'people-watching at the courthouse',
+    place: 'the Town Square',
+    verb: 'people-watching in the square',
     souvenir: 'feather',
     souvenirName: 'Pigeon feather',
     stories: [
-      'i sat on the courthouse steps and watched everyone rush in with their briefcases. a pigeon gave me this feather. i think he was a witness.',
-      'i peeked into a courtroom. the judge had a very serious face and a very nice robe. someday that\u2019ll be you. (i\u2019ll be the bailiff.)',
+      'i sat by the fountain and watched everyone hurry past with their bags and coffees. a pigeon gave me this feather. i think he liked me.',
+      'a street musician played a whole song just for me. someday i\u2019ll learn an instrument. (i\u2019ll start with the triangle.)',
     ],
   },
   {
@@ -171,6 +172,31 @@ export const ADVENTURES: AdventureDef[] = [
     ],
   },
 ]
+
+/** On the law track the library is a law library and the square is the courthouse steps. */
+const LAW_ADVENTURES: Record<string, Partial<AdventureDef>> = {
+  library: {
+    place: 'the Law Library',
+    verb: 'reading in the law library',
+    stories: [
+      'i snuck into the law library and read a whole casebook. i have many questions about adverse possession. i made you a bookmark!',
+      'the librarian owl said i was very quiet (i was napping on the reporters). i pressed a flower between the pages for you.',
+    ],
+  },
+  courthouse: {
+    place: 'the Courthouse Steps',
+    verb: 'people-watching at the courthouse',
+    stories: [
+      'i sat on the courthouse steps and watched everyone rush in with their briefcases. a pigeon gave me this feather. i think he was a witness.',
+      'i peeked into a courtroom. the judge had a very serious face and a very nice robe. someday that\u2019ll be you. (i\u2019ll be the bailiff.)',
+    ],
+  },
+}
+
+const LAW_LIST = ADVENTURES.map((a) => ({ ...a, ...LAW_ADVENTURES[a.id] }))
+
+/** The places the fox can go, worded for her track. */
+export const adventures = (s: Pick<GameState, 'study'>): AdventureDef[] => (s.study.track === 'law' ? LAW_LIST : ADVENTURES)
 
 export const REWARD_KINDS = ['adventure', 'gift', 'treat', 'clothes', 'note'] as const
 export type RewardKind = (typeof REWARD_KINDS)[number]

@@ -1,9 +1,10 @@
-import { ADVENTURES, CLOTHES, GIFTS, TREATS, byId, type RewardKind } from './content.ts'
+import { CLOTHES, GIFTS, TREATS, adventures, byId, type RewardKind } from './content.ts'
 import { GIFT } from '../gift.ts'
 import {
   GENERAL_NOTES,
   LABEL_NOTES,
   LAW_NOTES,
+  STUDY_NOTES,
   LONG_NOTES,
   MISSED_NOTES,
   MORNING_NOTES,
@@ -16,8 +17,8 @@ import { EFFECTS, SOCIAL, bump, simulate, type Activity } from './needs.ts'
 import { unlocked, rankOf, type UnlockKind } from './career.ts'
 import { dayKey, isOctober, monthDay, seasonOf } from './time.ts'
 import { examsToday } from './study.ts'
-import { celebrateBook, courseForLabel, courseMinutes, shelfName } from './shelf.ts'
-import { BIRTHDAY_NOTE, EXAM_NOTES } from './notes.ts'
+import { celebrateBook, courseForLabel, courseMinutes, shelfName, shelfOf } from './shelf.ts'
+import { BIRTHDAY_NOTE, EXAM_NOTES, LAW_EXAM_NOTES } from './notes.ts'
 import type { Clothing } from './content.ts'
 
 type Rng = () => number
@@ -101,7 +102,8 @@ export function celebrateDays(s: GameState, now: number, rng: Rng = Math.random)
   }
   for (const exam of examsToday(next, now)) {
     if (next.examsWished.includes(exam.id)) continue
-    const text = fill(pick(EXAM_NOTES, rng), { name: next.owner.toLowerCase(), exam: exam.name })
+    const notes = next.study.track === 'law' ? [...EXAM_NOTES, ...LAW_EXAM_NOTES] : EXAM_NOTES
+    const text = fill(pick(notes, rng), { name: next.owner.toLowerCase(), exam: exam.name })
     next = { ...addNote(next, { kind: 'exam', text }, now), examsWished: [...next.examsWished, exam.id] }
   }
   return next
@@ -259,8 +261,9 @@ export function offer(s: GameState, kind: RewardKind, rng: Rng = Math.random, no
   }
   if (kind === 'adventure') {
     // prefer places we haven't sent a postcard from yet
-    const fresh = ADVENTURES.filter((a) => !s.postcards.some((p) => p.adventure === a.id))
-    const pool = [...shuffle(fresh, rng), ...shuffle(ADVENTURES.filter((a) => !fresh.includes(a)), rng)]
+    const all = adventures(s)
+    const fresh = all.filter((a) => !s.postcards.some((p) => p.adventure === a.id))
+    const pool = [...shuffle(fresh, rng), ...shuffle(all.filter((a) => !fresh.includes(a)), rng)]
     options = pool.slice(0, n).map((a) => a.id)
   }
   return { ...s, pending: { ...s.pending, offer: { kind, options } } }
@@ -315,7 +318,7 @@ export function claim(s: GameState, now: number, kind: RewardKind, choice: strin
       break
     }
     case 'adventure': {
-      if (!choice || !ADVENTURES.some((a) => a.id === choice)) return null
+      if (!choice || !adventures(s).some((a) => a.id === choice)) return null
       // adventures last about as long as a break (sub-minute breaks only exist in ?debug)
       const b = s.settings.breakMinutes
       const minutes = b < 1 ? b : Math.max(3, Math.min(15, b))
@@ -374,7 +377,7 @@ function writeNote(s: GameState, now: number, minutes: number, label: string, rn
   if (s.secretsDelivered < GIFT.secretNotes.length && rng() < 0.3) return deliverSecret(s, now)
   const hour = new Date(now).getHours()
   const st = streak(s.stats.days, now)
-  const pools: string[][] = [GENERAL_NOTES, GENERAL_NOTES, LAW_NOTES]
+  const pools: string[][] = [GENERAL_NOTES, GENERAL_NOTES, s.study.track === 'law' ? LAW_NOTES : STUDY_NOTES]
   if (hour >= 5 && hour < 11) pools.push(MORNING_NOTES)
   if (hour >= 21 || hour < 4) pools.push(NIGHT_NOTES)
   if (minutes >= 45) pools.push(LONG_NOTES, LONG_NOTES)
@@ -414,7 +417,7 @@ export function readNote(s: GameState, id: string): GameState {
 export function resolveAdventure(s: GameState, now: number, rng: Rng = Math.random, force = false): GameState {
   const adv = s.adventure
   if (!adv || (!force && now < adv.returnsAt)) return s
-  const def = ADVENTURES.find((a) => a.id === adv.id)!
+  const def = adventures(s).find((a) => a.id === adv.id)!
   const card: Postcard = { adventure: def.id, story: pick(def.stories, rng), at: now }
   // a great time, but it comes home hungry, tired and a bit muddy
   return {
@@ -514,11 +517,11 @@ export function pet(s: GameState, now: number): { state: GameState; counted: boo
 // ─── career, decor, quiz ─────────────────────────────────────────────────────
 
 export function ownsClothing(s: GameState, id: string) {
-  return s.wardrobe.includes(id) || unlocked(s.stats.totalMinutes, 'clothes').includes(id)
+  return s.wardrobe.includes(id) || unlocked(s, 'clothes').includes(id)
 }
 
 export function isUnlocked(s: GameState, kind: UnlockKind, id: string) {
-  return unlocked(s.stats.totalMinutes, kind).includes(id)
+  return unlocked(s, kind).includes(id)
 }
 
 export function setDecor(s: GameState, patch: { wall?: string; floor?: string }): GameState {
@@ -534,19 +537,19 @@ export function shelveBook(s: GameState, id: string, now: number): GameState {
   const hours = Math.round(courseMinutes(s, c) / 60)
   const text =
     c.kind === 'work'
-      ? `i filed ${c.name} away on the work shelf today. ${hours} hours of hard work! you make it look easy (it isn’t). proud of you.`
-      : `i put ${c.name} on the ${shelfName(c.year)} today, right where i can see it. ${hours} hours! it has gold on the spine and everything. i’m so proud of you.`
+      ? `i filed ${c.name} away on the ${shelfOf(s, c)?.name ?? 'work'} shelf today. ${hours} hours of hard work! you make it look easy (it isn’t). proud of you.`
+      : `i put ${c.name} on the ${shelfName(s, c)} today, right where i can see it. ${hours} hours! it has gold on the spine and everything. i’m so proud of you.`
   return addNote(celebrateBook(s, id), { kind: 'fox', text }, now)
 }
 
 /** A promotion is waiting to be celebrated. */
 export function pendingPromotion(s: GameState): number | null {
-  const r = rankOf(s.stats.totalMinutes)
+  const r = rankOf(s)
   return r > s.rankSeen ? r : null
 }
 
 export function celebratePromotion(s: GameState): GameState {
-  return { ...s, rankSeen: rankOf(s.stats.totalMinutes) }
+  return { ...s, rankSeen: rankOf(s) }
 }
 
 /** After reviewing her own cards: the fox loves studying with her. */
