@@ -332,8 +332,9 @@ export function hydrate(raw: Record<string, unknown>, now: number): GameState {
     settings: { ...base.settings, ...parsed.settings },
     stats: { ...base.stats, ...parsed.stats },
     widget: { ...base.widget, ...parsed.widget },
-    // saves from before she could choose were the law school edition
-    study: parsed.study ? { ...base.study, ...parsed.study } : parsed.onboarded ? legacyStudy(parsed.courses ?? []) : base.study,
+    // until she has been asked, nothing is assumed: a save from before the question (or one an
+    // earlier build stamped with the old law default) starts neutral and the home screen asks
+    study: parsed.study?.asked ? { ...base.study, ...parsed.study } : parsed.onboarded ? legacyStudy(parsed.courses ?? []) : base.study,
   }
 }
 

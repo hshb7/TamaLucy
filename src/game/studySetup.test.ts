@@ -81,6 +81,12 @@ describe('setting up what she studies', () => {
     const s = hydrate(old, T0)
     expect(s.study).toEqual({ program: '', track: 'general', shelves: [], decks: [], asked: false })
     expect(setStudy(s, { program: 'law' }).study.asked).toBe(true)
+    // a save an earlier build stamped with the old law default, never answered: neutral too
+    const stamped = { ...old, study: { program: 'law school', track: 'law', shelves: [{ id: '2L', name: '2L', tag: '2L' }], decks: ['legalLatin'], asked: false } }
+    expect(hydrate(stamped, T0).study).toEqual({ program: '', track: 'general', shelves: [], decks: [], asked: false })
+    // but what she chose herself stays
+    const chosen = { ...old, study: { ...stamped.study, asked: true } }
+    expect(hydrate(chosen, T0).study.track).toBe('law')
     // books already standing on the shipped shelves keep those shelves
     const withBooks = { ...old, courses: [{ id: 'c', name: 'Evidence', kind: 'class', year: '2L', color: 'navy', goalHours: 100, priorHours: 0, doneAt: 0, created: 1 }] }
     expect(shelfTags(hydrate(withBooks, T0))).toEqual(['2L'])
