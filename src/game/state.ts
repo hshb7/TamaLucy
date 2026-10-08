@@ -4,7 +4,7 @@ import { GIFT } from '../gift.ts'
 import type { Needs } from './needs.ts'
 import { LAW_RANKS, rankIn } from './career.ts'
 import { defaultLeaveMode } from './device.ts'
-import { LEGACY_STUDY } from './studySetup.ts'
+import { legacyStudy } from './studySetup.ts'
 
 export interface Note {
   id: string
@@ -333,7 +333,7 @@ export function hydrate(raw: Record<string, unknown>, now: number): GameState {
     stats: { ...base.stats, ...parsed.stats },
     widget: { ...base.widget, ...parsed.widget },
     // saves from before she could choose were the law school edition
-    study: parsed.study ? { ...base.study, ...parsed.study } : parsed.onboarded ? LEGACY_STUDY : base.study,
+    study: parsed.study ? { ...base.study, ...parsed.study } : parsed.onboarded ? legacyStudy(parsed.courses ?? []) : base.study,
   }
 }
 

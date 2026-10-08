@@ -127,7 +127,7 @@ export function DecorScreen({ onBack, onWidget }: { onBack: () => void; onWidget
           <small>{game.foxName} on your home screen, in your colours ✿</small>
         </span>
       </button>
-      <p className="muted center">more wallpapers and floors unlock as {game.foxName}&rsquo;s law career grows</p>
+      <p className="muted center">more wallpapers and floors unlock as {game.foxName}&rsquo;s career grows</p>
       {(
         [
           ['wallpaper', 'wall', WALLPAPERS, walls],

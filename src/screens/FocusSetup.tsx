@@ -87,7 +87,7 @@ export function FocusForm({ onStarted, onAddClass, compact = false }: FormProps)
             {mine.length ? '+ class' : '+ add my classes'}
           </button>
         </div>
-        <input id="focus-label" value={label} maxLength={40} placeholder="or type anything, e.g. Torts outline" onChange={(e) => setLabel(e.target.value)} />
+        <input id="focus-label" value={label} maxLength={40} placeholder="or type anything, e.g. chapter 4 reading" onChange={(e) => setLabel(e.target.value)} />
       </div>
       <p className="hint">
         <PixelIcon sprite={ICON_ART.heart} scale={2} />

@@ -27,13 +27,15 @@ function notice(game: GameState, now: number, unread: number): Notice | null {
   const f = game.foxName
   if (isBirthday(game, now)) return { text: `happy birthday, ${game.owner}!!`, sub: `${f} made you a cake (and a letter) ♡`, icon: SPECIAL_ART.cake, go: 'album', tone: 'pink' }
   const today = examsToday(game, now)[0]
-  if (today) return { text: `today: ${today.name}`, sub: `you’ve got this, counsellor. ${f} believes in you ♡`, icon: NEED_ICON_ART.gavel, go: 'exams', tone: 'butter' }
+  const law = game.study.track === 'law'
+  const examIcon = law ? NEED_ICON_ART.gavel : NEED_ICON_ART.card
+  if (today) return { text: `today: ${today.name}`, sub: `you’ve got this${law ? ', counsellor' : ''}. ${f} believes in you ♡`, icon: examIcon, go: 'exams', tone: 'butter' }
   const mail = game.notes.find((n) => n.kind === 'post' && !n.read)
   if (mail) return { text: 'you’ve got mail! ✉', sub: mail.signed ? `a letter from ${mail.signed}` : 'a letter came for you ✿', icon: ICON_ART.mail, go: 'album', tone: 'pink' }
   if (unread) return { text: unread === 1 ? 'a letter is waiting for you!' : `${unread} letters are waiting for you!`, sub: 'tap to open ✿', icon: ICON_ART.mail, go: 'album', tone: 'pink' }
   if (!game.study.asked) return { text: `tell ${f} what you’re studying`, sub: 'your classes, the shelves, the fox’s career: set it up your way', icon: NEED_ICON_ART.books, go: 'settings', tone: 'lav' }
   const soon = upcomingExams(game, now)[0]
-  if (soon && daysUntil(soon.date, now) <= 7) return { text: `${soon.name} ${whenLabel(daysUntil(soon.date, now))}`, sub: `${f} is counting down with you`, icon: NEED_ICON_ART.gavel, go: 'exams', tone: 'lav' }
+  if (soon && daysUntil(soon.date, now) <= 7) return { text: `${soon.name} ${whenLabel(daysUntil(soon.date, now))}`, sub: `${f} is counting down with you`, icon: examIcon, go: 'exams', tone: 'lav' }
   const due = dueCards(game, now).length
   if (due) return { text: `${due} flashcard${due === 1 ? '' : 's'} due today`, sub: 'a quick review keeps them fresh', icon: NEED_ICON_ART.card, go: 'study', tone: 'lav' }
   if (game.settings.care === 'paused') return { text: 'exam week mode is on', sub: `${f}’s needs are paused. good luck ♡`, icon: NEED_ICON_ART.moon, go: 'exams', tone: 'butter' }

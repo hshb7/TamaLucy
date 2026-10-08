@@ -26,18 +26,24 @@ export const STUDY_PRESETS: StudyPreset[] = [
   { id: 'other', label: 'something else', program: '', track: 'general', shelves: ['this term', 'next term', 'work'], decks: [] },
 ]
 
-/** The setup the app shipped with, for saves made before there was a choice. */
-export const LEGACY_STUDY: Study = {
-  program: 'law school',
-  track: 'law',
-  shelves: [
-    { id: '2L', name: '2L', tag: '2L' },
-    { id: '3L', name: '3L', tag: '3L' },
-    { id: 'work', name: 'work', tag: 'WK' },
-  ],
-  decks: ['legalLatin'],
-  // the home screen asks her to look it over once
-  asked: false,
+/** The shelves the app shipped with, before she could name them. */
+const SHIPPED_SHELVES: Shelf[] = [
+  { id: '2L', name: '2L', tag: '2L' },
+  { id: '3L', name: '3L', tag: '3L' },
+  { id: 'work', name: 'work', tag: 'WK' },
+]
+
+/** The full law school setup the app shipped with (the law preset's old shape; tests use it). */
+export const LEGACY_STUDY: Study = { program: 'law school', track: 'law', shelves: SHIPPED_SHELVES, decks: ['legalLatin'], asked: false }
+
+/**
+ * A save made before there was a choice gets nothing assumed: the general
+ * track, no law jokes, no decks. The shipped shelves stay only where her books
+ * already stand on them, and the home screen asks her to set it up.
+ */
+export function legacyStudy(courses: readonly Pick<Course, 'year'>[]): Study {
+  const used = new Set(courses.map((c) => c.year))
+  return { program: '', track: 'general', shelves: SHIPPED_SHELVES.filter((sh) => used.has(sh.id)), decks: [], asked: false }
 }
 
 /** The two letters on a shelf's brass plate: "2L" stays "2L", "Fall 2026" becomes "F2", "clinicals" "CL". */

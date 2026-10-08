@@ -97,7 +97,7 @@ function CardsPanel() {
         <p className="muted">
           {game.cards.length
             ? `${game.cards.length} cards. ${game.foxName} brings each one back right before you’d forget it: the ones you know come back less and less often.`
-            : `write cards for cases, rules and elements. ${game.foxName} will quiz you and schedule them so you review each one right before you’d forget it.`}
+            : `write cards for terms, concepts and questions. ${game.foxName} will quiz you and schedule them so you review each one right before you’d forget it.`}
         </p>
         <div className="row">
           {game.cards.length > 0 && (
@@ -245,7 +245,7 @@ function ExamsPanel() {
         <h2>exam week mode {paused ? 'is on' : ''}</h2>
         <p className="muted">
           {paused
-            ? `${game.foxName}’s needs are paused, so it won’t get hungry or lonely while you’re buried in outlines. good luck ♡`
+            ? `${game.foxName}’s needs are paused, so it won’t get hungry or lonely while you’re buried in revision. good luck ♡`
             : `busy stretch coming up? pause ${game.foxName}’s needs so it can’t get sad while you focus on exams.`}
         </p>
         <button className={`btn ${paused ? '' : 'btn-pink'}`} onClick={() => setPaused(!paused)}>

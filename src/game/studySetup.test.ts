@@ -3,7 +3,7 @@ import { freshState, hydrate, type GameState } from './state.ts'
 import { GENERAL_RANKS, LAW_RANKS, currentRank, ladder, unlocked } from './career.ts'
 import { adventures } from './content.ts'
 import { addCourse, draftCourse, shelfIndex, shelfTags, workShelf } from './shelf.ts'
-import { LEGACY_STUDY, STUDY_PRESETS, applyPreset, setShelves, setStudy, shelvesFromNames, tagFor } from './studySetup.ts'
+import { STUDY_PRESETS, applyPreset, setShelves, setStudy, shelvesFromNames, tagFor } from './studySetup.ts'
 import { enabledDecks, toggleDeck } from './decks.ts'
 import { parseCardList } from './study.ts'
 
@@ -75,14 +75,15 @@ describe('setting up what she studies', () => {
     expect(adventures(school).map((a) => a.id)).toEqual(adventures(law).map((a) => a.id))
   })
 
-  it('a save from before the choice is the law school edition it always was', () => {
+  it('a save from before the choice assumes nothing: general track, no decks, asked on the home screen', () => {
     const old = { ...freshState(T0), onboarded: true } as unknown as Record<string, unknown>
     delete old.study
     const s = hydrate(old, T0)
-    expect(s.study).toEqual(LEGACY_STUDY)
-    expect(s.study.asked).toBe(false)
+    expect(s.study).toEqual({ program: '', track: 'general', shelves: [], decks: [], asked: false })
     expect(setStudy(s, { program: 'law' }).study.asked).toBe(true)
-    expect(shelfTags(s)).toEqual(['2L', '3L', 'WK'])
+    // books already standing on the shipped shelves keep those shelves
+    const withBooks = { ...old, courses: [{ id: 'c', name: 'Evidence', kind: 'class', year: '2L', color: 'navy', goalHours: 100, priorHours: 0, doneAt: 0, created: 1 }] }
+    expect(shelfTags(hydrate(withBooks, T0))).toEqual(['2L'])
     // a brand-new save waits for the setup screen
     const fresh = hydrate({ ...freshState(T0) } as unknown as Record<string, unknown>, T0)
     expect(fresh.study.shelves).toEqual([])
