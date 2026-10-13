@@ -18,6 +18,7 @@ import { shelvesOf } from '../game/shelf.ts'
 import { ShelvesEditor } from './Bookshelf.tsx'
 import { RungsEditor } from './Rungs.tsx'
 import { ladder } from '../game/career.ts'
+import { BuddySection, CalendarSection, CanvasSection, MusicSection, RemindersSection, WeatherSection } from './Links.tsx'
 
 function Choice<T extends string | number>({ value, options, onChange, format }: { value: T; options: T[]; onChange: (v: T) => void; format?: (v: T) => string }) {
   return (
@@ -196,7 +197,7 @@ function BirthdayField({ value, onChange }: { value: string; onChange: (v: strin
   )
 }
 
-export function SettingsScreen({ onBack, onWidget }: { onBack: () => void; onWidget: () => void }) {
+export function SettingsScreen({ onBack, onWidget, onStudy }: { onBack: () => void; onWidget: () => void; onStudy?: () => void }) {
   const game = useGame()
   const [tips, setTips] = useState(false)
   const [install, setInstall] = useState(false)
@@ -285,6 +286,18 @@ export function SettingsScreen({ onBack, onWidget }: { onBack: () => void; onWid
         </section>
 
         <MailboxSection />
+
+        <CalendarSection />
+
+        <CanvasSection />
+
+        <BuddySection onStudy={onStudy} />
+
+        <WeatherSection />
+
+        <MusicSection />
+
+        <RemindersSection />
 
         <BackupSection />
 

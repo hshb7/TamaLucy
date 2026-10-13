@@ -26,6 +26,11 @@ import { checkMail, connectMailbox, mailProblem, onNewMail, takeMailLink } from 
 import { startSync, syncFor, syncNow } from './sync.ts'
 import { notify } from './notify.ts'
 import { isNativeApp, native, nativePlatform, onNative } from './native.ts'
+import { logSession, syncCalendarIfStale } from './calendar.ts'
+import { syncCanvasIfStale } from './canvas.ts'
+import { pauseAfterSession, playForSession } from './music.ts'
+import { startReminderSync } from './reminders.ts'
+import { refreshWeather } from './weather.ts'
 
 export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'study' | 'classes' | 'career' | 'exams' | 'settings' | 'widget'
 
@@ -72,12 +77,32 @@ export default function App() {
   const ses = game.session
   const sesKey = ses ? `${ses.startedAt}:${ses.endsAt}` : ''
   const hadSession = useRef(false)
+  const lastStart = useRef(0)
   useEffect(() => {
     if (!isNativeApp) return
-    if (ses) native.focusStarted({ startedAt: ses.startedAt, endsAt: ses.endsAt, label: ses.label, fox: game.foxName })
-    else if (hadSession.current) native.focusEnded(getGame().pending ? 'done' : 'gaveUp')
+    if (ses) {
+      native.focusStarted({ startedAt: ses.startedAt, endsAt: ses.endsAt, label: ses.label, fox: game.foxName })
+      // a brand-new session (not a paused one resuming): her music starts with the timer
+      if (ses.startedAt !== lastStart.current) void playForSession()
+      lastStart.current = ses.startedAt
+    } else if (hadSession.current) {
+      native.focusEnded(getGame().pending ? 'done' : 'gaveUp')
+      void pauseAfterSession()
+    }
     hadSession.current = !!ses
   }, [sesKey]) // only when the session itself starts, moves or ends
+
+  // The weather at the window: fresh every so often, for the place she set
+  const { lat, lon } = game.weather
+  useEffect(() => {
+    const place = getGame().weather
+    void refreshWeather(place)
+    if (!lat && !lon) return
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') void refreshWeather(getGame().weather)
+    }, 10 * 60_000)
+    return () => clearInterval(id)
+  }, [lat, lon])
 
   // The iPhone's home screen widget: send it what to show whenever that changes
   const widgetKey = nativePlatform === 'ios' && game.onboarded ? JSON.stringify({ ...widgetData(game, Date.now()), savedAt: 0, look: widgetLook(game) }) : ''
@@ -142,6 +167,10 @@ export default function App() {
     const onHide = () => setGame((s) => focusHidden(s, Date.now()))
     startSync()
     void check() // the page may have been reloaded / killed mid-session
+    // her calendar and Canvas, if connected (quietly, a few times a day), and the fox's reminders
+    syncCalendarIfStale()
+    syncCanvasIfStale()
+    startReminderSync()
     const link = takeMailLink()
     if (link)
       connectMailbox(link).then(
@@ -176,6 +205,7 @@ export default function App() {
           setGame(completeFocus(s, now))
           sfx.fanfare()
           buzz([60, 40, 60, 40, 120], 'success')
+          void logSession(s.session, s.foxName) // onto her calendar, if she asked for that
           return
         }
         if (now - s.session.lastBeat > 3000) setGame(heartbeat(s, now))
@@ -224,7 +254,7 @@ export default function App() {
   else if (view === 'study' || view === 'classes' || view === 'career' || view === 'exams')
     // keyed so the Mac sidebar can switch its tabs
     screen = <StudyScreen key={view} onBack={() => setView('home')} initialTab={view === 'study' ? 'cards' : view} addClass={addClass} onAddClass={() => openShelf(true)} />
-  else if (view === 'settings') screen = <SettingsScreen onBack={() => setView('home')} onWidget={() => setView('widget')} />
+  else if (view === 'settings') screen = <SettingsScreen onBack={() => setView('home')} onWidget={() => setView('widget')} onStudy={() => setView('study')} />
   else screen = <Home onFocus={openSetup} go={setView} onShelf={openShelf} />
 
   const calm = !game.session && !game.pending && !reward

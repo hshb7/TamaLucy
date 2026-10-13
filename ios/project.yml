@@ -54,6 +54,11 @@ targets:
         NSSupportsLiveActivities: true
         ITSAppUsesNonExemptEncryption: false
         TLAppGroup: group.$(APP_ID)
+        # exams and deadlines from her calendar, finished sessions written to it (settings → your calendar)
+        NSCalendarsFullAccessUsageDescription: TamaLucy reads exams and deadlines from the calendars you pick, and can add your finished study sessions to your calendar.
+        NSCalendarsUsageDescription: TamaLucy reads exams and deadlines from the calendars you pick, and can add your finished study sessions to your calendar.
+        # a playlist that starts with the timer (settings → music with the timer)
+        NSAppleMusicUsageDescription: TamaLucy can start one of your playlists when a focus session starts.
     entitlements:
       path: App/App.entitlements
       properties:
@@ -198,6 +203,8 @@ targets:
     sources:
       - path: Mac
       - path: App/AppSchemeHandler.swift
+      - path: Shared/CalendarBridge.swift
+      - path: Shared/Reminders.swift
       - path: Shared/Fox.xcassets
       - path: ../dist
         type: folder
@@ -217,6 +224,9 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.productivity
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSCalendarsFullAccessUsageDescription: TamaLucy reads exams and deadlines from the calendars you pick, and can add your finished study sessions to your calendar.
+        NSCalendarsUsageDescription: TamaLucy reads exams and deadlines from the calendars you pick, and can add your finished study sessions to your calendar.
+        NSAppleEventsUsageDescription: TamaLucy asks Music or Spotify to play your playlist when a focus session starts, and to pause when it ends.
     entitlements:
       path: Mac/Mac.entitlements
       properties:
@@ -225,6 +235,13 @@ targets:
         com.apple.security.network.client: true
         # reading the apps she picks as distracting
         com.apple.security.files.user-selected.read-only: true
+        # exams and deadlines from her calendar; sessions written back
+        com.apple.security.personal-information.calendars: true
+        # asking Music or Spotify to play (AppleScript), and only those two
+        com.apple.security.automation.apple-events: true
+        com.apple.security.temporary-exception.apple-events:
+          - com.apple.Music
+          - com.spotify.client
     preBuildScripts:
       - name: Check the web app is built
         basedOnDependencyAnalysis: false

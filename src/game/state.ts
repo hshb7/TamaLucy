@@ -160,6 +160,19 @@ export interface Exam {
   /** The class it's for (a Course id), if any. */
   courseId?: string
   subject: string
+  /** An exam (the default) or something due that day (a memo, a problem set). */
+  kind?: 'exam' | 'due'
+  /** Where it came from, if she didn't type it: her calendar or her school's Canvas. */
+  source?: 'calendar' | 'canvas'
+  /** Its id on that side, so a sync can rename, move or remove it. */
+  externalId?: string
+}
+
+/** Where she is, for the weather at the window ('' / 0 = not set). */
+export interface WeatherPlace {
+  place: string
+  lat: number
+  lon: number
 }
 
 /** A photo, pixelated for the frame on the wall. `data` is w*h 6-digit hex colours. */
@@ -245,6 +258,9 @@ export interface GameState {
   exams: Exam[]
   /** Exams the fox already wished good luck for. */
   examsWished: string[]
+  /** Imported exams and deadlines she took off the list ("source:externalId"); a sync won't bring them back. */
+  examsHidden: string[]
+  weather: WeatherPlace
   /** MM-DD, or '' if unknown. */
   birthday: string
   /** Year the birthday letter was last delivered. */
@@ -305,6 +321,8 @@ export function freshState(now: number, rng: () => number = Math.random): GameSt
     widget: { bg: 'stripes', pose: 'sit', show: 'today', courseId: '', caption: '' },
     exams: [],
     examsWished: [],
+    examsHidden: [],
+    weather: { place: '', lat: 0, lon: 0 },
     birthday: GIFT.birthday,
     birthdayYear: 0,
     photo: null,
@@ -340,6 +358,7 @@ export function hydrate(raw: Record<string, unknown>, now: number): GameState {
     settings: { ...base.settings, ...parsed.settings },
     stats: { ...base.stats, ...parsed.stats },
     widget: { ...base.widget, ...parsed.widget },
+    weather: { ...base.weather, ...parsed.weather },
     // until she has been asked, nothing is assumed: a save from before the question (or one an
     // earlier build stamped with the old law default) starts neutral and the home screen asks
     study: parsed.study?.asked ? { ...base.study, ...parsed.study } : parsed.onboarded ? legacyStudy(parsed.courses ?? []) : base.study,

@@ -3,6 +3,7 @@ import { GIFT_ART, LAW_ART, ROOM_ART, SPECIAL_ART } from './items.ts'
 import { sprite, type Sprite } from './sprite.ts'
 import { BOOKCASE, drawBookcase, type PlacedBook } from './bookcase.ts'
 import type { Season } from '../game/time.ts'
+import type { WeatherKind } from '../game/weather.ts'
 
 /** The whole room is wider than the screen; the camera pans across it. */
 export const ROOM_W = 208
@@ -68,6 +69,8 @@ export interface RoomOptions {
   books?: readonly PlacedBook[]
   /** The bookcase's brass plates, top shelf first. */
   shelfLabels?: readonly string[]
+  /** The real weather where she is, if she told the fox. */
+  weather?: WeatherKind
 }
 
 export const PHOTO_SPOT = { x: 158, y: 13 }
@@ -96,7 +99,18 @@ export const FLOORS: Record<string, Floor> = {
 
 type Sky = { bands: string[]; sun?: 'sun' | 'moon'; stars: boolean; clouds: string | null }
 
-function skyFor(h: number): Sky {
+const OVERCAST_DAY = ['#aab4bf', '#b7c0c9', '#c5ccd3', '#d5dadf']
+const OVERCAST_DUSK = ['#8a84a8', '#a394ad', '#b7a4ad', '#c9b8b0']
+const OVERCAST_NIGHT = ['#1a1d33', '#20243d', '#272b47', '#2f3452']
+const STORM_DAY = ['#5f6a7a', '#6d7785', '#7b8591', '#8b949e']
+
+function skyFor(h: number, weather?: WeatherKind): Sky {
+  if (weather && weather !== 'clear') {
+    const night = h >= 19 || h < 5
+    const dusk = !night && (h < 7 || h >= 17)
+    const bands = weather === 'storm' && !night ? STORM_DAY : night ? OVERCAST_NIGHT : dusk ? OVERCAST_DUSK : OVERCAST_DAY
+    return { bands, stars: false, clouds: weather === 'fog' ? null : night ? '#3a4060' : weather === 'storm' ? '#4e5868' : '#e6eaee' }
+  }
   if (h >= 5 && h < 7) return { bands: ['#f3b7c6', '#f9cdbf', '#ffe0b8', '#fff0cf'], sun: 'sun', stars: false, clouds: '#fff6f0' }
   if (h >= 7 && h < 17) return { bands: ['#9fd3f0', '#b3dcf2', '#c7e6f4', '#dcf0f7'], sun: 'sun', stars: false, clouds: '#ffffff' }
   if (h >= 17 && h < 19) return { bands: ['#a58bd0', '#e79bb4', '#f7b39a', '#ffd18f'], sun: 'sun', stars: false, clouds: '#ffd9e0' }
@@ -116,7 +130,7 @@ function drawWindow(p: Painter, o: RoomOptions) {
   const Y = 12
   const W = 30
   const H = 30
-  const sky = skyFor(o.hour)
+  const sky = skyFor(o.hour, o.weather)
   const bandH = H / sky.bands.length
   sky.bands.forEach((c, i) => p.rect(X, Y + i * bandH, W, Math.ceil(bandH), c))
   // dither between bands
@@ -153,6 +167,7 @@ function drawWindow(p: Painter, o: RoomOptions) {
     p.rect(X + x, Y + H - hh, 1, hh, hill)
     if (o.season === 'spring' && !night && x % 5 === 2) p.rect(X + x, Y + H - hh, 1, 1, '#f7b6c6')
   }
+  if (o.weather === 'fog') p.rect(X, Y, W, H, night ? '#5a6275' : '#dfe4e8', 0.5)
   drawWeather(p, o, X, Y, W, H)
   // frame
   const F = '#fff7ec'
@@ -190,10 +205,32 @@ function drawWindow(p: Painter, o: RoomOptions) {
   p.rect(X + W + 9, Y - 8, 3, 4, '#7b523d')
 }
 
-export /** Snow, blossom petals, falling leaves or fireflies drifting past the window. */
+/** Rain or drizzle streaking past the window; a storm flashes now and then. */
+function drawRain(p: Painter, o: RoomOptions, X: number, Y: number, W: number, H: number) {
+  const night = isNight(o.hour)
+  const n = o.weather === 'drizzle' ? 8 : o.weather === 'storm' ? 22 : 16
+  const c = night ? '#8d9ab8' : o.weather === 'storm' ? '#c7d3e3' : '#dfe9f5'
+  for (let i = 0; i < n; i++) {
+    const x = Math.round(X + ((((i * 7.3 + 3 - o.t / 45) % W) + W) % W))
+    const y = Math.round(Y + ((o.t / 12 + i * 19) % (H + 3))) - 3
+    for (let k = 0; k < 2; k++) {
+      const px = x - k
+      const py = y + k
+      if (px >= X && px < X + W && py >= Y && py < Y + H) p.rect(px, py, 1, 1, c)
+    }
+  }
+  if (o.weather === 'storm') {
+    const ph = o.t % 7000
+    if (ph < 70 || (ph > 150 && ph < 210)) p.rect(X, Y, W, H, '#ffffff', 0.55)
+  }
+}
+
+export /** Snow, blossom petals, falling leaves or fireflies drifting past the window; the real weather, if she set it, wins. */
 function drawWeather(p: Painter, o: RoomOptions, X: number, Y: number, W: number, H: number) {
   const night = isNight(o.hour)
-  const kind = o.season === 'winter' ? 'snow' : o.season === 'spring' ? 'petal' : o.season === 'autumn' ? 'leaf' : night ? 'firefly' : null
+  if (o.weather === 'rain' || o.weather === 'drizzle' || o.weather === 'storm') return drawRain(p, o, X, Y, W, H)
+  const seasonal = o.season === 'winter' ? 'snow' : o.season === 'spring' ? 'petal' : o.season === 'autumn' ? 'leaf' : night ? 'firefly' : null
+  const kind = o.weather === 'snow' ? 'snow' : o.weather && o.weather !== 'clear' ? (seasonal === 'firefly' ? null : seasonal) : seasonal
   if (!kind) return
   const n = kind === 'snow' ? 14 : kind === 'firefly' ? 6 : 7
   const colours = { snow: ['#ffffff'], petal: ['#f7b6c6', '#fbd3dd'], leaf: ['#e8844f', '#d95b43', '#e5ab3d'], firefly: ['#fff3a0'] }[kind]

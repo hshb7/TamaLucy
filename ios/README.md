@@ -133,6 +133,22 @@ the App Store only after Apple approves the **Family Controls (Distribution)** e
 
 The Dynamic Island part needs no approval.
 
+## What the apps ask permission for
+
+Each of these is asked for the first time she uses the matching setting, never
+before, and the apps work without any of them.
+
+| | iPhone | Mac |
+|---|---|---|
+| **Calendar** (settings → your calendar) | Calendars, full access (EventKit) | Calendars (EventKit) + the `calendars` sandbox entitlement |
+| **Music** (settings → music with the timer) | Media & Apple Music (MediaPlayer, her library's playlists) | Automation: "TamaLucy wants to control Music / Spotify" (AppleScript; `automation.apple-events` + a temporary exception for those two apps in `Mac.entitlements`) |
+| **Notifications** (settings → notifications) | Notifications | Notifications |
+
+The usage descriptions live in `project.yml`, so after pulling a change to it
+run `xcodegen` again before building. The Mac app is not on the App Store, so
+the Apple-events exception is fine; an App Store build would need Music's
+scripting access group instead.
+
 ## Troubleshooting
 
 - **"the web app isn't built yet"** when building → run `npm run build` in the repo folder.

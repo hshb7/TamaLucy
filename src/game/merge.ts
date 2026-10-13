@@ -69,6 +69,7 @@ const RULES: Record<string, Rule> = {
   wardrobe: 'set',
   gifts: 'set',
   examsWished: 'set',
+  examsHidden: 'set',
   usedNotes: 'set',
   booksSeen: 'set',
   notes: byId<Note>((n) => n.id, (pick, l, r) => ({ ...pick, read: l.read || r.read }), newestFirst),
@@ -93,6 +94,7 @@ const RULES: Record<string, Rule> = {
   equipped: 'deep',
   widget: 'deep',
   study: 'deep',
+  weather: 'deep',
 }
 
 export function merge3(base: GameState, local: GameState, remote: GameState): GameState {

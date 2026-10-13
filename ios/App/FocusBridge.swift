@@ -26,7 +26,12 @@ final class FocusBridge {
         case "blocking.choose": return await chooseApps()
         case "widget.update": return updateWidget(body)
         case "haptic": haptic(body["style"] as? String ?? "light"); return true
-        default: return NSNull()
+        default:
+            // her calendar, her music, the fox's reminders
+            if let r = await CalendarBridge.handle(cmd, body) { return r }
+            if let r = await MusicBridge.handle(cmd, body) { return r }
+            if let r = await Reminders.handle(cmd, body) { return r }
+            return NSNull()
         }
     }
 

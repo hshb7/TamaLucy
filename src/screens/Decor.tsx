@@ -5,6 +5,7 @@ import { sfx } from '../audio.ts'
 import { ladder, unlockRank, unlocked } from '../game/career.ts'
 import { setDecor } from '../game/logic.ts'
 import { isOctober, seasonOf } from '../game/time.ts'
+import { currentWeather } from '../weather.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { PixelCanvas } from '../ui/PixelCanvas.tsx'
 import { drawFox, idleFace, idleTail } from '../ui/foxDraw.ts'
@@ -98,6 +99,7 @@ export function DecorScreen({ onBack, onWidget }: { onBack: () => void; onWidget
       law: unlocked(game, 'law'),
       bowl: game.bowl,
       season: seasonOf(d.getTime()),
+      weather: currentWeather()?.kind,
       october: isOctober(d.getTime()),
       photo: game.photo ? photoSprite(game.photo) : null,
       books: placeBooks(shelfBooks(game)),

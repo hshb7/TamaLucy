@@ -75,6 +75,67 @@ export interface BlockingStatus {
 
 const NONE: BlockingStatus = { available: false, authorized: false, count: 0 }
 
+export interface CalendarInfo {
+  id: string
+  title: string
+  /** #rrggbb */
+  color?: string
+  writable: boolean
+}
+
+export interface CalendarAccess {
+  /** This app can read her calendar (the native apps, or the web with a Google key). */
+  available: boolean
+  authorized: boolean
+  calendars: CalendarInfo[]
+}
+
+export interface NativeEvent {
+  id: string
+  title: string
+  /** ms */
+  start: number
+  end: number
+  allDay: boolean
+  recurring: boolean
+  /** Calendar id. */
+  calendar: string
+}
+
+export type Player = 'apple' | 'spotify'
+
+export interface MusicStatus {
+  available: boolean
+  /** Which players this device has: Apple Music on an iPhone; Music and/or Spotify on a Mac. */
+  players: Player[]
+  authorized: boolean
+}
+
+export interface Playlist {
+  id: string
+  name: string
+  count?: number
+}
+
+export type NotifyState = 'granted' | 'denied' | 'notasked'
+
+export interface NotifyStatus {
+  available: boolean
+  state: NotifyState
+}
+
+export interface ScheduledNote {
+  id: string
+  title: string
+  body: string
+  /** ms */
+  at: number
+}
+
+const NO_CAL: CalendarAccess = { available: false, authorized: false, calendars: [] }
+const NO_MUSIC: MusicStatus = { available: false, players: [], authorized: false }
+const NO_NOTIFY: NotifyStatus = { available: false, state: 'notasked' }
+
 export const native = {
   /**
    * A focus session is running (or its end time moved): show it in the
@@ -105,5 +166,46 @@ export const native = {
   },
   haptic(style: 'light' | 'success' | 'warning') {
     void call<boolean>('haptic', { style }, false)
+  },
+
+  // ─── her calendar (EventKit) ─────────────────────────────────────────────
+  /** Ask for calendar access (once) and list her calendars. */
+  calendars() {
+    return call<CalendarAccess>('calendar.list', {}, NO_CAL)
+  },
+  /** Events in those calendars between two times. */
+  calendarEvents(calendars: string[], from: number, to: number) {
+    return call<NativeEvent[]>('calendar.events', { calendars, from, to }, [])
+  },
+  /** Put a finished session on her calendar. */
+  calendarAdd(e: { calendar: string; title: string; start: number; end: number; notes: string }) {
+    return call<boolean>('calendar.add', e, false)
+  },
+
+  // ─── music that starts with the timer ────────────────────────────────────
+  musicStatus() {
+    return call<MusicStatus>('music.status', {}, NO_MUSIC)
+  },
+  /** Her playlists (asks for music library access on the iPhone). */
+  musicPlaylists(player: Player) {
+    return call<Playlist[]>('music.playlists', { player }, [])
+  },
+  musicPlay(player: Player, playlist: string) {
+    return call<boolean>('music.play', { player, playlist }, false)
+  },
+  musicPause(player: Player) {
+    return call<boolean>('music.pause', { player }, false)
+  },
+
+  // ─── notifications when she's away ───────────────────────────────────────
+  notifyStatus() {
+    return call<NotifyStatus>('notify.status', {}, NO_NOTIFY)
+  },
+  notifyAsk() {
+    return call<NotifyStatus>('notify.ask', {}, NO_NOTIFY)
+  },
+  /** Replace every scheduled reminder with these. */
+  notifySync(items: ScheduledNote[]) {
+    return call<boolean>('notify.sync', { items }, false)
   },
 }

@@ -101,7 +101,8 @@ export function celebrateDays(s: GameState, now: number, rng: Rng = Math.random)
     }
   }
   for (const exam of examsToday(next, now)) {
-    if (next.examsWished.includes(exam.id)) continue
+    // a deadline is not an exam: no good-luck letter for handing in a memo
+    if (exam.kind === 'due' || next.examsWished.includes(exam.id)) continue
     const notes = next.study.track === 'law' ? [...EXAM_NOTES, ...LAW_EXAM_NOTES] : EXAM_NOTES
     const text = fill(pick(notes, rng), { name: next.owner.toLowerCase(), exam: exam.name })
     next = { ...addNote(next, { kind: 'exam', text }, now), examsWished: [...next.examsWished, exam.id] }

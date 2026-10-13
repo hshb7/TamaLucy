@@ -2569,3 +2569,82 @@ select:focus {
     font-size: 120px;
   }
 }
+
+/* ─── connections (settings) ─────────────────────────────────────────────── */
+.cal-list {
+  display: grid;
+  gap: 4px;
+}
+.cal-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+.list-sub .from {
+  color: var(--ink-soft);
+}
+.buddy-row {
+  margin-top: 6px;
+}
+
+/* ─── the study buddy ─────────────────────────────────────────────────────── */
+.question {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 10px;
+  align-items: start;
+  background: var(--card);
+  border: var(--b) solid var(--line);
+  padding: 10px 12px;
+  margin: 6px 0;
+}
+.question .portrait-s {
+  width: 48px;
+}
+.question p {
+  margin: 0;
+}
+.verdict {
+  border: var(--b) solid var(--line);
+  padding: 10px 12px;
+  margin: 6px 0;
+}
+.verdict p {
+  margin: 6px 0 0;
+}
+.verdict.yes {
+  background: #e6f5e2;
+}
+.verdict.almost {
+  background: var(--butter);
+}
+.verdict.no {
+  background: var(--pink-light);
+}
+.drafts {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 50vh;
+  overflow: auto;
+}
+.drafts label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 6px 8px;
+  border: 2px solid var(--line);
+  background: var(--card);
+}
+.drafts .back {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.9em;
+}

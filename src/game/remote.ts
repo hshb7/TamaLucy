@@ -8,8 +8,10 @@
 import type { MailLetter } from './logic.ts'
 import { normalizeCode } from './mailcode.ts'
 
-const SUPABASE_URL = 'https://slaeektmteyxlkebxhan.supabase.co'
-const SUPABASE_KEY = 'sb_publishable_VNBq8VEgE_HWarmCrool1A_5kszWmVU'
+export const SUPABASE_URL = 'https://slaeektmteyxlkebxhan.supabase.co'
+export const SUPABASE_KEY = 'sb_publishable_VNBq8VEgE_HWarmCrool1A_5kszWmVU'
+/** The Edge Functions (the study buddy, the Canvas relay) live next door. */
+export const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`
 
 export type MailProblem = 'wrong-code' | 'offline' | 'full' | 'conflict' | 'server'
 

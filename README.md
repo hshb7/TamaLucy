@@ -252,6 +252,75 @@ out of the repository and share them only with her.
   `src/game/remote.ts`, then run `node scripts/new-mailbox.ts` and paste the one
   line of SQL it prints.
 
+## Connections 🔌
+
+Everything here is optional and lives in *Settings*. Each one says what it needs
+and works without the others.
+
+### Your calendar
+Exams and deadlines come straight from the calendars she picks: anything with
+"exam", "final", "quiz", "due", "memo", "problem set"… in its name lands under
+*study → exams* (a weekly lecture doesn't), and goes away when it's deleted
+there. Finished sessions can be written back ("studied Contracts", with the
+minutes). On the iPhone and the Mac it's the device's own calendar (EventKit): no
+account, one permission prompt. On the web it's Google Calendar: in the Google
+Cloud console create an OAuth client id (Web application) with your site as an
+authorised JavaScript origin, enable the Calendar API, and build with
+`VITE_GOOGLE_CLIENT_ID=…`. Without a key the section just explains itself.
+
+### Canvas
+If her school uses Canvas, assignments with a due date show up under exams and
+disappear once she hands them in, and her enrolled courses can go straight onto
+the bookcase as classes (*add my classes…*). She makes her own access token in
+Canvas (*Account → Settings → + New Access Token*) and types her school's Canvas
+address; the token stays on her device. Browsers can't call Canvas directly, so
+requests go through a small relay, [`supabase/functions/canvas-proxy`](supabase/functions/canvas-proxy/index.ts),
+that only forwards `GET /api/v1/…` to the host she typed, with her token, and
+needs her mailbox code (so it isn't an open proxy). Deploy it with
+`supabase functions deploy canvas-proxy --no-verify-jwt`.
+
+### Study buddy ✨
+Paste notes, an outline or a case brief and the fox turns them into flashcards
+(*study → my cards → ✨ cards from my notes*); or let it ask questions about a
+class and check her answers (*✨ Mochi asks*), with her own cards as the
+starting point. The thinking is done by Claude, called from the Edge Function
+[`supabase/functions/study-buddy`](supabase/functions/study-buddy/index.ts), which
+holds the API key, checks her mailbox code, and keeps a daily cap (80 calls per
+mailbox by default; the table and function are in
+`supabase/migrations/20261013150000_usage_limits.sql`). To switch it on:
+
+```
+supabase functions deploy study-buddy --no-verify-jwt
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-…
+# optional: BUDDY_MODEL=claude-haiku-5-5 (cheapest), BUDDY_DAILY_LIMIT=80
+```
+
+Until the key is set, the app says the buddy isn't switched on yet. The default
+model is `claude-opus-5-5`; a batch of twenty cards is a few thousand tokens, so
+a few cents on Opus and well under a cent on Haiku. Her notes are sent to the
+model for that one call and not stored anywhere.
+
+### Weather at the window
+Tell the fox where she is (a city, or "use my location") and the window shows
+the real weather: rain, snow, fog, the odd storm. The forecast comes from
+[Open-Meteo](https://open-meteo.com) (free, no key, no account); only the
+coordinates are kept, and they sync with her fox so every device agrees.
+
+### Music with the timer
+In the iPhone app, one of her Apple Music playlists starts when a focus session
+starts and pauses when time's up (it asks for *Media & Apple Music* access once).
+In the Mac app it's the Music app or Spotify, whichever she has, asked through
+AppleScript: macOS asks once whether TamaLucy may control the app. Spotify can't
+list playlists, so she pastes a link. The choice stays on each device.
+
+### Notifications
+The iPhone and Mac apps can let her know when the fox misses her (after two
+quiet days), the week before and the day before an exam (the day before a
+deadline), at 8pm when a streak is about to slip, and at a daily "study with
+me?" time if she sets one. They're ordinary local notifications, planned from
+her save every time the app opens, so nothing fires that isn't true any more.
+No server, no push, nothing during a session.
+
 ## About "you can't touch other apps"
 
 Web apps aren't allowed to block other apps, so TamaLucy does what focus apps
@@ -286,11 +355,19 @@ src/
   sync.ts            one fox on every device: cloud save, sign-in, merging
   notify.ts          the end-of-session notification (Mac)
   native.ts          the bridge to the native iPhone and Mac apps (ios/)
+  links.ts           her connections, kept on this device: calendars, playlist, Canvas token, reminders
+  calendar.ts        exams in, sessions out (EventKit on the apps, google.ts on the web)
+  canvas.ts          her school's Canvas: due dates and courses, through the relay
+  buddy.ts           the study buddy: cards from notes, questions, answers checked
+  weather.ts         the real weather at the window (Open-Meteo)
+  music.ts           the playlist that starts with the timer
+  reminders.ts       hands the fox's reminder plan to the phone or the Mac
 scripts/
   make-icons.ts      renders the app icons from the fox sprite (npm run icons)
   sprite-sheet.ts    renders all sprites to sprites.png for quick art edits (npm run sprites)
   new-mailbox.ts     makes a mailbox code + writer key and prints the SQL to register them
-supabase/migrations/ the database: letters, the cloud save, and the functions that guard them
+supabase/migrations/ the database: letters, the cloud save, daily caps, and the functions that guard them
+supabase/functions/  study-buddy (Claude, behind her mailbox code) and canvas-proxy (the Canvas relay)
 ios/                 the native iPhone + Mac apps: Dynamic Island, Screen Time blocking, menu bar fox (see ios/README.md)
 ```
 

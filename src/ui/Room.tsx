@@ -7,6 +7,7 @@ import type { Face } from '../art/fox.ts'
 import { unlocked } from '../game/career.ts'
 import { costOf, isBirthday, refillCost } from '../game/logic.ts'
 import { isOctober, seasonOf } from '../game/time.ts'
+import { currentWeather } from '../weather.ts'
 import { photoSprite } from '../art/photo.ts'
 import { BOOKCASE, placeBooks } from '../art/bookcase.ts'
 import { shelfBooks, shelfTags } from '../game/shelf.ts'
@@ -235,6 +236,7 @@ export function Room({ game, bubble, onStart, onDone, onCommand, onBroke, onWake
       bowl: g.bowl,
       hide: doing === 'ball' ? ['ball'] : doing === 'yarn' ? ['yarn'] : [],
       season: seasonOf(d.getTime()),
+      weather: currentWeather()?.kind,
       october: isOctober(d.getTime()),
       birthday: isBirthday(g, d.getTime()),
       photo: g.photo ? photoSprite(g.photo) : null,

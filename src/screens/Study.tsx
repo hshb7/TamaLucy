@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { NEED_ICON_ART } from '../art/items.ts'
 import { sfx } from '../audio.ts'
 import { BOOK_COLORS } from '../art/bookcase.ts'
-import { addCard, addCards, addExam, cardCourse, cardPiles, daysUntil, deleteCard, deleteExam, dueCards, parseCardList, updateCard, whenLabel, type CardGroup } from '../game/study.ts'
+import { addCard, addCards, addExam, cardCourse, cardPiles, daysUntil, deleteCard, dueCards, parseCardList, updateCard, whenLabel, type CardGroup } from '../game/study.ts'
+import { removeExam } from '../game/external.ts'
+import { ClassPicker } from './ClassPicker.tsx'
+import { AskMe, MakeCards } from './Buddy.tsx'
 import type { StudyCard } from '../game/state.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { dayKey } from '../game/time.ts'
@@ -13,7 +16,7 @@ import { PixelIcon } from '../ui/PixelIcon.tsx'
 import { ReviewCards } from '../ui/ReviewCards.tsx'
 import { CareerPanel } from './Stats.tsx'
 import { BookshelfPanel } from './Bookshelf.tsx'
-import { lastCourse, shelfIndex } from '../game/shelf.ts'
+import { lastCourse } from '../game/shelf.ts'
 import { Header } from './Header.tsx'
 
 export type StudyTab = 'cards' | 'classes' | 'exams' | 'career'
@@ -39,30 +42,6 @@ export function StudyScreen({ onBack, initialTab = 'cards', addClass = false, on
   )
 }
 
-/** Which class a card or exam is for: her classes in bookcase order, or "general". '' = general. */
-function ClassPicker({ value, onChange, onAddClass }: { value: string; onChange: (courseId: string) => void; onAddClass?: () => void }) {
-  const game = useGame()
-  const classes = [...game.courses].sort((a, b) => Number(!!a.doneAt) - Number(!!b.doneAt) || shelfIndex(game, a) - shelfIndex(game, b) || a.created - b.created)
-  return (
-    <div className="subject-chips">
-      {classes.map((c) => (
-        <button key={c.id} type="button" className={`subject-chip course-chip ${value === c.id ? 'on' : ''}`} onClick={() => onChange(c.id)}>
-          <span className="course-dot" style={{ background: (BOOK_COLORS[c.color] ?? BOOK_COLORS.cherry).spine }} />
-          {c.name}
-        </button>
-      ))}
-      <button type="button" className={`subject-chip ${value === '' ? 'on' : ''}`} onClick={() => onChange('')}>
-        general
-      </button>
-      {onAddClass && (
-        <button type="button" className="subject-chip add-chip" onClick={onAddClass}>
-          {classes.length ? '+ class' : '+ add my classes'}
-        </button>
-      )}
-    </div>
-  )
-}
-
 function Pips({ box }: { box: number }) {
   return (
     <span className="pips" aria-label={`learned ${box} of 5`}>
@@ -83,6 +62,8 @@ function CardsPanel({ onAddClass }: { onAddClass?: () => void }) {
   const [review, setReview] = useState<{ group?: CardGroup; all?: boolean } | null>(null)
   const [deck, setDeck] = useState<Deck | null>(null)
   const [bulk, setBulk] = useState(false)
+  const [make, setMake] = useState(false)
+  const [ask, setAsk] = useState(false)
   const decks = enabledDecks(game)
   const [editing, setEditing] = useState<StudyCard | null>(null)
   const due = dueCards(game, now)
@@ -122,6 +103,15 @@ function CardsPanel({ onAddClass }: { onAddClass?: () => void }) {
             </button>
           ))}
         </div>
+        <div className="row buddy-row">
+          <button className="btn" onClick={() => setMake(true)}>
+            ✨ cards from my notes
+          </button>
+          <button className="btn" onClick={() => setAsk(true)}>
+            ✨ {game.foxName} asks
+          </button>
+        </div>
+        <p className="muted">{game.foxName} can turn your notes into cards, or quiz you on a class and check your answers.</p>
       </section>
 
       <form className="px-box card form" onSubmit={add}>
@@ -174,6 +164,8 @@ function CardsPanel({ onAddClass }: { onAddClass?: () => void }) {
       {review && <ReviewCards group={review.group} practiceAll={review.all} onClose={() => setReview(null)} />}
       {deck && <Flashcards deck={deck} onClose={() => setDeck(null)} />}
       {bulk && <BulkAdd courseId={courseId} onClose={() => setBulk(false)} onAddClass={onAddClass} />}
+      {make && <MakeCards courseId={courseId} onClose={() => setMake(false)} onAddClass={onAddClass} />}
+      {ask && <AskMe onClose={() => setAsk(false)} />}
       {editing && <EditCard card={editing} onClose={() => setEditing(null)} />}
     </>
   )
@@ -295,10 +287,12 @@ function ExamsPanel({ onAddClass }: { onAddClass?: () => void }) {
                 <span className="exam-info">
                   <span className="list-title">{e.name}</span>
                   <span className="list-sub">
-                    {new Date(e.date + 'T12:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {whenLabel(d)}
+                    {new Date(e.date + 'T12:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {e.kind === 'due' ? 'due ' : ''}
+                    {whenLabel(d)}
+                    {e.source && <span className="from"> · from {e.source === 'canvas' ? 'Canvas' : 'your calendar'}</span>}
                   </span>
                 </span>
-                <button className="icon-x" aria-label={`remove ${e.name}`} onClick={() => setGame((s) => deleteExam(s, e.id))}>
+                <button className="icon-x" aria-label={`remove ${e.name}`} onClick={() => setGame((s) => removeExam(s, e.id))}>
                   ×
                 </button>
               </li>
@@ -306,7 +300,12 @@ function ExamsPanel({ onAddClass }: { onAddClass?: () => void }) {
           })}
         </ul>
       )}
-      {!upcoming.length && <p className="empty">no exams coming up. add one and {game.foxName} will count down with you, and wish you luck on the day.</p>}
+      {!upcoming.length && (
+        <p className="empty">
+          no exams coming up. add one and {game.foxName} will count down with you, and wish you luck on the day. connect your calendar or Canvas in settings and they
+          fill in by themselves.
+        </p>
+      )}
       {past.length > 0 && (
         <p className="muted center">
           done: {past.map((e) => e.name).join(' · ')} ✓
