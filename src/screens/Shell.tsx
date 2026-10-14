@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { ICON_ART, NEED_ICON_ART } from '../art/items.ts'
 import { sprite, type Sprite } from '../art/sprite.ts'
 import { currentRank } from '../game/career.ts'
@@ -87,6 +87,12 @@ export function DesktopShell({ view, go, onFocus, settingsTab, onSettingsTab, ch
   const rank = currentRank(game)
   const unread = game.notes.filter((n) => !n.read).length
   const st = streak(game.stats.days, now)
+  // the settings folder: open whenever settings is reached, and a click on "settings" while there folds it
+  const [open, setOpen] = useState(true)
+  useEffect(() => {
+    if (view === 'settings') setOpen(true)
+  }, [view])
+  const unfolded = view === 'settings' && open
   return (
     <div className="shell">
       <aside className="side-nav">
@@ -105,14 +111,18 @@ export function DesktopShell({ view, go, onFocus, settingsTab, onSettingsTab, ch
                 it.view === 'settings' ? (
                   // settings unfolds into its sections, like a folder
                   <div key={it.view} className="side-tree">
-                    <button className={`side-item ${view === 'settings' ? 'on' : ''}`} aria-expanded={view === 'settings'} onClick={() => go('settings')}>
+                    <button
+                      className={`side-item ${view === 'settings' ? 'on' : ''}`}
+                      aria-expanded={unfolded}
+                      onClick={() => (view === 'settings' ? setOpen(!open) : go('settings'))}
+                    >
                       <PixelIcon sprite={it.icon} scale={2} />
                       <span>{it.label}</span>
                       <span className="caret" aria-hidden="true">
-                        {view === 'settings' ? '▾' : '▸'}
+                        {unfolded ? '▾' : '▸'}
                       </span>
                     </button>
-                    {view === 'settings' && (
+                    {unfolded && (
                       <div className="side-sub" role="tablist" aria-label="settings sections">
                         {settingsTabs(game.foxName).map((t) => (
                           <button key={t.id} role="tab" aria-selected={settingsTab === t.id} className={`side-subitem ${settingsTab === t.id ? 'on' : ''}`} onClick={() => onSettingsTab(t.id)}>
