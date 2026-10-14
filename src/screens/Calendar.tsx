@@ -8,11 +8,11 @@ import { addExam, daysUntil, whenLabel } from '../game/study.ts'
 import { dayKey } from '../game/time.ts'
 import { BOOK_COLORS } from '../art/bookcase.ts'
 import { sfx } from '../audio.ts'
-import { feedProblem, syncCalendar, useCalendarEvents, type CalEvent } from '../calendar.ts'
+import { feedProblem, syncCalendar, takePendingLink, useCalendarEvents, type CalEvent } from '../calendar.ts'
 import { formatMinutes } from '../hooks.ts'
 import { ago, useLinks } from '../links.ts'
 import { CardHead, toast } from '../ui/bits.tsx'
-import { CalendarLinksModal } from './CalendarLinks.tsx'
+import { CalendarLinksModal, type Provider } from './CalendarLinks.tsx'
 import { ClassPicker } from './ClassPicker.tsx'
 import type { Exam } from '../game/state.ts'
 
@@ -29,7 +29,16 @@ export function CalendarPanel({ onAddClass }: { onAddClass?: () => void }) {
   const [picked, setPicked] = useState(today)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [linking, setLinking] = useState(false)
+  const [linkStart, setLinkStart] = useState<Provider | null>(null)
   const [syncing, setSyncing] = useState(false)
+  useEffect(() => {
+    // back from a sign-in: show her what got linked
+    const p = takePendingLink() as Provider | null
+    if (p) {
+      setLinkStart(p)
+      setLinking(true)
+    }
+  }, [])
   const events = useCalendarEvents()
   const { calendar } = useLinks()
   const linked = calendar.on || calendar.feeds.some((f) => f.on)
@@ -253,7 +262,15 @@ export function CalendarPanel({ onAddClass }: { onAddClass?: () => void }) {
       </section>
 
       <DayPanel key={picked} day={picked} today={today} now={now} onAddClass={onAddClass} fox={f} events={events} />
-      {linking && <CalendarLinksModal onClose={() => setLinking(false)} />}
+      {linking && (
+        <CalendarLinksModal
+          initial={linkStart}
+          onClose={() => {
+            setLinking(false)
+            setLinkStart(null)
+          }}
+        />
+      )}
     </>
   )
 }

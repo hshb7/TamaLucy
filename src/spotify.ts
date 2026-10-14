@@ -5,13 +5,13 @@
 // whole file is inert and the music card just explains itself.
 import { patchLinks } from './links.ts'
 import { isNativeApp, type Playlist } from './native.ts'
+import { returnUrl, startAuth, type AuthReturn } from './oauth.ts'
 
 const CLIENT_ID = (import.meta.env.VITE_SPOTIFY_CLIENT_ID as string | undefined)?.trim() ?? ''
 const SCOPE = 'playlist-read-private playlist-read-collaborative user-read-private user-read-playback-state user-modify-playback-state'
 const ACCOUNTS = 'https://accounts.spotify.com'
 const API = 'https://api.spotify.com/v1'
 const KEY = 'tamalucy:spotify'
-const ROUND_TRIP = 'tamalucy:spotify-login'
 
 export const hasSpotify = () => !!CLIENT_ID
 
@@ -43,33 +43,10 @@ function save(t: Tokens | null) {
 
 export const spotifyConnected = () => !!tokens?.refresh
 
-/** Where Spotify sends her back: this very page. It has to be listed, exactly, in the Spotify dashboard. */
-export const spotifyRedirect = () => location.origin + location.pathname.replace(/index\.html$/, '')
-
-const b64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-
-async function challenge(verifier: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
-  return b64url(new Uint8Array(digest))
-}
-
-/** Send her to Spotify to sign in; `finishSpotifyLogin` picks it up when she's back. */
-export async function connectSpotify(): Promise<void> {
+/** Leave for Spotify's sign-in page; App finishes the trip when she's back. */
+export function connectSpotify(): Promise<void> {
   if (!CLIENT_ID) throw new Error('no spotify client id')
-  const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)))
-  const state = b64url(crypto.getRandomValues(new Uint8Array(12)))
-  localStorage.setItem(ROUND_TRIP, JSON.stringify({ verifier, state }))
-  const u = new URL(`${ACCOUNTS}/authorize`)
-  u.search = new URLSearchParams({
-    client_id: CLIENT_ID,
-    response_type: 'code',
-    redirect_uri: spotifyRedirect(),
-    scope: SCOPE,
-    state,
-    code_challenge_method: 'S256',
-    code_challenge: await challenge(verifier),
-  }).toString()
-  location.assign(u.toString())
+  return startAuth('spotify', `${ACCOUNTS}/authorize`, { client_id: CLIENT_ID, scope: SCOPE })
 }
 
 async function tokenCall(body: Record<string, string>): Promise<Tokens | null> {
@@ -83,21 +60,10 @@ async function tokenCall(body: Record<string, string>): Promise<Tokens | null> {
   return { access: j.access_token, refresh: j.refresh_token ?? body.refresh_token ?? '', exp: Date.now() + j.expires_in * 1000 }
 }
 
-/** On load: if Spotify just sent her back here, finish signing in. */
-export async function finishSpotifyLogin(): Promise<'linked' | 'failed' | null> {
-  if (typeof location === 'undefined') return null
-  const q = new URLSearchParams(location.search)
-  const code = q.get('code')
-  const state = q.get('state')
-  if (!code && !q.get('error')) return null
-  const raw = localStorage.getItem(ROUND_TRIP)
-  localStorage.removeItem(ROUND_TRIP)
-  // the address bar is tidy again either way
-  history.replaceState(null, '', spotifyRedirect() + location.hash)
-  if (!raw || !code) return 'failed'
-  const trip = JSON.parse(raw) as { verifier: string; state: string }
-  if (!state || state !== trip.state) return 'failed'
-  const t = await tokenCall({ grant_type: 'authorization_code', code, redirect_uri: spotifyRedirect(), code_verifier: trip.verifier })
+/** Back from Spotify: trade the code for tokens and remember who she is there. */
+export async function finishSpotifyLogin(r: AuthReturn): Promise<'linked' | 'failed'> {
+  if (!r.code) return 'failed'
+  const t = await tokenCall({ grant_type: 'authorization_code', code: r.code, redirect_uri: returnUrl(), code_verifier: r.verifier })
   if (!t) return 'failed'
   save(t)
   try {

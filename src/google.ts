@@ -1,82 +1,73 @@
-// Google Calendar for the web app (the iPhone and Mac apps use the calendar
-// built into the device instead). Needs a Google OAuth client id, set at build
-// time as VITE_GOOGLE_CLIENT_ID; without one this whole file is inert.
+// Google Calendar for the web app, signed in once: she taps "sign in with
+// Google", says yes on Google's page, and comes back linked for good (a
+// refresh token). The code is traded for tokens by a small Edge Function,
+// google-auth, because Google wants the client secret at that step; the app
+// itself only carries the public client id (VITE_GOOGLE_CLIENT_ID). Without
+// one this whole file is inert. The iPhone and Mac apps read the device's
+// calendar instead, where her Google account already is.
+import { FUNCTIONS_URL, SUPABASE_KEY } from './game/remote.ts'
+import { getGame } from './game/store.ts'
 import type { CalendarInfo, NativeEvent } from './native.ts'
+import { startAuth, tokenStore, tokensFrom, type AuthReturn, type TokenReply } from './oauth.ts'
 
 const CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim() ?? ''
 const SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly'
 const API = 'https://www.googleapis.com/calendar/v3'
-const TOKEN_KEY = 'tamalucy:gcal'
+const store = tokenStore('tamalucy:google')
 
 export const hasGoogle = () => !!CLIENT_ID
+export const googleConnected = () => !!store.get()?.refresh
 
-interface TokenClient {
-  requestAccessToken(o: { prompt: string }): void
-}
-interface Gis {
-  accounts: { oauth2: { initTokenClient(o: { client_id: string; scope: string; callback: (r: { access_token?: string; expires_in?: number; error?: string }) => void }): TokenClient } }
-}
-
-let token: { value: string; exp: number } | null = (() => {
-  try {
-    const raw = sessionStorage.getItem(TOKEN_KEY)
-    return raw ? (JSON.parse(raw) as { value: string; exp: number }) : null
-  } catch {
-    return null
-  }
-})()
-
-export const googleConnected = () => !!token && token.exp > Date.now()
-
-function gis(): Promise<Gis> {
-  const w = window as unknown as { google?: Gis }
-  if (w.google?.accounts?.oauth2) return Promise.resolve(w.google)
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script')
-    s.src = 'https://accounts.google.com/gsi/client'
-    s.async = true
-    s.onload = () => (w.google ? resolve(w.google) : reject(new Error('no google')))
-    s.onerror = () => reject(new Error('offline'))
-    document.head.appendChild(s)
+/** Leave for Google's sign-in page. */
+export function connectGoogle(): Promise<void> {
+  return startAuth('google', 'https://accounts.google.com/o/oauth2/v2/auth', {
+    client_id: CLIENT_ID,
+    scope: SCOPE,
+    access_type: 'offline',
+    prompt: 'consent',
+    include_granted_scopes: 'true',
   })
 }
 
-/** A token, asking her to sign in if we don't have one (`interactive`) or quietly if we do. */
-export async function googleToken(interactive: boolean): Promise<string | null> {
-  if (!CLIENT_ID) return null
-  if (token && token.exp > Date.now() + 60_000) return token.value
-  if (!interactive && !token) return null
-  const g = await gis()
-  return new Promise((resolve) => {
-    const client = g.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPE,
-      callback: (r) => {
-        if (!r.access_token) return resolve(null)
-        token = { value: r.access_token, exp: Date.now() + (r.expires_in ?? 3600) * 1000 }
-        try {
-          sessionStorage.setItem(TOKEN_KEY, JSON.stringify(token))
-        } catch {
-          // fine
-        }
-        resolve(token.value)
-      },
-    })
-    client.requestAccessToken({ prompt: interactive ? 'consent' : '' })
+/** The token step, through google-auth (which holds the client secret and needs her mailbox code). */
+async function exchange(body: Record<string, string>): Promise<TokenReply | null> {
+  const code = getGame().mailbox
+  if (!code) return null
+  const res = await fetch(`${FUNCTIONS_URL}/google-auth`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, ...body }),
+    signal: AbortSignal.timeout(20_000),
   })
+  const j = (await res.json().catch(() => null)) as (TokenReply & { error?: string }) | null
+  return res.ok && j?.access_token ? j : null
+}
+
+/** Back from Google: trade the code for tokens. */
+export async function finishGoogleLogin(r: AuthReturn): Promise<boolean> {
+  if (!r.code) return false
+  const reply = await exchange({ grant: 'code', auth_code: r.code, verifier: r.verifier, redirect_uri: location.origin + location.pathname.replace(/index\.html$/, '') })
+  if (!reply) return false
+  store.set(tokensFrom(reply))
+  return true
 }
 
 export function googleForget() {
-  token = null
-  try {
-    sessionStorage.removeItem(TOKEN_KEY)
-  } catch {
-    // fine
-  }
+  store.set(null)
+}
+
+async function token(): Promise<string | null> {
+  const t = store.get()
+  if (!t) return null
+  if (t.exp > Date.now() + 30_000) return t.access
+  const reply = await exchange({ grant: 'refresh', refresh_token: t.refresh })
+  if (!reply) return null
+  store.set(tokensFrom(reply, t.refresh))
+  return reply.access_token
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const t = await googleToken(false)
+  const t = await token()
   if (!t) throw new Error('not signed in')
   const res = await fetch(`${API}${path}`, { ...init, headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' } })
   if (res.status === 401) {
@@ -107,7 +98,7 @@ export async function googleCalendars(): Promise<CalendarInfo[]> {
   return (r.items ?? []).map((c) => ({ id: c.id, title: c.summary, color: c.backgroundColor, writable: c.accessRole === 'owner' || c.accessRole === 'writer' }))
 }
 
-const when = (t?: { date?: string; dateTime?: string }) => (t?.dateTime ? Date.parse(t.dateTime) : t?.date ? new Date(t.date + 'T12:00').getTime() : NaN)
+const when = (t?: { date?: string; dateTime?: string }) => (t?.dateTime ? Date.parse(t.dateTime) : t?.date ? new Date(t.date + 'T00:00').getTime() : NaN)
 
 export async function googleEvents(calendars: string[], from: number, to: number): Promise<NativeEvent[]> {
   const out: NativeEvent[] = []

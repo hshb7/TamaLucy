@@ -3,15 +3,30 @@
 // calendar" sheet and by the settings card alike.
 import { useEffect, useState, type ReactNode } from 'react'
 import { BOOK_COLORS } from '../art/bookcase.ts'
-import { addFeed, calendarWay, connectCalendar, disconnectCalendar, feedProblem, listCalendars, previewFeed, removeFeed, syncCalendar, updateFeed, useCalendarEvents } from '../calendar.ts'
+import {
+  addFeed,
+  calendarWay,
+  connectCalendar,
+  disconnectCalendar,
+  disconnectMicrosoft,
+  feedProblem,
+  listCalendars,
+  listMicrosoftCalendars,
+  previewFeed,
+  removeFeed,
+  SCHOOLISH,
+  syncCalendar,
+  updateFeed,
+  useCalendarEvents,
+} from '../calendar.ts'
 import { useGame } from '../game/store.ts'
+import { hasGoogle } from '../google.ts'
 import { ago, patchLinks, useLinks } from '../links.ts'
+import { connectMicrosoft, hasMicrosoft } from '../microsoft.ts'
 import { isNativeApp, nativePlatform, type CalendarInfo } from '../native.ts'
-import { cantReach } from '../preview.ts'
+import { cantReach, framed } from '../preview.ts'
 import { Modal, toast } from '../ui/bits.tsx'
 import { CanvasLogo, DeviceCalendarLogo, GoogleLogo, ICloudLogo, LinkLogo, OutlookLogo } from '../ui/brands.tsx'
-
-const SCHOOLISH = /school|class|law|uni|college|course|study|exam|lecture|semester|term/i
 
 /** Colours a linked calendar can wear (the bookcase's spines). */
 export const FEED_COLORS = ['navy', 'forest', 'honey', 'plum', 'rose', 'sky', 'cocoa', 'mint', 'peach', 'cherry'].map((k) => BOOK_COLORS[k].spine)
@@ -38,10 +53,12 @@ export function DeviceCalendarPanel() {
     )
 
   const connect = async () => {
+    if (way === 'google' && framed) return setProblem(cantReach('Google’s sign-in page', ''))
     setBusy(true)
     setProblem('')
     try {
       const a = await connectCalendar()
+      if (way === 'google' && !a.available) return // off to Google's page; App finishes the trip
       if (!a.authorized) {
         setProblem(way === 'device' ? `${f} wasn’t allowed to see your calendar. you can allow it in Settings → Privacy → Calendars.` : 'google didn’t let us in. try again?')
         return
@@ -83,10 +100,10 @@ export function DeviceCalendarPanel() {
         <>
           <p className="muted">
             anything in your calendar named like an exam or a deadline (“exam”, “final”, “quiz”, “due”, “memo”…) shows up under exams, so you never type a date
-            twice.{way === 'device' ? ' nothing leaves this device.' : ' sign in with Google once per session.'}
+            twice.{way === 'device' ? ' nothing leaves this device.' : ' you sign in once and it stays linked.'}
           </p>
           <button className="btn" disabled={busy} onClick={connect}>
-            {busy ? 'connecting…' : 'connect my calendar'}
+            {busy ? 'connecting…' : way === 'google' ? 'sign in with Google' : 'connect my calendar'}
           </button>
         </>
       ) : (
@@ -149,6 +166,95 @@ export function DeviceCalendarPanel() {
   )
 }
 
+
+/** Outlook on the web: sign in once, tick the calendars with her classes. */
+export function MicrosoftPanel() {
+  const game = useGame()
+  const { calendar } = useLinks()
+  const ms = calendar.microsoft
+  const [cals, setCals] = useState<CalendarInfo[] | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [problem, setProblem] = useState('')
+  const f = game.foxName
+  useEffect(() => {
+    if (ms.on) void listMicrosoftCalendars().then(setCals)
+  }, [ms.on])
+  const connect = async () => {
+    if (framed) return setProblem(cantReach('Microsoft’s sign-in page', ''))
+    setBusy(true)
+    try {
+      await connectMicrosoft() // off to Microsoft's page; App finishes the trip
+    } catch {
+      setProblem('couldn’t open Microsoft’s sign-in page just now.')
+      setBusy(false)
+    }
+  }
+  const sync = async () => {
+    setBusy(true)
+    setProblem('')
+    try {
+      const n = await syncCalendar()
+      toast(n ? `${n} from your calendars are on the exams list ✓` : 'synced ✓ nothing that looks like an exam or a deadline yet')
+    } catch {
+      setProblem(cantReach('Outlook', 'couldn’t read Outlook just now. are you online?'))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const toggle = (id: string, on: boolean) =>
+    patchLinks('calendar', { microsoft: { ...ms, calendars: on ? [...new Set([...ms.calendars, id])] : ms.calendars.filter((x) => x !== id) } })
+  return (
+    <div className="cal-device">
+      {!ms.on ? (
+        <>
+          <p className="muted">
+            your Outlook calendars on the calendar page, and anything named like an exam or a deadline under exams, so you never type a date twice. you sign in
+            once and it stays linked.
+          </p>
+          <button className="btn" disabled={busy} onClick={connect}>
+            {busy ? 'opening Microsoft…' : 'sign in with Microsoft'}
+          </button>
+        </>
+      ) : (
+        <>
+          <p>
+            signed in{ms.account ? <> as <b>{ms.account}</b></> : ''} ✓ <span className="muted">· last synced {ago(calendar.lastSync)}</span>
+          </p>
+          <div className="field">
+            <span>read from</span>
+            {cals === null ? (
+              <p className="muted">looking for your calendars…</p>
+            ) : cals.length ? (
+              <div className="cal-list">
+                {cals.map((c) => (
+                  <label key={c.id} className="check">
+                    <input type="checkbox" checked={ms.calendars.includes(c.id)} onChange={(e) => toggle(c.id, e.target.checked)} />
+                    <span className="cal-name">
+                      {c.color && <span className="cal-dot" style={{ background: c.color }} />}
+                      {c.title}
+                      {SCHOOLISH.test(c.title) && <small className="muted"> · {f} thinks this one has your classes</small>}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="muted">no calendars found right now.</p>
+            )}
+          </div>
+          <div className="row">
+            <button className="btn" disabled={busy || !ms.calendars.length} onClick={sync}>
+              {busy ? 'syncing…' : 'sync now'}
+            </button>
+          </div>
+          <button className="link" onClick={() => disconnectMicrosoft()}>
+            disconnect Outlook
+          </button>
+        </>
+      )}
+      {problem && <p className="error">{problem}</p>}
+    </div>
+  )
+}
 
 export type Provider = 'device' | 'google' | 'icloud' | 'outlook' | 'canvas' | 'other'
 
@@ -223,14 +329,15 @@ export function ProviderTiles({ onPick }: { onPick: (p: Provider) => void }) {
   const way = calendarWay()
   const { calendar } = useLinks()
   const day = new Date().getDate()
+  const onDevice = way === 'device' ? (calendar.on ? 'connected ✓' : 'on this device? one tap') : undefined
   const tiles: { id: Provider; name: string; logo: ReactNode; note?: string }[] = []
-  if (way === 'device') tiles.push({ id: 'device', name: deviceName(), logo: <DeviceCalendarLogo day={day} />, note: calendar.on ? 'connected ✓' : 'iCloud, Google, Outlook… whatever is on it' })
+  if (way === 'device') tiles.push({ id: 'device', name: deviceName(), logo: <DeviceCalendarLogo day={day} />, note: calendar.on ? 'connected ✓' : 'one tap · every account on it' })
   tiles.push(
-    { id: 'google', name: 'Google Calendar', logo: <GoogleLogo />, note: way === 'google' ? (calendar.on ? 'connected ✓' : 'sign in with Google') : undefined },
-    { id: 'icloud', name: 'iCloud', logo: <ICloudLogo /> },
-    { id: 'outlook', name: 'Outlook', logo: <OutlookLogo /> },
-    { id: 'canvas', name: 'Canvas', logo: <CanvasLogo /> },
-    { id: 'other', name: 'another calendar', logo: <LinkLogo /> },
+    { id: 'google', name: 'Google Calendar', logo: <GoogleLogo />, note: onDevice ?? (way === 'google' ? (calendar.on ? 'connected ✓' : 'sign in · one tap') : 'by its address') },
+    { id: 'icloud', name: 'iCloud', logo: <ICloudLogo />, note: onDevice ?? 'by its address' },
+    { id: 'outlook', name: 'Outlook', logo: <OutlookLogo />, note: onDevice ?? (hasMicrosoft() ? (calendar.microsoft.on ? 'connected ✓' : 'sign in · one tap') : 'by its address') },
+    { id: 'canvas', name: 'Canvas', logo: <CanvasLogo />, note: 'by its address' },
+    { id: 'other', name: 'another calendar', logo: <LinkLogo />, note: 'by its address' },
   )
   return (
     <div className="providers">
@@ -269,8 +376,11 @@ export function ProviderGuide({ provider, onBack, onLinked }: { provider: Provid
     )
   const g = GUIDES[provider]
   const open = provider === 'canvas' ? (canvas.base ? `${canvas.base}/calendar` : undefined) : g.open
-  const viaDevice = provider === 'icloud' && way === 'device'
-  const viaGoogle = provider === 'google' && way === 'google'
+  // the apps: her Google, iCloud or Outlook account is on the device already, and that's one tap
+  const viaDevice = way === 'device' && (provider === 'icloud' || provider === 'google' || provider === 'outlook')
+  const viaGoogle = provider === 'google' && way === 'google' && hasGoogle()
+  const viaMicrosoft = provider === 'outlook' && !isNativeApp && hasMicrosoft()
+  const oneTap = viaDevice || viaGoogle || viaMicrosoft
   return (
     <div className="guide">
       <div className="guide-head">
@@ -280,24 +390,22 @@ export function ProviderGuide({ provider, onBack, onLinked }: { provider: Provid
       </div>
       {viaDevice && (
         <>
-          <p className="muted">your iCloud calendars are already in {deviceName()}, so that’s the one to connect:</p>
+          <p className="muted">
+            if your {g.name} account is on this {nativePlatform === 'mac' ? 'Mac' : 'iPhone'}, its calendars are in {deviceName()} already, and that’s one tap:
+          </p>
           <DeviceCalendarPanel />
-          <details className="help">
-            <summary>a public iCloud calendar someone shared with you?</summary>
-            <AddressSteps guide={g} open={open} onLinked={onLinked} />
-          </details>
         </>
       )}
-      {viaGoogle && (
-        <>
-          <DeviceCalendarPanel />
-          <details className="help">
-            <summary>or by its address, without signing in</summary>
-            <AddressSteps guide={g} open={open} onLinked={onLinked} />
-          </details>
-        </>
+      {viaGoogle && <DeviceCalendarPanel />}
+      {viaMicrosoft && <MicrosoftPanel />}
+      {oneTap ? (
+        <details className="help">
+          <summary>{viaDevice ? `a ${g.name} calendar that isn’t on this device?` : 'or by its address, without signing in'}</summary>
+          <AddressSteps guide={g} open={open} onLinked={onLinked} />
+        </details>
+      ) : (
+        <AddressSteps guide={g} open={open} onLinked={onLinked} />
       )}
-      {!viaDevice && !viaGoogle && <AddressSteps guide={g} open={open} onLinked={onLinked} />}
     </div>
   )
 }
@@ -419,9 +527,27 @@ export function LinkedList({ onManage }: { onManage?: (p: Provider) => void }) {
   const events = useCalendarEvents()
   const way = calendarWay()
   const count = (id: string) => events.filter((e) => e.calendar === id).length
-  if (!calendar.on && !calendar.feeds.length) return null
+  const ms = calendar.microsoft
+  if (!calendar.on && !ms.on && !calendar.feeds.length) return null
   return (
     <ul className="feed-list">
+      {ms.on && (
+        <li className="feed-row">
+          <span className="cal-name linked-device">
+            <OutlookLogo />
+            {ms.account || 'Outlook'}
+            <small className="muted">
+              {' '}
+              · {ms.calendars.length} {ms.calendars.length === 1 ? 'calendar' : 'calendars'} ✓
+            </small>
+          </span>
+          {onManage && (
+            <button className="link inline" onClick={() => onManage('outlook')}>
+              change
+            </button>
+          )}
+        </li>
+      )}
       {calendar.on && way && (
         <li className="feed-row">
           <span className="cal-name linked-device">
@@ -469,8 +595,8 @@ export function LinkedList({ onManage }: { onManage?: (p: Provider) => void }) {
 }
 
 /** The whole thing: what's linked, the buttons, and the guide for the one she tapped. */
-export function CalendarLinker({ compact = false }: { compact?: boolean }) {
-  const [provider, setProvider] = useState<Provider | null>(null)
+export function CalendarLinker({ compact = false, initial = null }: { compact?: boolean; initial?: Provider | null }) {
+  const [provider, setProvider] = useState<Provider | null>(initial)
   return (
     <div className="linker">
       <LinkedList onManage={setProvider} />
@@ -480,12 +606,12 @@ export function CalendarLinker({ compact = false }: { compact?: boolean }) {
 }
 
 /** The calendar page's sheet. */
-export function CalendarLinksModal({ onClose }: { onClose: () => void }) {
+export function CalendarLinksModal({ onClose, initial = null }: { onClose: () => void; initial?: Provider | null }) {
   return (
     <Modal onClose={onClose} className="sheet">
       <h2>link a calendar</h2>
       <p className="muted center">your lectures and everything else show on the calendar page; exams and deadlines land under exams too.</p>
-      <CalendarLinker compact />
+      <CalendarLinker compact initial={initial} />
       <button className="btn" onClick={onClose}>
         done
       </button>

@@ -14,7 +14,8 @@ import { getGame, setGame } from './game/store.ts'
 import { formatMinutes } from './hooks.ts'
 import { getLinks, patchLinks, type Feed } from './links.ts'
 import { isNativeApp, native, type CalendarAccess, type CalendarInfo, type NativeEvent } from './native.ts'
-import { googleAdd, googleCalendars, googleConnected, googleEvents, googleForget, googleToken, hasGoogle } from './google.ts'
+import { connectGoogle, googleAdd, googleCalendars, googleConnected, googleEvents, googleForget, hasGoogle } from './google.ts'
+import { microsoftCalendars, microsoftConnected, microsoftEvents, microsoftForget, microsoftMe } from './microsoft.ts'
 import { cantReach } from './preview.ts'
 
 export type CalendarWay = 'device' | 'google' | null
@@ -28,7 +29,7 @@ const BACK_DAYS = 31
 
 /** An event from any of her calendars, as the calendar page shows it. */
 export interface CalEvent extends NativeEvent {
-  source: 'device' | 'google' | 'feed'
+  source: 'device' | 'google' | 'microsoft' | 'feed'
   /** The calendar's colour, if it has one. */
   color?: string
   /** The calendar's name, to show and to match classes by. */
@@ -71,10 +72,49 @@ export function useCalendarEvents(): CalEvent[] {
   )
 }
 
-/** Something is linked: the device's calendar, Google, or a feed that's switched on. */
+/** Something is linked: the device's calendar, Google, Outlook, or a feed that's switched on. */
 export const calendarLinked = () => {
   const { calendar } = getLinks()
-  return calendar.on || calendar.feeds.some((f) => f.on)
+  return calendar.on || calendar.microsoft.on || calendar.feeds.some((f) => f.on)
+}
+
+/** Calendars that sound like they hold her classes, ticked by default after a sign-in. */
+export const SCHOOLISH = /school|class|law|uni|college|course|study|exam|lecture|semester|term/i
+
+/** After she signs in with Google or Microsoft: list the calendars, tick the likely ones (all of them if none sound like school), read them. */
+export async function afterCalendarSignIn(provider: 'google' | 'microsoft'): Promise<number> {
+  const cals = provider === 'google' ? await googleCalendars() : await microsoftCalendars()
+  let picked = cals.filter((c) => SCHOOLISH.test(c.title)).map((c) => c.id)
+  if (!picked.length) picked = cals.map((c) => c.id)
+  if (provider === 'google') patchLinks('calendar', { on: true, calendars: picked, logCalendar: cals.find((c) => c.writable)?.id ?? '' })
+  else {
+    let account = ''
+    try {
+      account = await microsoftMe()
+    } catch {
+      // the name is only for show
+    }
+    patchLinks('calendar', { microsoft: { on: true, calendars: picked, account } })
+  }
+  await syncCalendar().catch(() => {})
+  return picked.length
+}
+
+export function disconnectMicrosoft() {
+  patchLinks('calendar', { microsoft: { on: false, calendars: [], account: '' } })
+  microsoftForget()
+  syncCalendar().catch(() => {})
+}
+
+/** The provider whose sheet the calendar page should open next (set after a sign-in round trip). */
+let pending: string | null = null
+export const setPendingLink = (p: string) => {
+  pending = p
+}
+export function takePendingLink(): string | null {
+  const p = pending
+  pending = null
+  return p
 }
 
 // ── Calendars by address, through the relay ──
@@ -162,16 +202,25 @@ export function removeFeed(id: string) {
   syncCalendar().catch(() => {})
 }
 
-/** Ask for access (the first time) and list her calendars. */
+/** Ask for access (the first time) and list her calendars. On the web this leaves for Google's sign-in page; App finishes the trip. */
 export async function connectCalendar(): Promise<CalendarAccess> {
   const way = calendarWay()
   if (way === 'device') return native.calendars()
   if (way === 'google') {
-    const t = await googleToken(true)
-    if (!t) return { available: true, authorized: false, calendars: [] }
-    return { available: true, authorized: true, calendars: await googleCalendars() }
+    if (googleConnected()) return { available: true, authorized: true, calendars: await googleCalendars() }
+    await connectGoogle()
   }
   return { available: false, authorized: false, calendars: [] }
+}
+
+/** Her Outlook calendars, without asking anything (empty if not connected). */
+export async function listMicrosoftCalendars(): Promise<CalendarInfo[]> {
+  try {
+    if (microsoftConnected()) return await microsoftCalendars()
+  } catch {
+    // offline: the settings screen shows what it remembers
+  }
+  return []
 }
 
 /** Her calendars, without asking anything (empty if not connected). */
@@ -221,6 +270,18 @@ export function syncCalendar(): Promise<number> {
         }
       } catch {
         for (const id of calendar.calendars) failed.add(id)
+      }
+    }
+    if (calendar.microsoft.on && calendar.microsoft.calendars.length) {
+      try {
+        const cals = await microsoftCalendars()
+        const found = await microsoftEvents(calendar.microsoft.calendars, from, to)
+        for (const e of found) {
+          const c = cals.find((x) => x.id === e.calendar)
+          fresh.push({ ...e, source: 'microsoft', color: c?.color, calendarName: c?.title ?? '' })
+        }
+      } catch {
+        for (const id of calendar.microsoft.calendars) failed.add(id)
       }
     }
     for (const f of calendar.feeds) {

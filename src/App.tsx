@@ -29,7 +29,8 @@ import { isNativeApp, native, nativePlatform, onNative } from './native.ts'
 import { logSession, syncCalendarIfStale } from './calendar.ts'
 import { syncCanvasIfStale } from './canvas.ts'
 import { pauseAfterSession, playForSession } from './music.ts'
-import { finishSpotifyLogin } from './spotify.ts'
+import { takeAuthReturn } from './oauth.ts'
+import { finishSignIn } from './signin.ts'
 import { startReminderSync } from './reminders.ts'
 import { refreshWeather } from './weather.ts'
 
@@ -180,13 +181,16 @@ export default function App() {
     syncCalendarIfStale()
     syncCanvasIfStale()
     startReminderSync()
-    // back from Spotify's sign-in page: straight to the music card
-    void finishSpotifyLogin().then((r) => {
-      if (!r) return
-      setView('settings')
-      setSettingsTab('focus')
-      toast(r === 'linked' ? 'Spotify linked ✓ now pick a playlist' : 'hmm, Spotify didn’t let us in. try again?')
-    })
+    // back from a sign-in page (Spotify, Google, Microsoft): finish the trip and go where it belongs
+    const back = takeAuthReturn()
+    if (back)
+      void finishSignIn(back).then((r) => {
+        if (r.provider === 'spotify') {
+          setView('settings')
+          setSettingsTab('focus')
+        } else setView('calendar')
+        toast(r.message, 5000)
+      })
     const link = takeMailLink()
     if (link)
       connectMailbox(link).then(

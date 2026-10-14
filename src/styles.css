@@ -3220,3 +3220,7 @@ label.check > span.cal-name {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+/* inside a provider's guide the heading is already there */
+.guide .cal-device > h3 {
+  display: none;
+}

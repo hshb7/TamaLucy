@@ -19,7 +19,7 @@ import { CalendarLinker } from './CalendarLinks.tsx'
 /** Her calendars: the device's own or Google, and any calendar by its address. */
 export function CalendarSection() {
   const { calendar } = useLinks()
-  const linked = calendar.on || calendar.feeds.some((f) => f.on)
+  const linked = calendar.on || calendar.microsoft.on || calendar.feeds.some((f) => f.on)
   return (
     <section className="px-box card" id="calendar">
       <CardHead title="your calendars" status={linked ? 'on ✓' : 'off'} on={linked} />

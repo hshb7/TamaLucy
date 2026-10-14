@@ -279,32 +279,34 @@ Page Up/Down turn the months, with Shift the years, Home is today).
 *Study → calendar → + link a calendar* (and *settings → study → your
 calendars*) shows a button per place a calendar can live: Google Calendar,
 iCloud, Outlook, Canvas, another calendar, and in the apps the device's own.
-Each one walks her through it. Underneath there are three mechanisms:
+Three mechanisms sit underneath, and each button uses the best one it has:
 
-- **Any calendar by its address** (iCloud, Google, Outlook, Canvas, a school's
-  own feed, a shared class calendar): the button opens the right settings page
-  in her browser and lists the two or three taps to copy the subscription
-  address (`webcal://…` or `https://….ics`); she pastes it, the app checks it,
-  she names it and picks a colour. Browsers can't
-  read those addresses across origins, so a small relay,
-  [`supabase/functions/calendar-feed`](supabase/functions/calendar-feed/index.ts),
+- **One tap, in the iPhone and Mac apps**: *this iPhone's calendar* (EventKit)
+  holds every account the phone already has, iCloud, Google, Outlook and all,
+  so those buttons point at it there. One permission prompt, no account, no
+  key, and finished sessions can be written back ("studied Contracts", with
+  the minutes).
+- **One tap, on the web**: *sign in with Google* and *sign in with Microsoft*,
+  the same OAuth round trip every other app uses: she lands on the provider's
+  page, taps allow, comes back linked for good (a refresh token on her
+  device), and the calendars that sound like school are ticked for her. It
+  needs the app registered with each provider under your own account, which is
+  a client id only you can make; see *Switching the sign-ins on* below.
+  Without a key, those buttons fall back to the address route.
+- **By address, anywhere**: for iCloud (which has no sign-in for calendars),
+  Canvas, a school's feed, a shared class calendar, or when no key is set up.
+  The button opens the right settings page in her browser, lists the two or
+  three taps to copy the subscription address (`webcal://…` or
+  `https://….ics`), she pastes it, the app checks it, she names it and picks a
+  colour. Browsers can't read those addresses across origins, so a small
+  relay, [`supabase/functions/calendar-feed`](supabase/functions/calendar-feed/index.ts),
   fetches exactly the https address she pasted (public hosts only, a 3 MB cap,
   a few redirects at most) and hands the text back; her mailbox code keeps it
   from being an open proxy and it allows 400 reads a day per mailbox
   (`FEED_DAILY_LIMIT`). Deploy it with
-  `supabase functions deploy calendar-feed --no-verify-jwt`. The address is
-  private to her and stays on her device. The feed is read by `src/game/ics.ts`,
-  repeating events, exceptions and time zones included.
-- **The device's own calendar**, in the iPhone and Mac apps (EventKit): no
-  account, one permission prompt, and finished sessions can be written back
-  ("studied Contracts", with the minutes).
-- **Google Calendar with a sign-in**, on the web: in the Google Cloud console
-  create an OAuth client id (Web application) with your site as an authorised
-  JavaScript origin, enable the Calendar API, and build with
-  `VITE_GOOGLE_CLIENT_ID=…` (or set a repository variable of that name for the
-  Pages workflow). Then the Google button signs her in and lists her calendars
-  to tick, with the address route still there underneath. Without a key the
-  Google button uses the address route.
+  `supabase functions deploy calendar-feed --no-verify-jwt`. The address stays
+  on her device. The feed is read by `src/game/ics.ts`, repeating events,
+  exceptions and time zones included.
 
 Whichever way, every event shows on the calendar page, and anything named like
 an exam or a deadline ("exam", "final", "quiz", "due", "memo", "problem set"…)
@@ -312,6 +314,38 @@ lands under *study → exams* as well (a weekly lecture doesn't), and goes away
 when it's deleted there. Calendars sync when the app opens (a few times a day)
 and on *sync* under the grid. The links are per device, like the other
 connections.
+
+**Switching the sign-ins on.** Both are free and take a few minutes each. The
+"site URL" below is the exact address the web app is served from, with its
+trailing slash (for example `https://you.github.io/TamaLucy/`).
+
+- *Google*: at [console.cloud.google.com](https://console.cloud.google.com)
+  make a project, enable the **Google Calendar API** (APIs & Services →
+  Library), set up the OAuth consent screen (External; while it's in "testing"
+  add her Google address under test users), then Credentials → Create
+  credentials → **OAuth client ID** → *Web application*, with the site origin
+  under *Authorised JavaScript origins* and the site URL under *Authorised
+  redirect URIs*. That gives a client id and a client secret. Google wants the
+  secret when a code is traded for tokens, so that one step runs in
+  [`supabase/functions/google-auth`](supabase/functions/google-auth/index.ts)
+  (behind her mailbox code, 120 calls a day):
+  ```
+  supabase secrets set GOOGLE_CLIENT_ID=… GOOGLE_CLIENT_SECRET=…
+  supabase functions deploy google-auth --no-verify-jwt
+  ```
+  and the app is built with `VITE_GOOGLE_CLIENT_ID=…` (or a repository
+  variable of that name for the Pages workflow). Google refuses to sign in
+  inside an app's web view, which is why the apps use the device's calendar
+  for Google instead.
+- *Microsoft*: at [entra.microsoft.com](https://entra.microsoft.com) (or the
+  Azure portal) → App registrations → **New registration**: any name, accounts
+  in any directory *and personal Microsoft accounts*, and under Redirect URI
+  pick **Single-page application** with the site URL. Copy the *Application
+  (client) ID*; under API permissions add Microsoft Graph → delegated →
+  `Calendars.ReadWrite`. No secret: a single-page registration allows the
+  code-for-tokens step straight from the browser. Build with
+  `VITE_MICROSOFT_CLIENT_ID=…` (or the repository variable). This one works in
+  the apps too, if she'd rather sign in than use the device's calendar.
 
 ### Canvas
 If her school uses Canvas, assignments with a due date show up under exams and
@@ -428,7 +462,8 @@ src/
   notify.ts          the end-of-session notification (Mac)
   native.ts          the bridge to the native iPhone and Mac apps (ios/)
   links.ts           her connections, kept on this device: calendars, playlist, Canvas token, reminders
-  calendar.ts        her calendars in (the device's, Google, feeds by address), sessions out
+  calendar.ts        her calendars in (the device's, Google, Outlook, feeds by address), sessions out
+  oauth.ts           one sign-in round trip (PKCE) for Spotify, Google and Microsoft; google.ts, microsoft.ts, spotify.ts use it
   canvas.ts          her school's Canvas: due dates and courses, through the relay
   buddy.ts           the study buddy: cards from notes, questions, answers checked
   weather.ts         the real weather at the window (Open-Meteo)
@@ -440,7 +475,8 @@ scripts/
   sprite-sheet.ts    renders all sprites to sprites.png for quick art edits (npm run sprites)
   new-mailbox.ts     makes a mailbox code + writer key and prints the SQL to register them
 supabase/migrations/ the database: letters, the cloud save, daily caps, and the functions that guard them
-supabase/functions/  study-buddy (Claude, behind her mailbox code), canvas-proxy (the Canvas relay), calendar-feed (reads a calendar's address)
+supabase/functions/  study-buddy (Claude, behind her mailbox code), canvas-proxy (the Canvas relay),
+                     calendar-feed (reads a calendar's address), google-auth (the token step of "sign in with Google")
 ios/                 the native iPhone + Mac apps: Dynamic Island, Screen Time blocking, menu bar fox (see ios/README.md)
 ```
 

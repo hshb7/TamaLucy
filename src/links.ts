@@ -28,6 +28,13 @@ export interface Links {
     logCalendar: string
     /** Calendars linked by address. */
     feeds: Feed[]
+    /** Outlook, signed in on the web. */
+    microsoft: {
+      on: boolean
+      calendars: string[]
+      /** Her name there, to show. */
+      account: string
+    }
     lastSync: number
   }
   music: {
@@ -60,7 +67,7 @@ export interface Links {
 const KEY = 'tamalucy:links'
 
 const DEFAULTS: Links = {
-  calendar: { on: false, calendars: [], logSessions: false, logCalendar: '', feeds: [], lastSync: 0 },
+  calendar: { on: false, calendars: [], logSessions: false, logCalendar: '', feeds: [], microsoft: { on: false, calendars: [], account: '' }, lastSync: 0 },
   music: { player: 'none', playlist: '', name: '', autoplay: true, pauseAtEnd: true, account: '', premium: true },
   canvas: { base: '', token: '', user: '', lastSync: 0 },
   reminders: { on: false, ...DEFAULT_REMINDERS },
@@ -72,7 +79,7 @@ function read(): Links {
     if (raw) {
       const p = JSON.parse(raw) as Partial<Links>
       return {
-        calendar: { ...DEFAULTS.calendar, ...p.calendar },
+        calendar: { ...DEFAULTS.calendar, ...p.calendar, microsoft: { ...DEFAULTS.calendar.microsoft, ...p.calendar?.microsoft } },
         music: { ...DEFAULTS.music, ...p.music },
         canvas: { ...DEFAULTS.canvas, ...p.canvas },
         reminders: { ...DEFAULTS.reminders, ...p.reminders },
