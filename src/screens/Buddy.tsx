@@ -9,6 +9,8 @@ import { setGame, useGame } from '../game/store.ts'
 import { addCards, cardsIn } from '../game/study.ts'
 import { Modal, toast } from '../ui/bits.tsx'
 import { FoxPortrait } from '../ui/FoxPortrait.tsx'
+import { PixelIcon } from '../ui/PixelIcon.tsx'
+import { NEED_ICON_ART } from '../art/items.ts'
 import { ClassPicker } from './ClassPicker.tsx'
 
 const COUNTS = [10, 15, 20, 30]
@@ -25,6 +27,7 @@ export function MakeCards({ courseId, onClose, onAddClass }: { courseId: string;
   const [keep, setKeep] = useState<boolean[]>([])
   const [files, setFiles] = useState<(Attachment & { pages?: number })[]>([])
   const [importing, setImporting] = useState(false)
+  const [over, setOver] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const f = game.foxName
   const course = game.courses.find((c) => c.id === picked)
@@ -91,9 +94,9 @@ export function MakeCards({ courseId, onClose, onAddClass }: { courseId: string;
           <ClassPicker value={picked} onChange={setPicked} onAddClass={onAddClass} />
           <textarea
             value={notes}
-            rows={8}
+            rows={7}
             maxLength={MAX_NOTES}
-            placeholder="your notes go here (or drop a file on this box)"
+            placeholder="paste or type your notes here"
             aria-label="your notes"
             onChange={(e) => setNotes(e.target.value)}
             onDragOver={(e) => e.preventDefault()}
@@ -102,12 +105,28 @@ export function MakeCards({ courseId, onClose, onAddClass }: { courseId: string;
               void addFiles(e.dataTransfer.files)
             }}
           />
-          <div className="row import-row">
-            <button type="button" className="btn btn-small" disabled={importing} onClick={() => fileInput.current?.click()}>
-              {importing ? 'reading…' : 'import a file…'}
-            </button>
-            <span className="muted">txt, docx, pdf, or photos of your notes</span>
-          </div>
+          <button
+            type="button"
+            className={`dropzone ${over ? 'over' : ''}`}
+            disabled={importing}
+            onClick={() => fileInput.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault()
+              setOver(true)
+            }}
+            onDragLeave={() => setOver(false)}
+            onDrop={(e) => {
+              e.preventDefault()
+              setOver(false)
+              void addFiles(e.dataTransfer.files)
+            }}
+          >
+            <PixelIcon sprite={NEED_ICON_ART.books} scale={2} />
+            <span className="dz-text">
+              <b>{importing ? 'reading…' : over ? 'drop it here' : 'import a file'}</b>
+              <small>txt, docx, pdf, or photos of your notes</small>
+            </span>
+          </button>
           <input
             ref={fileInput}
             type="file"
@@ -121,8 +140,9 @@ export function MakeCards({ courseId, onClose, onAddClass }: { courseId: string;
             <ul className="attachments">
               {files.map((a, i) => (
                 <li key={i}>
-                  <span>
-                    {a.kind === 'pdf' ? '📄' : '🖼'} {a.name ?? a.kind}
+                  <span className="kind">{a.kind === 'pdf' ? 'pdf' : 'photo'}</span>
+                  <span className="name">
+                    {a.name ?? a.kind}
                     {a.pages ? <small className="muted"> · {a.pages} page{a.pages === 1 ? '' : 's'}</small> : null}
                   </span>
                   <button type="button" className="icon-x" aria-label={`remove ${a.name ?? a.kind}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}>
@@ -132,7 +152,7 @@ export function MakeCards({ courseId, onClose, onAddClass }: { courseId: string;
               ))}
             </ul>
           )}
-          <div className="field">
+          <div className="field field-inline">
             <span>how many?</span>
             <div className="chips chips-left">
               {COUNTS.map((n) => (
@@ -143,7 +163,7 @@ export function MakeCards({ courseId, onClose, onAddClass }: { courseId: string;
             </div>
           </div>
           <p className="muted">
-            {notes.length ? `${notes.length.toLocaleString()} characters` : 'nothing pasted yet'}
+            {notes.length ? `${notes.length.toLocaleString()} characters` : 'nothing yet'}
             {files.length ? ` + ${files.length} file${files.length === 1 ? '' : 's'}` : ''} · {f} reads only what you send, and keeps none of it.
           </p>
           {problem && <p className="error">{problem}</p>}

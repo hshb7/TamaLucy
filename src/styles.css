@@ -2649,9 +2649,49 @@ select:focus {
   font-size: 0.9em;
 }
 
-.import-row {
+/* bringing notes in from a file */
+.dropzone {
+  display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 2px dashed var(--ink-soft);
+  color: var(--ink);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+.dropzone:hover,
+.dropzone.over {
+  background: var(--pink-light);
+  border-color: var(--pink-deep);
+}
+.dropzone:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.dropzone .dz-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.dropzone b {
+  font-family: var(--font-pixel);
+  font-size: 17px;
+  font-weight: normal;
+}
+.dropzone small {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.field-inline {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
 }
 .attachments {
   list-style: none;
@@ -2663,9 +2703,23 @@ select:focus {
 .attachments li {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   padding: 4px 8px;
   border: 2px solid var(--line);
   background: var(--card);
+}
+.attachments .kind {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  line-height: 18px;
+  padding: 0 6px;
+  background: var(--butter);
+  border: 2px solid var(--line);
+}
+.attachments .name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
