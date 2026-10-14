@@ -2785,6 +2785,9 @@ label.check > span.cal-name {
 .side-fold-inner {
   min-height: 0;
   overflow: hidden;
+  /* room for the selected item's outline (a box-shadow), which the clip would otherwise cut off */
+  padding: 0 var(--b);
+  margin: 0 calc(-1 * var(--b));
 }
 .side-sub {
   display: flex;
