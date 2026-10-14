@@ -118,19 +118,29 @@ export function DesktopShell({ view, go, onFocus, settingsTab, onSettingsTab, ch
                     >
                       <PixelIcon sprite={it.icon} scale={2} />
                       <span>{it.label}</span>
-                      <span className="caret" aria-hidden="true">
-                        {unfolded ? '▾' : '▸'}
+                      <span className={`caret ${unfolded ? 'open' : ''}`} aria-hidden="true">
+                        ▸
                       </span>
                     </button>
-                    {unfolded && (
-                      <div className="side-sub" role="tablist" aria-label="settings sections">
-                        {settingsTabs(game.foxName).map((t) => (
-                          <button key={t.id} role="tab" aria-selected={settingsTab === t.id} className={`side-subitem ${settingsTab === t.id ? 'on' : ''}`} onClick={() => onSettingsTab(t.id)}>
-                            {t.label}
-                          </button>
-                        ))}
+                    {/* always in the tree, folded shut or open, so it can slide */}
+                    <div className={`side-fold ${unfolded ? 'open' : ''}`} aria-hidden={!unfolded}>
+                      <div className="side-fold-inner">
+                        <div className="side-sub" role="tablist" aria-label="settings sections">
+                          {settingsTabs(game.foxName).map((t) => (
+                            <button
+                              key={t.id}
+                              role="tab"
+                              aria-selected={settingsTab === t.id}
+                              tabIndex={unfolded ? 0 : -1}
+                              className={`side-subitem ${settingsTab === t.id ? 'on' : ''}`}
+                              onClick={() => onSettingsTab(t.id)}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 ) : (
                   <button key={it.view} className={`side-item ${view === it.view ? 'on' : ''}`} aria-current={view === it.view ? 'page' : undefined} onClick={() => go(it.view)}>

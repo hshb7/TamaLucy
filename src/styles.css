@@ -2763,11 +2763,28 @@ label.check > span.cal-name {
   color: var(--ink);
 }
 
-/* the sidebar's settings folder */
+/* the sidebar's settings folder: slides open and shut */
 .side-tree .caret {
+  display: inline-block;
   margin-left: auto;
   font-size: 12px;
   color: var(--ink-soft);
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.side-tree .caret.open {
+  transform: rotate(90deg);
+}
+.side-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.side-fold.open {
+  grid-template-rows: 1fr;
+}
+.side-fold-inner {
+  min-height: 0;
+  overflow: hidden;
 }
 .side-sub {
   display: flex;
@@ -2776,6 +2793,20 @@ label.check > span.cal-name {
   margin: 4px 0 6px 20px;
   padding-left: 10px;
   border-left: 2px dotted var(--ink-soft);
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 160ms ease, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.side-fold.open .side-sub {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .side-tree .caret,
+  .side-fold,
+  .side-sub {
+    transition: none;
+  }
 }
 .side-subitem {
   border: 0;
