@@ -8,6 +8,7 @@ import { useNow } from '../hooks.ts'
 import { FoxPortrait } from '../ui/FoxPortrait.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
 import type { View } from '../App.tsx'
+import { settingsTabs, type SettingsTab } from './Settings.tsx'
 
 const HOUSE = sprite([
   '.....oo.....',
@@ -69,6 +70,9 @@ interface Props {
   view: View
   go: (v: View) => void
   onFocus: () => void
+  /** Which settings section is open; "settings" unfolds into them in the sidebar. */
+  settingsTab: SettingsTab
+  onSettingsTab: (t: SettingsTab) => void
   children: ReactNode
 }
 
@@ -77,7 +81,7 @@ interface Props {
  * app, with the screen beside it. The phone keeps its stacked layout and its
  * menu under the room.
  */
-export function DesktopShell({ view, go, onFocus, children }: Props) {
+export function DesktopShell({ view, go, onFocus, settingsTab, onSettingsTab, children }: Props) {
   const game = useGame()
   const now = useNow(60_000)
   const rank = currentRank(game)
@@ -97,13 +101,35 @@ export function DesktopShell({ view, go, onFocus, children }: Props) {
           {GROUPS.map((g, i) => (
             <div key={i} className="side-group">
               {g.title && <p className="side-title">{g.title === 'fox' ? game.foxName.toLowerCase() : g.title}</p>}
-              {g.items.map((it) => (
-                <button key={it.view} className={`side-item ${view === it.view ? 'on' : ''}`} aria-current={view === it.view ? 'page' : undefined} onClick={() => go(it.view)}>
-                  <PixelIcon sprite={it.icon} scale={2} />
-                  <span>{it.label}</span>
-                  {it.view === 'album' && unread > 0 && <span className="badge">{unread}</span>}
-                </button>
-              ))}
+              {g.items.map((it) =>
+                it.view === 'settings' ? (
+                  // settings unfolds into its sections, like a folder
+                  <div key={it.view} className="side-tree">
+                    <button className={`side-item ${view === 'settings' ? 'on' : ''}`} aria-expanded={view === 'settings'} onClick={() => go('settings')}>
+                      <PixelIcon sprite={it.icon} scale={2} />
+                      <span>{it.label}</span>
+                      <span className="caret" aria-hidden="true">
+                        {view === 'settings' ? '▾' : '▸'}
+                      </span>
+                    </button>
+                    {view === 'settings' && (
+                      <div className="side-sub" role="tablist" aria-label="settings sections">
+                        {settingsTabs(game.foxName).map((t) => (
+                          <button key={t.id} role="tab" aria-selected={settingsTab === t.id} className={`side-subitem ${settingsTab === t.id ? 'on' : ''}`} onClick={() => onSettingsTab(t.id)}>
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button key={it.view} className={`side-item ${view === it.view ? 'on' : ''}`} aria-current={view === it.view ? 'page' : undefined} onClick={() => go(it.view)}>
+                    <PixelIcon sprite={it.icon} scale={2} />
+                    <span>{it.label}</span>
+                    {it.view === 'album' && unread > 0 && <span className="badge">{unread}</span>}
+                  </button>
+                ),
+              )}
             </div>
           ))}
         </nav>

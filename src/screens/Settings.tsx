@@ -204,33 +204,47 @@ function BirthdayField({ value, onChange }: { value: string; onChange: (v: strin
 
 export type SettingsTab = 'fox' | 'study' | 'focus' | 'account'
 
-export function SettingsScreen({ onBack, onWidget, onStudy, initialTab }: { onBack: () => void; onWidget: () => void; onStudy?: () => void; initialTab?: SettingsTab }) {
+/** The four sections, in order; the first is named after the fox. */
+export const settingsTabs = (fox: string): { id: SettingsTab; label: string; blurb: string }[] => [
+  { id: 'fox', label: fox.toLowerCase(), blurb: `names, how much looking after ${fox} needs, the weather outside, your widget` },
+  { id: 'study', label: 'study', blurb: 'what you study, the study buddy, exams and deadlines from your calendar and Canvas' },
+  { id: 'focus', label: 'focus', blurb: 'leaving the app, distracting apps, breaks, music and reminders' },
+  { id: 'account', label: 'account', blurb: 'your mailbox code (it’s your sign-in), backups, installing' },
+]
+
+interface SettingsProps {
+  onBack: () => void
+  onWidget: () => void
+  onStudy?: () => void
+  tab: SettingsTab
+  onTab: (t: SettingsTab) => void
+  /** The phone shows the tabs here; on the Mac the sidebar has them. */
+  showTabs?: boolean
+}
+
+export function SettingsScreen({ onBack, onWidget, onStudy, tab, onTab, showTabs = true }: SettingsProps) {
   const game = useGame()
-  // a save that hasn't said what she studies opens on that tab
-  const [tab, setTab] = useState<SettingsTab>(() => initialTab ?? (game.study.asked ? 'fox' : 'study'))
   const [tips, setTips] = useState(false)
   const [install, setInstall] = useState(false)
   const [reset, setReset] = useState(0)
   const set = (patch: Partial<Settings>) => setGame((s) => ({ ...s, settings: { ...s.settings, ...patch } }))
   const f = game.foxName
-  const tabs: { id: SettingsTab; label: string; blurb: string }[] = [
-    { id: 'fox', label: f.toLowerCase(), blurb: `names, how much looking after ${f} needs, the weather outside, your widget` },
-    { id: 'study', label: 'study', blurb: 'what you study, the study buddy, exams and deadlines from your calendar and Canvas' },
-    { id: 'focus', label: 'focus', blurb: 'leaving the app, distracting apps, breaks, music and reminders' },
-    { id: 'account', label: 'account', blurb: 'your mailbox code (it’s your sign-in), backups, installing' },
-  ]
+  const tabs = settingsTabs(f)
+  const current = tabs.find((t) => t.id === tab) ?? tabs[0]
 
   return (
     <main className="screen settings">
-      <Header title="settings" onBack={onBack} />
-      <div className="tabs settings-tabs" role="tablist">
-        {tabs.map((t) => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <p className="muted tab-blurb">{tabs.find((t) => t.id === tab)!.blurb}</p>
+      <Header title={showTabs ? 'settings' : `settings · ${current.label}`} onBack={onBack} />
+      {showTabs && (
+        <div className="tabs settings-tabs" role="tablist">
+          {tabs.map((t) => (
+            <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => onTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="muted tab-blurb">{current.blurb}</p>
 
       {/* two columns of cards on a wide screen */}
       <div className="settings-cards">

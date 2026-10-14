@@ -13,7 +13,7 @@ import { BreakScreen } from './screens/Break.tsx'
 import { Wardrobe } from './screens/Wardrobe.tsx'
 import { Album } from './screens/Album.tsx'
 import { StudyScreen } from './screens/Study.tsx'
-import { SettingsScreen } from './screens/Settings.tsx'
+import { SettingsScreen, type SettingsTab } from './screens/Settings.tsx'
 import { BookModal, FailedModal, MailModal, PostcardModal, PromotionModal } from './screens/Modals.tsx'
 import { DecorScreen } from './screens/Decor.tsx'
 import { WidgetStudio } from './screens/WidgetStudio.tsx'
@@ -40,6 +40,8 @@ export default function App() {
   const [setupOpen, setSetupOpen] = useState(false)
   /** Open the bookshelf straight to "add a class". */
   const [addClass, setAddClass] = useState(false)
+  /** Which settings section is open (a save that hasn't said what she studies starts on that one). */
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>(() => (getGame().study.asked ? 'fox' : 'study'))
   const [failedAway, setFailedAway] = useState<number | null>(null)
   const [failedBlocked, setFailedBlocked] = useState(false)
   const [reward, setReward] = useState<RewardResult | null>(null)
@@ -254,7 +256,8 @@ export default function App() {
   else if (view === 'study' || view === 'classes' || view === 'career' || view === 'exams')
     // keyed so the Mac sidebar can switch its tabs
     screen = <StudyScreen key={view} onBack={() => setView('home')} initialTab={view === 'study' ? 'cards' : view} addClass={addClass} onAddClass={() => openShelf(true)} />
-  else if (view === 'settings') screen = <SettingsScreen onBack={() => setView('home')} onWidget={() => setView('widget')} onStudy={() => setView('study')} />
+  else if (view === 'settings')
+    screen = <SettingsScreen onBack={() => setView('home')} onWidget={() => setView('widget')} onStudy={() => setView('study')} tab={settingsTab} onTab={setSettingsTab} showTabs={!wide} />
   else screen = <Home onFocus={openSetup} go={setView} onShelf={openShelf} />
 
   const calm = !game.session && !game.pending && !reward
@@ -269,7 +272,7 @@ export default function App() {
   return (
     <>
       {inShell ? (
-        <DesktopShell view={view} go={setView} onFocus={openSetup}>
+        <DesktopShell view={view} go={setView} onFocus={openSetup} settingsTab={settingsTab} onSettingsTab={setSettingsTab}>
           {screen}
         </DesktopShell>
       ) : (
