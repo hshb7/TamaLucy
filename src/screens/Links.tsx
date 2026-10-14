@@ -13,7 +13,7 @@ import { askToRemind, notifyStatus, remindersAvailable, syncReminders } from '..
 import { CardHead, Modal, toast } from '../ui/bits.tsx'
 import { findPlace, herePlace, refreshWeather, useWeather, type Place } from '../weather.ts'
 import { cantReach, framed } from '../preview.ts'
-import { DeviceCalendarPanel, FeedsPanel } from './CalendarLinks.tsx'
+import { CalendarLinker } from './CalendarLinks.tsx'
 
 
 /** Her calendars: the device's own or Google, and any calendar by its address. */
@@ -27,8 +27,7 @@ export function CalendarSection() {
         your lectures and everything else show on the calendar page; anything named like an exam or a deadline lands under exams too, so you never type a date
         twice.
       </p>
-      <DeviceCalendarPanel />
-      <FeedsPanel />
+      <CalendarLinker />
     </section>
   )
 }

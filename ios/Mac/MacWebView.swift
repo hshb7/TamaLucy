@@ -24,6 +24,7 @@ struct MacWebView: NSViewRepresentable {
             web.isInspectable = true
         }
         context.coordinator.web = web
+        web.navigationDelegate = context.coordinator
         FocusCenter.shared.emit = { [weak web] name in
             web?.evaluateJavaScript("window.__tamalucyNative && window.__tamalucyNative.emit('\(name)')", completionHandler: nil)
         }
@@ -33,8 +34,19 @@ struct MacWebView: NSViewRepresentable {
 
     func updateNSView(_ web: WKWebView, context: Context) {}
 
-    final class Coordinator: NSObject, WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         weak var web: WKWebView?
+
+        /// A link she taps (a calendar's settings page, a playlist on Spotify) opens in her browser, not in the fox's window.
+        /// Navigations the app makes itself (Spotify's sign-in round trip) stay here.
+        func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            if action.navigationType == .linkActivated, let url = action.request.url, url.scheme == "https" || url.scheme == "http" {
+                NSWorkspace.shared.open(url)
+                decisionHandler(.cancel)
+                return
+            }
+            decisionHandler(.allow)
+        }
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
             guard let body = message.body as? [String: Any],

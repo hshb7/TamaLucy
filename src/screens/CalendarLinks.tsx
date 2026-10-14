@@ -1,14 +1,15 @@
 // Linking her calendars: the device's own (or Google on the web), and any
 // calendar by its subscription address. Used by the calendar page's "link a
 // calendar" sheet and by the settings card alike.
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { BOOK_COLORS } from '../art/bookcase.ts'
 import { addFeed, calendarWay, connectCalendar, disconnectCalendar, feedProblem, listCalendars, previewFeed, removeFeed, syncCalendar, updateFeed, useCalendarEvents } from '../calendar.ts'
 import { useGame } from '../game/store.ts'
 import { ago, patchLinks, useLinks } from '../links.ts'
-import { nativePlatform, type CalendarInfo } from '../native.ts'
+import { isNativeApp, nativePlatform, type CalendarInfo } from '../native.ts'
 import { cantReach } from '../preview.ts'
 import { Modal, toast } from '../ui/bits.tsx'
+import { CanvasLogo, DeviceCalendarLogo, GoogleLogo, ICloudLogo, LinkLogo, OutlookLogo } from '../ui/brands.tsx'
 
 const SCHOOLISH = /school|class|law|uni|college|course|study|exam|lecture|semester|term/i
 
@@ -148,21 +149,187 @@ export function DeviceCalendarPanel() {
   )
 }
 
-/** Calendars linked by their subscription address, through the relay. */
-export function FeedsPanel() {
+
+export type Provider = 'device' | 'google' | 'icloud' | 'outlook' | 'canvas' | 'other'
+
+interface Guide {
+  name: string
+  logo: ReactNode
+  /** Where the address lives, to open in her browser. */
+  open?: string
+  openLabel?: string
+  steps: string[]
+  /** What the address looks like. */
+  hint: string
+}
+
+const GUIDES: Record<Exclude<Provider, 'device'>, Guide> = {
+  google: {
+    name: 'Google Calendar',
+    logo: <GoogleLogo />,
+    open: 'https://calendar.google.com/calendar/r/settings',
+    openLabel: 'open Google Calendar’s settings',
+    steps: ['on the left, under “Settings for my calendars”, pick the calendar', 'scroll to “Integrate calendar” and copy the “Secret address in iCal format”', 'paste it below'],
+    hint: 'https://calendar.google.com/calendar/ical/…/basic.ics',
+  },
+  icloud: {
+    name: 'iCloud',
+    logo: <ICloudLogo />,
+    open: 'https://www.icloud.com/calendar/',
+    openLabel: 'open iCloud Calendar',
+    steps: [
+      'on your iPhone: Calendar → Calendars → the ⓘ next to the calendar → turn on “Public Calendar” → Share Link → Copy',
+      'on icloud.com: the share icon next to the calendar → “Public Calendar” → copy the link',
+      'paste it below',
+    ],
+    hint: 'webcal://p12-caldav.icloud.com/published/2/…',
+  },
+  outlook: {
+    name: 'Outlook',
+    logo: <OutlookLogo />,
+    open: 'https://outlook.live.com/calendar/0/options/calendar/SharedCalendars',
+    openLabel: 'open Outlook’s shared calendars',
+    steps: ['under “Publish a calendar”, pick the calendar, “Can view all details”, then Publish', 'copy the ICS link', 'paste it below'],
+    hint: 'https://outlook.live.com/owa/calendar/…/calendar.ics',
+  },
+  canvas: {
+    name: 'Canvas',
+    logo: <CanvasLogo />,
+    openLabel: 'open Canvas’ calendar',
+    steps: ['in Canvas, open Calendar (on the left)', 'tap “Calendar Feed” at the bottom right and copy the link', 'paste it below'],
+    hint: 'https://canvas.yourschool.edu/feeds/calendars/user_….ics',
+  },
+  other: {
+    name: 'another calendar',
+    logo: <LinkLogo />,
+    steps: ['in the calendar app or site, look for “subscribe”, “share”, “iCal” or “.ics”', 'copy the address (it starts with webcal:// or https://)', 'paste it below'],
+    hint: 'webcal:// or https://….ics',
+  },
+}
+
+const deviceName = () => (nativePlatform === 'mac' ? 'this Mac’s calendar' : 'this iPhone’s calendar')
+
+/** A link that leaves the app: a new tab on the web, her browser from the apps. */
+function OpenLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a className="btn btn-small open-link" href={href} target={isNativeApp ? undefined : '_blank'} rel="noopener noreferrer">
+      {children} ↗
+    </a>
+  )
+}
+
+/** The buttons: one per place a calendar can live. */
+export function ProviderTiles({ onPick }: { onPick: (p: Provider) => void }) {
+  const way = calendarWay()
   const { calendar } = useLinks()
-  const events = useCalendarEvents()
+  const day = new Date().getDate()
+  const tiles: { id: Provider; name: string; logo: ReactNode; note?: string }[] = []
+  if (way === 'device') tiles.push({ id: 'device', name: deviceName(), logo: <DeviceCalendarLogo day={day} />, note: calendar.on ? 'connected ✓' : 'iCloud, Google, Outlook… whatever is on it' })
+  tiles.push(
+    { id: 'google', name: 'Google Calendar', logo: <GoogleLogo />, note: way === 'google' ? (calendar.on ? 'connected ✓' : 'sign in with Google') : undefined },
+    { id: 'icloud', name: 'iCloud', logo: <ICloudLogo /> },
+    { id: 'outlook', name: 'Outlook', logo: <OutlookLogo /> },
+    { id: 'canvas', name: 'Canvas', logo: <CanvasLogo /> },
+    { id: 'other', name: 'another calendar', logo: <LinkLogo /> },
+  )
+  return (
+    <div className="providers">
+      {tiles.map((t) => (
+        <button key={t.id} className="provider" onClick={() => onPick(t.id)}>
+          {t.logo}
+          <span>
+            {t.name}
+            {t.note && <small>{t.note}</small>}
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** The chosen provider: how to get its address, and the box to paste it in (or the sign-in, where there is one). */
+export function ProviderGuide({ provider, onBack, onLinked }: { provider: Provider; onBack: () => void; onLinked?: () => void }) {
+  const { canvas } = useLinks()
+  const way = calendarWay()
+  const back = (
+    <button className="link inline" onClick={onBack}>
+      ← other calendars
+    </button>
+  )
+  if (provider === 'device')
+    return (
+      <div className="guide">
+        <div className="guide-head">
+          <DeviceCalendarLogo day={new Date().getDate()} />
+          <h3>{deviceName()}</h3>
+          {back}
+        </div>
+        <DeviceCalendarPanel />
+      </div>
+    )
+  const g = GUIDES[provider]
+  const open = provider === 'canvas' ? (canvas.base ? `${canvas.base}/calendar` : undefined) : g.open
+  const viaDevice = provider === 'icloud' && way === 'device'
+  const viaGoogle = provider === 'google' && way === 'google'
+  return (
+    <div className="guide">
+      <div className="guide-head">
+        {g.logo}
+        <h3>{g.name}</h3>
+        {back}
+      </div>
+      {viaDevice && (
+        <>
+          <p className="muted">your iCloud calendars are already in {deviceName()}, so that’s the one to connect:</p>
+          <DeviceCalendarPanel />
+          <details className="help">
+            <summary>a public iCloud calendar someone shared with you?</summary>
+            <AddressSteps guide={g} open={open} onLinked={onLinked} />
+          </details>
+        </>
+      )}
+      {viaGoogle && (
+        <>
+          <DeviceCalendarPanel />
+          <details className="help">
+            <summary>or by its address, without signing in</summary>
+            <AddressSteps guide={g} open={open} onLinked={onLinked} />
+          </details>
+        </>
+      )}
+      {!viaDevice && !viaGoogle && <AddressSteps guide={g} open={open} onLinked={onLinked} />}
+    </div>
+  )
+}
+
+function AddressSteps({ guide, open, onLinked }: { guide: Guide; open?: string; onLinked?: () => void }) {
+  return (
+    <>
+      {open && guide.openLabel && <OpenLink href={open}>{guide.openLabel}</OpenLink>}
+      <ol>
+        {guide.steps.map((st, i) => (
+          <li key={i}>{st}</li>
+        ))}
+      </ol>
+      <AddressForm hint={guide.hint} onLinked={onLinked} />
+    </>
+  )
+}
+
+/** Paste an address, check it, name it, pick a colour, link it. */
+export function AddressForm({ hint, onLinked }: { hint: string; onLinked?: () => void }) {
+  const { calendar } = useLinks()
   const [address, setAddress] = useState('')
   const [found, setFound] = useState<{ url: string; name: string; count: number } | null>(null)
   const [name, setName] = useState('')
   const [color, setColor] = useState(FEED_COLORS[0])
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState('')
-  const used = new Set(calendar.feeds.map((f) => f.color))
   useEffect(() => {
     // a colour no other calendar wears yet
+    const used = new Set(calendar.feeds.map((f) => f.color))
     if (!found) setColor(FEED_COLORS.find((c) => !used.has(c)) ?? FEED_COLORS[calendar.feeds.length % FEED_COLORS.length])
-  }, [calendar.feeds.length, found]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [calendar.feeds, found])
 
   const check = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -188,51 +355,21 @@ export function FeedsPanel() {
       setFound(null)
       setAddress('')
       setName('')
+      onLinked?.()
     } catch (err) {
       setProblem(feedProblem(err))
     } finally {
       setBusy(false)
     }
   }
-  const count = (id: string) => events.filter((e) => e.calendar === id).length
 
   return (
-    <div className="feeds">
-      <h3>calendars by address</h3>
-      {calendar.feeds.length > 0 && (
-        <ul className="feed-list">
-          {calendar.feeds.map((f) => (
-            <li key={f.id} className="feed-row">
-              <label className="check feed-name">
-                <input type="checkbox" checked={f.on} onChange={(e) => updateFeed(f.id, { on: e.target.checked })} aria-label={`read ${f.name}`} />
-                <span className="cal-name">
-                  <span className="cal-dot" style={{ background: f.color }} />
-                  {f.name}
-                  <small className="muted">
-                    {' '}
-                    · {count(f.id)} {count(f.id) === 1 ? 'event' : 'events'}
-                  </small>
-                </span>
-              </label>
-              <button
-                className="icon-x"
-                aria-label={`unlink ${f.name}`}
-                onClick={() => {
-                  removeFeed(f.id)
-                  toast(`${f.name} unlinked`)
-                }}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="address">
       {!found ? (
         <form className="row feed-form" onSubmit={check}>
           <input
             value={address}
-            placeholder="paste a calendar’s address (webcal:// or https://…)"
+            placeholder={hint}
             aria-label="calendar address"
             inputMode="url"
             autoCapitalize="off"
@@ -272,39 +409,83 @@ export function FeedsPanel() {
         </div>
       )}
       {problem && <p className="error">{problem}</p>}
-      <details className="help">
-        <summary>where do I find a calendar’s address?</summary>
-        <ul>
-          <li>
-            <b>iCloud</b>: in Calendar, the ⓘ next to the calendar → <i>Public Calendar</i> → copy the webcal link.
-          </li>
-          <li>
-            <b>Google</b>: calendar.google.com → settings → the calendar → <i>Secret address in iCal format</i>.
-          </li>
-          <li>
-            <b>Outlook</b>: settings → Calendar → <i>Shared calendars</i> → publish a calendar → the ICS link.
-          </li>
-          <li>
-            <b>Canvas</b>: Calendar → <i>Calendar Feed</i> (bottom right) → copy.
-          </li>
-          <li>
-            <b>your school’s site</b>: look for “subscribe”, “iCal” or a link ending in .ics.
-          </li>
-        </ul>
-        <p className="muted">the address is private to you: it stays on this device, and only the relay that fetches it for the app ever sees it.</p>
-      </details>
     </div>
   )
 }
 
-/** The calendar page's sheet: everything that can be linked, in one place. */
+/** What's linked already: calendars by address (switch off, unlink) and the device's own or Google. */
+export function LinkedList({ onManage }: { onManage?: (p: Provider) => void }) {
+  const { calendar } = useLinks()
+  const events = useCalendarEvents()
+  const way = calendarWay()
+  const count = (id: string) => events.filter((e) => e.calendar === id).length
+  if (!calendar.on && !calendar.feeds.length) return null
+  return (
+    <ul className="feed-list">
+      {calendar.on && way && (
+        <li className="feed-row">
+          <span className="cal-name linked-device">
+            {way === 'device' ? <DeviceCalendarLogo day={new Date().getDate()} /> : <GoogleLogo />}
+            {way === 'device' ? deviceName() : 'Google Calendar'}
+            <small className="muted">
+              {' '}
+              · {calendar.calendars.length} {calendar.calendars.length === 1 ? 'calendar' : 'calendars'} ✓
+            </small>
+          </span>
+          {onManage && (
+            <button className="link inline" onClick={() => onManage(way)}>
+              change
+            </button>
+          )}
+        </li>
+      )}
+      {calendar.feeds.map((f) => (
+        <li key={f.id} className="feed-row">
+          <label className="check feed-name">
+            <input type="checkbox" checked={f.on} onChange={(e) => updateFeed(f.id, { on: e.target.checked })} aria-label={`read ${f.name}`} />
+            <span className="cal-name">
+              <span className="cal-dot" style={{ background: f.color }} />
+              {f.name}
+              <small className="muted">
+                {' '}
+                · {count(f.id)} {count(f.id) === 1 ? 'event' : 'events'}
+              </small>
+            </span>
+          </label>
+          <button
+            className="icon-x"
+            aria-label={`unlink ${f.name}`}
+            onClick={() => {
+              removeFeed(f.id)
+              toast(`${f.name} unlinked`)
+            }}
+          >
+            ×
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** The whole thing: what's linked, the buttons, and the guide for the one she tapped. */
+export function CalendarLinker({ compact = false }: { compact?: boolean }) {
+  const [provider, setProvider] = useState<Provider | null>(null)
+  return (
+    <div className="linker">
+      <LinkedList onManage={setProvider} />
+      {provider ? <ProviderGuide provider={provider} onBack={() => setProvider(null)} onLinked={() => setProvider(null)} /> : <>{!compact && <h3>link a calendar</h3>}<ProviderTiles onPick={setProvider} /></>}
+    </div>
+  )
+}
+
+/** The calendar page's sheet. */
 export function CalendarLinksModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal onClose={onClose} className="sheet">
       <h2>link a calendar</h2>
       <p className="muted center">your lectures and everything else show on the calendar page; exams and deadlines land under exams too.</p>
-      <DeviceCalendarPanel />
-      <FeedsPanel />
+      <CalendarLinker compact />
       <button className="btn" onClick={onClose}>
         done
       </button>

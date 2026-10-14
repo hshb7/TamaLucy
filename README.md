@@ -276,13 +276,16 @@ month's name (a month and year picker), or the keyboard (arrows walk the days,
 Page Up/Down turn the months, with Shift the years, Home is today).
 
 ### Your calendars
-Three ways to link a calendar, all in *study → calendar → + link a calendar*
-(and in *settings → study → your calendars*):
+*Study → calendar → + link a calendar* (and *settings → study → your
+calendars*) shows a button per place a calendar can live: Google Calendar,
+iCloud, Outlook, Canvas, another calendar, and in the apps the device's own.
+Each one walks her through it. Underneath there are three mechanisms:
 
 - **Any calendar by its address** (iCloud, Google, Outlook, Canvas, a school's
-  own feed, a shared class calendar): she pastes the subscription address
-  (`webcal://…` or `https://….ics`), the app checks it, she names it and picks
-  a colour. The sheet says where each app hides that address. Browsers can't
+  own feed, a shared class calendar): the button opens the right settings page
+  in her browser and lists the two or three taps to copy the subscription
+  address (`webcal://…` or `https://….ics`); she pastes it, the app checks it,
+  she names it and picks a colour. Browsers can't
   read those addresses across origins, so a small relay,
   [`supabase/functions/calendar-feed`](supabase/functions/calendar-feed/index.ts),
   fetches exactly the https address she pasted (public hosts only, a 3 MB cap,
@@ -295,11 +298,13 @@ Three ways to link a calendar, all in *study → calendar → + link a calendar*
 - **The device's own calendar**, in the iPhone and Mac apps (EventKit): no
   account, one permission prompt, and finished sessions can be written back
   ("studied Contracts", with the minutes).
-- **Google Calendar**, on the web: in the Google Cloud console create an OAuth
-  client id (Web application) with your site as an authorised JavaScript
-  origin, enable the Calendar API, and build with `VITE_GOOGLE_CLIENT_ID=…` (or
-  set a repository variable of that name for the Pages workflow). Without a key
-  the option just explains itself.
+- **Google Calendar with a sign-in**, on the web: in the Google Cloud console
+  create an OAuth client id (Web application) with your site as an authorised
+  JavaScript origin, enable the Calendar API, and build with
+  `VITE_GOOGLE_CLIENT_ID=…` (or set a repository variable of that name for the
+  Pages workflow). Then the Google button signs her in and lists her calendars
+  to tick, with the address route still there underneath. Without a key the
+  Google button uses the address route.
 
 Whichever way, every event shows on the calendar page, and anything named like
 an exam or a deadline ("exam", "final", "quiz", "due", "memo", "problem set"…)
