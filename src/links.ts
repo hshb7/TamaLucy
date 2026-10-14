@@ -5,8 +5,20 @@
 import { useSyncExternalStore } from 'react'
 import { DEFAULT_REMINDERS, type ReminderPrefs } from './game/reminders.ts'
 
+/** A calendar linked by its subscription address (iCloud, Google, Outlook, Canvas, a school's feed). */
+export interface Feed {
+  id: string
+  name: string
+  /** https://… (webcal:// is read as https). It's a private address: it stays on this device. */
+  url: string
+  /** #rrggbb, hers to pick. */
+  color: string
+  on: boolean
+}
+
 export interface Links {
   calendar: {
+    /** The device's own calendar (the apps) or Google Calendar (the web) is connected. */
     on: boolean
     /** Calendar ids to read exams and deadlines from. */
     calendars: string[]
@@ -14,6 +26,8 @@ export interface Links {
     logSessions: boolean
     /** The calendar they go to ('' = the default one). */
     logCalendar: string
+    /** Calendars linked by address. */
+    feeds: Feed[]
     lastSync: number
   }
   music: {
@@ -46,7 +60,7 @@ export interface Links {
 const KEY = 'tamalucy:links'
 
 const DEFAULTS: Links = {
-  calendar: { on: false, calendars: [], logSessions: false, logCalendar: '', lastSync: 0 },
+  calendar: { on: false, calendars: [], logSessions: false, logCalendar: '', feeds: [], lastSync: 0 },
   music: { player: 'none', playlist: '', name: '', autoplay: true, pauseAtEnd: true, account: '', premium: true },
   canvas: { base: '', token: '', user: '', lastSync: 0 },
   reminders: { on: false, ...DEFAULT_REMINDERS },

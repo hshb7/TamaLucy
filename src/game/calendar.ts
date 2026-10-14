@@ -95,6 +95,35 @@ export function monthSummary(s: GameState, year: number, month: number): MonthSu
   return out
 }
 
+export interface DayEvent {
+  id: string
+  title: string
+  /** ms */
+  start: number
+  end: number
+  allDay: boolean
+}
+
+/** The events that touch a day (an all-day one ends at the next midnight, which doesn't count). */
+export function eventsOn<T extends DayEvent>(events: readonly T[], key: string): T[] {
+  return events
+    .filter((e) => dayKey(e.start) <= key && dayKey(Math.max(e.start, e.end - 1)) >= key)
+    .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.start - b.start || a.title.localeCompare(b.title))
+}
+
+/** "all day", "10:00", or "10:00 – 11:30", in her language. */
+export function timeLabel(e: DayEvent, key?: string, locale?: string): string {
+  if (e.allDay) return 'all day'
+  const fmt = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' })
+  const startsToday = !key || dayKey(e.start) === key
+  const endsToday = !key || dayKey(Math.max(e.start, e.end - 1)) === key
+  if (!startsToday && !endsToday) return 'all day'
+  if (!startsToday) return `until ${fmt.format(e.end)}`
+  if (e.end - e.start < 60_000) return fmt.format(e.start)
+  if (!endsToday) return `from ${fmt.format(e.start)}`
+  return `${fmt.format(e.start)} – ${fmt.format(e.end)}`
+}
+
 /** Weekday initials in her language, starting on `weekStart`. */
 export function weekdayLetters(weekStart = 0, locale?: string): string[] {
   const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short' })

@@ -1,15 +1,18 @@
 // Her term on one page: a month with every exam and deadline on its day, the
 // days she studied, and a place to add the next one by tapping a day.
 import { useEffect, useRef, useState } from 'react'
-import { dayInfo, daysInMonth, dayTitle, keyOf, monthGrid, monthNames, monthSummary, monthTitle, parseKey, shiftMonth, weekdayLetters } from '../game/calendar.ts'
+import { dayInfo, daysInMonth, dayTitle, eventsOn, keyOf, monthGrid, monthNames, monthSummary, monthTitle, parseKey, shiftMonth, timeLabel, weekdayLetters } from '../game/calendar.ts'
 import { removeExam } from '../game/external.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { addExam, daysUntil, whenLabel } from '../game/study.ts'
 import { dayKey } from '../game/time.ts'
 import { BOOK_COLORS } from '../art/bookcase.ts'
 import { sfx } from '../audio.ts'
+import { feedProblem, syncCalendar, useCalendarEvents, type CalEvent } from '../calendar.ts'
 import { formatMinutes } from '../hooks.ts'
-import { CardHead } from '../ui/bits.tsx'
+import { ago, useLinks } from '../links.ts'
+import { CardHead, toast } from '../ui/bits.tsx'
+import { CalendarLinksModal } from './CalendarLinks.tsx'
 import { ClassPicker } from './ClassPicker.tsx'
 import type { Exam } from '../game/state.ts'
 
@@ -25,6 +28,27 @@ export function CalendarPanel({ onAddClass }: { onAddClass?: () => void }) {
   })
   const [picked, setPicked] = useState(today)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [linking, setLinking] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const events = useCalendarEvents()
+  const { calendar } = useLinks()
+  const linked = calendar.on || calendar.feeds.some((f) => f.on)
+  /** What's linked, for the strip under the grid: feeds by name, and whichever device or Google calendars have events. */
+  const sources = [
+    ...calendar.feeds.filter((f) => f.on).map((f) => ({ id: f.id, name: f.name, color: f.color as string | undefined })),
+    ...[...new Map(events.filter((e) => e.source !== 'feed').map((e) => [e.calendar, { id: e.calendar, name: e.calendarName || (e.source === 'google' ? 'Google Calendar' : 'this device'), color: e.color }])).values()],
+  ]
+  const sync = async () => {
+    setSyncing(true)
+    try {
+      await syncCalendar()
+      toast('calendars synced ✓')
+    } catch (e) {
+      toast(feedProblem(e), 5000)
+    } finally {
+      setSyncing(false)
+    }
+  }
   const grid = useRef<HTMLDivElement>(null)
   const touch = useRef<{ x: number; y: number } | null>(null)
   const wheelAt = useRef(0)
@@ -165,9 +189,12 @@ export function CalendarPanel({ onAddClass }: { onAddClass?: () => void }) {
             const exam = info.exams.some((e) => e.kind !== 'due')
             const due = info.exams.some((e) => e.kind === 'due')
             const past = d.key < today
+            // her calendars' events, minus the ones already on the exams list
+            const evs = events.length ? eventsOn(events, d.key).filter((e) => !info.exams.some((x) => x.externalId === e.id)) : []
             const marks = [
               exam ? 'an exam' : '',
               due ? 'something due' : '',
+              evs.length ? `${evs.length} on your calendar` : '',
               info.minutes ? `studied ${formatMinutes(info.minutes)}` : '',
               info.birthday ? 'your birthday' : '',
             ].filter(Boolean)
@@ -186,6 +213,9 @@ export function CalendarPanel({ onAddClass }: { onAddClass?: () => void }) {
                   {exam && <i className="mk mk-exam" />}
                   {due && <i className="mk mk-due" />}
                   {info.birthday && <i className="mk mk-bday" />}
+                  {evs.slice(0, 3).map((e, i) => (
+                    <i key={i} className="mk mk-ev" style={{ background: e.color ?? 'var(--sky)' }} />
+                  ))}
                 </span>
                 {info.minutes > 0 && <i className="cal-study" style={{ width: `${Math.min(100, 20 + (info.minutes / 180) * 80)}%` }} aria-hidden="true" />}
               </button>
@@ -203,16 +233,35 @@ export function CalendarPanel({ onAddClass }: { onAddClass?: () => void }) {
           )}
         </p>
         {summary.length > 0 && <p className="muted center">this month: {summary.join(' · ')}</p>}
+        <div className="cal-sources">
+          {sources.map((s) => (
+            <span key={s.id} className="cal-src">
+              <i className="cal-dot" style={{ background: s.color ?? 'var(--sky)' }} />
+              {s.name}
+            </span>
+          ))}
+          <button className="link inline" onClick={() => setLinking(true)}>
+            + link {sources.length ? 'a calendar' : 'your calendars'}
+          </button>
+          {linked && (
+            <button className="link inline" onClick={sync} disabled={syncing}>
+              {syncing ? 'syncing…' : `sync · ${ago(calendar.lastSync)}`}
+            </button>
+          )}
+        </div>
+        {!linked && <p className="muted center">link your school’s calendar, iCloud, Google or Outlook and your lectures show up here.</p>}
       </section>
 
-      <DayPanel key={picked} day={picked} today={today} now={now} onAddClass={onAddClass} fox={f} />
+      <DayPanel key={picked} day={picked} today={today} now={now} onAddClass={onAddClass} fox={f} events={events} />
+      {linking && <CalendarLinksModal onClose={() => setLinking(false)} />}
     </>
   )
 }
 
-function DayPanel({ day, today, now, onAddClass, fox }: { day: string; today: string; now: number; onAddClass?: () => void; fox: string }) {
+function DayPanel({ day, today, now, onAddClass, fox, events }: { day: string; today: string; now: number; onAddClass?: () => void; fox: string; events: CalEvent[] }) {
   const game = useGame()
   const info = dayInfo(game, day)
+  const evs = events.length ? eventsOn(events, day).filter((e) => !info.exams.some((x) => x.externalId === e.id)) : []
   const past = day < today
   const d = daysUntil(day, now)
   const [adding, setAdding] = useState(false)
@@ -243,13 +292,29 @@ function DayPanel({ day, today, now, onAddClass, fox }: { day: string; today: st
           ))}
         </ul>
       )}
+      {evs.length > 0 && (
+        <ul className="list cal-events">
+          {evs.map((e, i) => (
+            <li key={`${e.id}:${e.start}:${i}`} className="exam px-box cal-exam">
+              <span className="cal-kind ev" style={{ background: e.color ?? 'var(--sky)' }} aria-hidden="true" />
+              <span className="exam-info">
+                <span className="list-title">{e.title || '(untitled)'}</span>
+                <span className="list-sub">
+                  {timeLabel(e, day)}
+                  {e.calendarName ? ` · ${e.calendarName}` : ''}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       {info.minutes > 0 ? (
         <p className="cal-line">
           <i className="cal-study legend" aria-hidden="true" /> studied {formatMinutes(info.minutes)}
           {info.sessions ? ` · ${info.sessions} ${info.sessions === 1 ? 'session' : 'sessions'}` : ''} ✓
         </p>
       ) : (
-        !info.exams.length && !info.birthday && <p className="muted">{past ? 'a quiet day.' : day === today ? `nothing on today. a good day for a session with ${fox}?` : 'nothing on this day yet.'}</p>
+        !info.exams.length && !evs.length && !info.birthday && <p className="muted">{past ? 'a quiet day.' : day === today ? `nothing on today. a good day for a session with ${fox}?` : 'nothing on this day yet.'}</p>
       )}
       {!adding ? (
         <button className="link" onClick={() => setAdding(true)}>

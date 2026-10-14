@@ -57,7 +57,7 @@ home screen, works offline, and needs no app store.
 - **Two career tracks for the fox:** *law* (Pre-Law Pup → 1L → … → Supreme Court Justice, with the law decor, law jokes, the law library and courthouse adventures) or *school* (Curious Kit → Freshman → … → Dean, with a trophy and a globe instead of the gavel and scales, and no law jokes). Same hours, same rungs.
 - **Quiz decks are opt-in.** Her own cards always come first; the built-in Legal Latin deck is a toggle in settings. She can also paste a whole list of cards at once (one per line, "front — back").
 - **Settings → my studies** changes any of it later: what she's studying, the track, the shelves, the decks.
-- **A calendar page** (*study → calendar*): the month with every exam and deadline on its day, the days she studied, and a tap on any day to add the next one.
+- **A calendar page** (*study → calendar*): the month with every exam and deadline on its day, the days she studied, and a tap on any day to add the next one. Her own calendars link in too (iCloud, Google, Outlook, Canvas, a school's feed), so her lectures are on it.
 
 **Law school edition** (the *law* track)
 - **Career ladder:** every hour of focus moves the fox up: Pre-Law Pup, 1L, 2L, 3L, Law Graduate, Passed the Bar, Associate, Senior Associate, Partner, Judge, Supreme Court Justice. Each promotion gets a celebration and unlocks something (grad cap, tie, judge wig, diploma, gavel, scales of justice, wallpapers). On the *school* track the same rungs are Freshman to Dean.
@@ -267,22 +267,46 @@ a pink square on a day is an exam, a yellow one something due, a green line
 underneath a day she studied (longer for longer), and her birthday gets a
 lavender one. Tapping a day shows what's on it, with the class's colour and
 where it came from (typed, her calendar, Canvas), lets her take it off, and adds
-an exam or a deadline to that day without typing a date. A line under the grid
+an exam or a deadline to that day without typing a date. Her linked calendars'
+events are there too, as coloured dots on the grid and a list for the day
+(*+ link a calendar* under the grid; see [Your calendars](#your-calendars)). A line under the grid
 sums up the month: hours over how many days, exams, deadlines. To get around:
 the arrows, a swipe across the grid, two fingers sideways on a trackpad, the
 month's name (a month and year picker), or the keyboard (arrows walk the days,
 Page Up/Down turn the months, with Shift the years, Home is today).
 
-### Your calendar
-Exams and deadlines come straight from the calendars she picks: anything with
-"exam", "final", "quiz", "due", "memo", "problem set"… in its name lands under
-*study → exams* (a weekly lecture doesn't), and goes away when it's deleted
-there. Finished sessions can be written back ("studied Contracts", with the
-minutes). On the iPhone and the Mac it's the device's own calendar (EventKit): no
-account, one permission prompt. On the web it's Google Calendar: in the Google
-Cloud console create an OAuth client id (Web application) with your site as an
-authorised JavaScript origin, enable the Calendar API, and build with
-`VITE_GOOGLE_CLIENT_ID=…`. Without a key the section just explains itself.
+### Your calendars
+Three ways to link a calendar, all in *study → calendar → + link a calendar*
+(and in *settings → study → your calendars*):
+
+- **Any calendar by its address** (iCloud, Google, Outlook, Canvas, a school's
+  own feed, a shared class calendar): she pastes the subscription address
+  (`webcal://…` or `https://….ics`), the app checks it, she names it and picks
+  a colour. The sheet says where each app hides that address. Browsers can't
+  read those addresses across origins, so a small relay,
+  [`supabase/functions/calendar-feed`](supabase/functions/calendar-feed/index.ts),
+  fetches exactly the https address she pasted (public hosts only, a 3 MB cap,
+  a few redirects at most) and hands the text back; her mailbox code keeps it
+  from being an open proxy and it allows 400 reads a day per mailbox
+  (`FEED_DAILY_LIMIT`). Deploy it with
+  `supabase functions deploy calendar-feed --no-verify-jwt`. The address is
+  private to her and stays on her device. The feed is read by `src/game/ics.ts`,
+  repeating events, exceptions and time zones included.
+- **The device's own calendar**, in the iPhone and Mac apps (EventKit): no
+  account, one permission prompt, and finished sessions can be written back
+  ("studied Contracts", with the minutes).
+- **Google Calendar**, on the web: in the Google Cloud console create an OAuth
+  client id (Web application) with your site as an authorised JavaScript
+  origin, enable the Calendar API, and build with `VITE_GOOGLE_CLIENT_ID=…` (or
+  set a repository variable of that name for the Pages workflow). Without a key
+  the option just explains itself.
+
+Whichever way, every event shows on the calendar page, and anything named like
+an exam or a deadline ("exam", "final", "quiz", "due", "memo", "problem set"…)
+lands under *study → exams* as well (a weekly lecture doesn't), and goes away
+when it's deleted there. Calendars sync when the app opens (a few times a day)
+and on *sync* under the grid. The links are per device, like the other
+connections.
 
 ### Canvas
 If her school uses Canvas, assignments with a due date show up under exams and
@@ -389,7 +413,7 @@ src/
   gift.ts            ← personalise here
   art/               pixel art as code: fox, clothes, items, room (+ day/night)
   game/              state + save migration, needs & offline simulation, sessions,
-                     rewards, law career, flashcards, the calendar month, text content, tests
+                     rewards, law career, flashcards, the calendar month, calendar feeds (ics.ts), text content, tests
   ui/                canvas renderer, the room (camera, pie menus), the fox's
                      free-will brain (brain.ts), shared widgets
   screens/           onboarding, home, focus, rewards, break, closet, album, stats, settings
@@ -399,7 +423,7 @@ src/
   notify.ts          the end-of-session notification (Mac)
   native.ts          the bridge to the native iPhone and Mac apps (ios/)
   links.ts           her connections, kept on this device: calendars, playlist, Canvas token, reminders
-  calendar.ts        exams in, sessions out (EventKit on the apps, google.ts on the web)
+  calendar.ts        her calendars in (the device's, Google, feeds by address), sessions out
   canvas.ts          her school's Canvas: due dates and courses, through the relay
   buddy.ts           the study buddy: cards from notes, questions, answers checked
   weather.ts         the real weather at the window (Open-Meteo)
@@ -411,7 +435,7 @@ scripts/
   sprite-sheet.ts    renders all sprites to sprites.png for quick art edits (npm run sprites)
   new-mailbox.ts     makes a mailbox code + writer key and prints the SQL to register them
 supabase/migrations/ the database: letters, the cloud save, daily caps, and the functions that guard them
-supabase/functions/  study-buddy (Claude, behind her mailbox code) and canvas-proxy (the Canvas relay)
+supabase/functions/  study-buddy (Claude, behind her mailbox code), canvas-proxy (the Canvas relay), calendar-feed (reads a calendar's address)
 ios/                 the native iPhone + Mac apps: Dynamic Island, Screen Time blocking, menu bar fox (see ios/README.md)
 ```
 

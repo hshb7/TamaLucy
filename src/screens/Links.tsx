@@ -1,7 +1,6 @@
 // Settings: her connections to the outside world. Each one is optional, says
 // what it needs, and works without the others.
 import { useEffect, useState } from 'react'
-import { calendarWay, connectCalendar, disconnectCalendar, listCalendars, syncCalendar } from '../calendar.ts'
 import { addCanvasClasses, canvasCourses, canvasProblem, connectCanvas, disconnectCanvas, syncCanvas, type CanvasCourse } from '../canvas.ts'
 import { spotifyUri } from '../game/music.ts'
 import { setGame, useGame } from '../game/store.ts'
@@ -9,146 +8,27 @@ import { usesFahrenheit, weatherLine } from '../game/weather.ts'
 import { ago, patchLinks, useLinks } from '../links.ts'
 import { musicAvailable, musicStatus, playNow, playlists, spotifyOnDevice } from '../music.ts'
 import { connectSpotify, disconnectSpotify, hasSpotify, openInSpotify, spotifyConnected, SpotifyError } from '../spotify.ts'
-import { nativePlatform, type CalendarInfo, type MusicStatus, type NotifyStatus, type Player, type Playlist } from '../native.ts'
+import { nativePlatform, type MusicStatus, type NotifyStatus, type Player, type Playlist } from '../native.ts'
 import { askToRemind, notifyStatus, remindersAvailable, syncReminders } from '../reminders.ts'
 import { CardHead, Modal, toast } from '../ui/bits.tsx'
 import { findPlace, herePlace, refreshWeather, useWeather, type Place } from '../weather.ts'
 import { cantReach, framed } from '../preview.ts'
+import { DeviceCalendarPanel, FeedsPanel } from './CalendarLinks.tsx'
 
-const SCHOOLISH = /school|class|law|uni|college|course|study|exam|lecture|semester|term/i
 
-/** Her calendar: exams and deadlines in, finished sessions out. */
+/** Her calendars: the device's own or Google, and any calendar by its address. */
 export function CalendarSection() {
-  const game = useGame()
   const { calendar } = useLinks()
-  const way = calendarWay()
-  const [cals, setCals] = useState<CalendarInfo[] | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [problem, setProblem] = useState('')
-  const f = game.foxName
-  useEffect(() => {
-    if (calendar.on) void listCalendars().then(setCals)
-  }, [calendar.on])
-
-  if (!way)
-    return (
-      <section className="px-box card" id="calendar">
-        <CardHead title="your calendar" status="iPhone & Mac apps" />
-        <p className="muted">
-          exams and deadlines straight from your calendar, and finished sessions written back to it. this works in the iPhone and Mac apps (and on the web once a
-          Google Calendar key is set up, see the README). the ones you add yourself are on the calendar page already (study → calendar).
-        </p>
-      </section>
-    )
-
-  const connect = async () => {
-    setBusy(true)
-    setProblem('')
-    try {
-      const a = await connectCalendar()
-      if (!a.authorized) {
-        setProblem(way === 'device' ? `${f} wasn’t allowed to see your calendar. you can allow it in Settings → Privacy → Calendars.` : 'google didn’t let us in. try again?')
-        return
-      }
-      setCals(a.calendars)
-      const picked = a.calendars.filter((c) => SCHOOLISH.test(c.title)).map((c) => c.id)
-      patchLinks('calendar', { on: true, calendars: picked, logCalendar: a.calendars.find((c) => c.writable)?.id ?? '' })
-      if (picked.length) {
-        const n = await syncCalendar()
-        toast(n ? `${n} from your calendar are on the exams list ✓` : 'connected! pick the calendars with your classes in them ✓')
-      }
-    } catch {
-      setProblem(cantReach('your calendar', 'couldn’t reach your calendar just now.'))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const sync = async () => {
-    setBusy(true)
-    setProblem('')
-    try {
-      const n = await syncCalendar()
-      toast(n ? `${n} from your calendar are on the exams list ✓` : 'nothing that looks like an exam or a deadline in those calendars yet')
-    } catch {
-      setProblem('couldn’t read your calendar just now. are you online?')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const toggle = (id: string, on: boolean) =>
-    patchLinks('calendar', { calendars: on ? [...new Set([...calendar.calendars, id])] : calendar.calendars.filter((x) => x !== id) })
-
+  const linked = calendar.on || calendar.feeds.some((f) => f.on)
   return (
     <section className="px-box card" id="calendar">
-      <CardHead title="your calendar" status={calendar.on ? 'on ✓' : 'off'} on={calendar.on} />
-      {!calendar.on ? (
-        <>
-          <p className="muted">
-            anything in your calendar named like an exam or a deadline (“exam”, “final”, “quiz”, “due”, “memo”…) shows up under exams, so you never type a date
-            twice.{way === 'device' ? ' nothing leaves this device.' : ' sign in with Google once per session.'}
-          </p>
-          <button className="btn" disabled={busy} onClick={connect}>
-            {busy ? 'connecting…' : 'connect my calendar'}
-          </button>
-        </>
-      ) : (
-        <>
-          <p>
-            connected ✓ <span className="muted">· last synced {ago(calendar.lastSync)}</span>
-          </p>
-          <div className="field">
-            <span>read exams and deadlines from</span>
-            {cals === null ? (
-              <p className="muted">looking for your calendars…</p>
-            ) : cals.length ? (
-              <div className="cal-list">
-                {cals.map((c) => (
-                  <label key={c.id} className="check">
-                    <input type="checkbox" checked={calendar.calendars.includes(c.id)} onChange={(e) => toggle(c.id, e.target.checked)} />
-                    <span className="cal-name">
-                      {c.color && <span className="cal-dot" style={{ background: c.color }} />}
-                      {c.title}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            ) : (
-              <p className="muted">no calendars found right now.</p>
-            )}
-          </div>
-          <label className="check">
-            <input type="checkbox" checked={calendar.logSessions} onChange={(e) => patchLinks('calendar', { logSessions: e.target.checked })} />
-            <span>
-              write my finished sessions to my calendar <small className="muted">“studied Contracts”, with the minutes</small>
-            </span>
-          </label>
-          {calendar.logSessions && cals && cals.some((c) => c.writable) && (
-            <label>
-              into
-              <select value={calendar.logCalendar} onChange={(e) => patchLinks('calendar', { logCalendar: e.target.value })} aria-label="calendar for sessions">
-                {cals
-                  .filter((c) => c.writable)
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.title}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          )}
-          <div className="row">
-            <button className="btn" disabled={busy || !calendar.calendars.length} onClick={sync}>
-              {busy ? 'syncing…' : 'sync now'}
-            </button>
-          </div>
-          <button className="link" onClick={() => disconnectCalendar()}>
-            disconnect my calendar
-          </button>
-        </>
-      )}
-      {problem && <p className="error">{problem}</p>}
+      <CardHead title="your calendars" status={linked ? 'on ✓' : 'off'} on={linked} />
+      <p className="muted">
+        your lectures and everything else show on the calendar page; anything named like an exam or a deadline lands under exams too, so you never type a date
+        twice.
+      </p>
+      <DeviceCalendarPanel />
+      <FeedsPanel />
     </section>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dayInfo, daysInMonth, dayTitle, keyOf, monthGrid, monthNames, monthSummary, monthTitle, parseKey, shiftMonth, weekdayLetters } from './calendar.ts'
+import { dayInfo, daysInMonth, dayTitle, eventsOn, keyOf, monthGrid, monthNames, monthSummary, monthTitle, parseKey, shiftMonth, timeLabel, weekdayLetters } from './calendar.ts'
 import { freshState } from './state.ts'
 import { addExam } from './study.ts'
 
@@ -66,5 +66,33 @@ describe('what a day holds', () => {
     expect(monthSummary(s, 2026, 9)).toEqual({ minutes: 75, sessions: 3, studyDays: 2, exams: 1, due: 1 })
     expect(monthSummary(s, 2026, 10)).toEqual({ minutes: 0, sessions: 0, studyDays: 0, exams: 1, due: 0 })
     expect(monthSummary(s, 2026, 8).minutes).toBe(100)
+  })
+})
+
+describe('events on a day', () => {
+  const at = (d: number, h: number, mi = 0) => new Date(2026, 9, d, h, mi).getTime()
+  const DAY = 86_400_000
+  const events = [
+    { id: 'a', title: 'Evidence lecture', start: at(14, 10), end: at(14, 11, 30), allDay: false },
+    { id: 'b', title: 'reading week', start: at(14, 0), end: at(15, 0), allDay: true },
+    { id: 'c', title: 'late night', start: at(13, 23), end: at(14, 1), allDay: false },
+    { id: 'd', title: 'conference', start: at(13, 9), end: at(15, 17), allDay: false },
+    { id: 'e', title: 'tomorrow', start: at(15, 9), end: at(15, 10), allDay: false },
+    { id: 'f', title: 'two days', start: at(16, 0), end: at(16, 0) + 2 * DAY, allDay: true },
+  ]
+  it('finds what touches the day, all-day first, then by time', () => {
+    expect(eventsOn(events, '2026-10-14').map((e) => e.id)).toEqual(['b', 'd', 'c', 'a']) // the ones that began earlier come first
+    expect(eventsOn(events, '2026-10-15').map((e) => e.id)).toEqual(['d', 'e']) // the all-day one ended at midnight
+    expect(eventsOn(events, '2026-10-17').map((e) => e.id)).toEqual(['f'])
+    expect(eventsOn(events, '2026-10-18')).toEqual([])
+  })
+  it('says when, from the day’s point of view', () => {
+    const k = '2026-10-14'
+    expect(timeLabel(events[0], k, 'en-US')).toBe('10:00 AM – 11:30 AM')
+    expect(timeLabel(events[1], k, 'en-US')).toBe('all day')
+    expect(timeLabel(events[2], k, 'en-US')).toBe('until 1:00 AM')
+    expect(timeLabel(events[3], k, 'en-US')).toBe('all day')
+    expect(timeLabel(events[3], '2026-10-13', 'en-US')).toBe('from 9:00 AM')
+    expect(timeLabel({ id: 'x', title: 'due', start: at(14, 23, 59), end: at(14, 23, 59), allDay: false }, k, 'en-US')).toBe('11:59 PM')
   })
 })
