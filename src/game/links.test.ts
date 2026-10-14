@@ -4,7 +4,7 @@ import { cleanCourseName, fromCalendar, fromCanvas, importEvents, matchCourse, r
 import { addExam } from './study.ts'
 import { addCourse, draftCourse } from './shelf.ts'
 import { DEFAULT_REMINDERS, reminderPlan } from './reminders.ts'
-import { usesFahrenheit, weatherKind, weatherLine } from './weather.ts'
+import { bestPlace, parsePlace, usesFahrenheit, weatherKind, weatherLine } from './weather.ts'
 import { spotifyUri } from './music.ts'
 import { merge3 } from './merge.ts'
 import { dayKey } from './time.ts'
@@ -134,6 +134,26 @@ describe('little helpers', () => {
     expect(usesFahrenheit('en-US')).toBe(true)
     expect(usesFahrenheit('en-GB')).toBe(false)
   })
+  it('finds the Charlotte she meant', () => {
+    expect(parsePlace('Charlotte, NC')).toEqual({ name: 'Charlotte', hint: 'nc' })
+    expect(parsePlace('Charlotte NC')).toEqual({ name: 'Charlotte', hint: 'nc' })
+    expect(parsePlace('Paris, France')).toEqual({ name: 'Paris', hint: 'france' })
+    expect(parsePlace('  Boston ')).toEqual({ name: 'Boston', hint: '' })
+    expect(parsePlace('Le Mans')).toEqual({ name: 'Le Mans', hint: '' }) // "ns" is not a state
+    const hits = [
+      { name: 'Charlotte', admin1: 'Michigan', country: 'United States', country_code: 'US', latitude: 42.56, longitude: -84.84 },
+      { name: 'Charlotte', admin1: 'North Carolina', country: 'United States', country_code: 'US', latitude: 35.23, longitude: -80.84 },
+      { name: 'Paris', admin1: 'Île-de-France', country: 'France', country_code: 'FR', latitude: 48.85, longitude: 2.35 },
+    ]
+    expect(bestPlace(hits, 'nc')?.admin1).toBe('North Carolina')
+    expect(bestPlace(hits, 'north carolina')?.admin1).toBe('North Carolina')
+    expect(bestPlace(hits, 'france')?.name).toBe('Paris')
+    expect(bestPlace(hits, 'fr')?.name).toBe('Paris')
+    expect(bestPlace(hits, '')?.admin1).toBe('Michigan') // no hint: the geocoder's first
+    expect(bestPlace(hits, 'tx')?.admin1).toBe('Michigan') // no such place: still the first
+    expect(bestPlace([], 'nc')).toBeUndefined()
+  })
+
   it('reads Spotify links', () => {
     expect(spotifyUri('https://open.spotify.com/playlist/37i9dQZF1DWWQRwui0ExPn?si=abc')).toBe('spotify:playlist:37i9dQZF1DWWQRwui0ExPn')
     expect(spotifyUri('https://open.spotify.com/intl-fr/album/4aawyAB9vmqN3uQ7FjRGTy')).toBe('spotify:album:4aawyAB9vmqN3uQ7FjRGTy')

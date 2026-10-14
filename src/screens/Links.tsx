@@ -12,6 +12,7 @@ import { nativePlatform, type CalendarInfo, type MusicStatus, type NotifyStatus,
 import { askToRemind, notifyStatus, remindersAvailable, syncReminders } from '../reminders.ts'
 import { CardHead, Modal, toast } from '../ui/bits.tsx'
 import { findPlace, herePlace, refreshWeather, useWeather, type Place } from '../weather.ts'
+import { cantReach } from '../preview.ts'
 
 const SCHOOLISH = /school|class|law|uni|college|course|study|exam|lecture|semester|term/i
 
@@ -56,7 +57,7 @@ export function CalendarSection() {
         toast(n ? `${n} from your calendar are on the exams list ✓` : 'connected! pick the calendars with your classes in them ✓')
       }
     } catch {
-      setProblem('couldn’t reach your calendar just now.')
+      setProblem(cantReach('your calendar', 'couldn’t reach your calendar just now.'))
     } finally {
       setBusy(false)
     }
@@ -339,7 +340,7 @@ export function WeatherSection() {
       set(p)
       setText('')
     } catch {
-      setProblem('couldn’t look that up right now. are you online?')
+      setProblem(cantReach('the weather service', 'couldn’t look that up right now. are you online?'))
     } finally {
       setBusy(false)
     }

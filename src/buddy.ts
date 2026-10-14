@@ -4,6 +4,7 @@
 // her mailbox code, and keeps a daily cap, so the app itself holds no secret.
 import { getGame } from './game/store.ts'
 import { FUNCTIONS_URL, SUPABASE_KEY } from './game/remote.ts'
+import { cantReach } from './preview.ts'
 
 export type BuddyProblem = 'no-mailbox' | 'offline' | 'not-set-up' | 'limit' | 'refused' | 'too-long' | 'bad-file' | 'server'
 
@@ -18,7 +19,7 @@ export class BuddyError extends Error {
 export function buddyProblem(e: unknown, fox: string): string {
   const p = e instanceof BuddyError ? e.problem : 'server'
   if (p === 'no-mailbox') return `connect your mailbox in settings first: it’s how ${fox} knows it’s you.`
-  if (p === 'offline') return `couldn’t reach ${fox}’s desk. are you online?`
+  if (p === 'offline') return cantReach(`${fox}’s desk`, `couldn’t reach ${fox}’s desk. are you online?`)
   if (p === 'not-set-up') return `the study buddy isn’t switched on for this app yet (whoever set it up needs to add a Claude API key, see the README).`
   if (p === 'limit') return `${fox} has done a lot of thinking today. more tomorrow?`
   if (p === 'refused') return `${fox} couldn’t help with that one. try different notes?`

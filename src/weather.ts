@@ -2,7 +2,7 @@
 // Where she is comes from a place name she types or the browser's location;
 // only the coordinates are kept, and only on her devices.
 import { useSyncExternalStore } from 'react'
-import { weatherKind, type WeatherKind } from './game/weather.ts'
+import { bestPlace, parsePlace, weatherKind, type PlaceHit, type WeatherKind } from './game/weather.ts'
 import type { WeatherPlace } from './game/state.ts'
 
 export interface Conditions {
@@ -83,18 +83,18 @@ export interface Place {
   lon: number
 }
 
-/** "boston" → Boston, Massachusetts and its coordinates. */
+/** "boston", "Charlotte, NC", "Paris, France" → the place and its coordinates. */
 export async function findPlace(text: string): Promise<Place | null> {
-  const name = text.trim()
+  const { name, hint } = parsePlace(text)
   if (!name) return null
-  const q = new URLSearchParams({ name, count: '1', language: 'en', format: 'json' })
+  const q = new URLSearchParams({ name, count: '8', language: 'en', format: 'json' })
   const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${q}`, { signal: AbortSignal.timeout(10_000) })
   if (!res.ok) throw new Error('offline')
-  const data = (await res.json()) as { results?: { name: string; admin1?: string; country_code?: string; latitude: number; longitude: number }[] }
-  const r = data.results?.[0]
+  const data = (await res.json()) as { results?: PlaceHit[] }
+  const r = bestPlace(data.results ?? [], hint)
   if (!r) return null
-  const where = [r.name, r.admin1, r.country_code].filter(Boolean)
-  return { name: where.slice(0, 2).join(', ').slice(0, 40), lat: Math.round(r.latitude * 100) / 100, lon: Math.round(r.longitude * 100) / 100 }
+  const where = [r.name, r.admin1 ?? r.country].filter(Boolean)
+  return { name: where.join(', ').slice(0, 40), lat: Math.round(r.latitude * 100) / 100, lon: Math.round(r.longitude * 100) / 100 }
 }
 
 /** Where the browser says she is (asks once). */

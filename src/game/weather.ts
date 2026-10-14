@@ -31,3 +31,44 @@ export function weatherLine(kind: WeatherKind, tempC: number, fahrenheit: boolea
 
 /** Rain outside goes well with rain in the headphones. */
 export const ambientFor = (kind: WeatherKind): 'rain' | null => (kind === 'rain' || kind === 'drizzle' || kind === 'storm' ? 'rain' : null)
+
+// ─── finding a place by name ────────────────────────────────────────────────
+
+const US_STATES: Record<string, string> = {
+  al: 'alabama', ak: 'alaska', az: 'arizona', ar: 'arkansas', ca: 'california', co: 'colorado', ct: 'connecticut', de: 'delaware', fl: 'florida', ga: 'georgia',
+  hi: 'hawaii', id: 'idaho', il: 'illinois', in: 'indiana', ia: 'iowa', ks: 'kansas', ky: 'kentucky', la: 'louisiana', me: 'maine', md: 'maryland',
+  ma: 'massachusetts', mi: 'michigan', mn: 'minnesota', ms: 'mississippi', mo: 'missouri', mt: 'montana', ne: 'nebraska', nv: 'nevada', nh: 'new hampshire',
+  nj: 'new jersey', nm: 'new mexico', ny: 'new york', nc: 'north carolina', nd: 'north dakota', oh: 'ohio', ok: 'oklahoma', or: 'oregon', pa: 'pennsylvania',
+  ri: 'rhode island', sc: 'south carolina', sd: 'south dakota', tn: 'tennessee', tx: 'texas', ut: 'utah', vt: 'vermont', va: 'virginia', wa: 'washington',
+  wv: 'west virginia', wi: 'wisconsin', wy: 'wyoming', dc: 'district of columbia',
+}
+
+/** "Charlotte, NC" → the town to search for, and a hint about where ("nc", "north carolina", "france"). */
+export function parsePlace(text: string): { name: string; hint: string } {
+  const t = text.trim().replace(/\s+/g, ' ')
+  const comma = t.indexOf(',')
+  if (comma > 0) return { name: t.slice(0, comma).trim(), hint: t.slice(comma + 1).trim().toLowerCase() }
+  // "Charlotte NC": a two-letter tail is a state
+  const m = /^(.+?)\s+([A-Za-z]{2})$/.exec(t)
+  if (m && US_STATES[m[2].toLowerCase()]) return { name: m[1], hint: m[2].toLowerCase() }
+  return { name: t, hint: '' }
+}
+
+export interface PlaceHit {
+  name: string
+  admin1?: string
+  country?: string
+  country_code?: string
+  latitude: number
+  longitude: number
+  population?: number
+}
+
+/** Of several places with that name, the one in the state or country she meant; else the first (the geocoder puts the biggest first). */
+export function bestPlace<T extends PlaceHit>(hits: T[], hint: string): T | undefined {
+  if (!hits.length) return undefined
+  if (!hint) return hits[0]
+  const want = [hint, US_STATES[hint] ?? ''].filter(Boolean)
+  const matches = (h: T) => [h.admin1, h.country, h.country_code].some((v) => v && want.some((w) => v.toLowerCase() === w || v.toLowerCase().includes(w)))
+  return hits.find(matches) ?? hits[0]
+}

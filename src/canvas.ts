@@ -9,6 +9,7 @@ import { addCourse, draftCourse } from './game/shelf.ts'
 import { getGame, setGame } from './game/store.ts'
 import { FUNCTIONS_URL, SUPABASE_KEY } from './game/remote.ts'
 import { getLinks, patchLinks } from './links.ts'
+import { cantReach } from './preview.ts'
 
 export type CanvasProblem = 'no-mailbox' | 'not-connected' | 'offline' | 'bad-token' | 'bad-url' | 'limit' | 'server'
 
@@ -24,7 +25,7 @@ export function canvasProblem(e: unknown): string {
   const p = e instanceof CanvasError ? e.problem : 'server'
   if (p === 'no-mailbox') return 'connect your mailbox first (mailbox & sync, above): it’s what lets the relay know it’s you.'
   if (p === 'not-connected') return 'connect Canvas first.'
-  if (p === 'offline') return 'couldn’t reach Canvas. are you online?'
+  if (p === 'offline') return cantReach('Canvas', 'couldn’t reach Canvas. are you online?')
   if (p === 'bad-token') return 'Canvas didn’t accept that token. make a new one in Canvas → Account → Settings → New Access Token.'
   if (p === 'bad-url') return 'that doesn’t look like a Canvas address. it’s usually something like https://canvas.yourschool.edu'
   if (p === 'limit') return 'that’s a lot of syncing for one day. try again tomorrow?'
