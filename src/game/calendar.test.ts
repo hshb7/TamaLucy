@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dayInfo, daysInMonth, dayTitle, keyOf, monthGrid, monthSummary, monthTitle, parseKey, shiftMonth, weekdayLetters } from './calendar.ts'
+import { dayInfo, daysInMonth, dayTitle, keyOf, monthGrid, monthNames, monthSummary, monthTitle, parseKey, shiftMonth, weekdayLetters } from './calendar.ts'
 import { freshState } from './state.ts'
 import { addExam } from './study.ts'
 
@@ -36,6 +36,7 @@ describe('month grid', () => {
     expect(weekdayLetters(0, 'en-US')).toEqual(['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'])
     expect(weekdayLetters(1, 'en-US')[0]).toBe('Mo')
     expect(monthTitle(2026, 9, 'en-US')).toBe('October 2026')
+    expect(monthNames('en-US')).toEqual(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
     expect(dayTitle('2026-10-14', 'en-US')).toBe('Wednesday, October 14')
   })
 })

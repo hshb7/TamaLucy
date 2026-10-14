@@ -268,7 +268,10 @@ underneath a day she studied (longer for longer), and her birthday gets a
 lavender one. Tapping a day shows what's on it, with the class's colour and
 where it came from (typed, her calendar, Canvas), lets her take it off, and adds
 an exam or a deadline to that day without typing a date. A line under the grid
-sums up the month: hours over how many days, exams, deadlines.
+sums up the month: hours over how many days, exams, deadlines. To get around:
+the arrows, a swipe across the grid, two fingers sideways on a trackpad, the
+month's name (a month and year picker), or the keyboard (arrows walk the days,
+Page Up/Down turn the months, with Shift the years, Home is today).
 
 ### Your calendar
 Exams and deadlines come straight from the calendars she picks: anything with

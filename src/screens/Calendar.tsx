@@ -1,7 +1,7 @@
 // Her term on one page: a month with every exam and deadline on its day, the
 // days she studied, and a place to add the next one by tapping a day.
-import { useState } from 'react'
-import { dayInfo, dayTitle, monthGrid, monthSummary, monthTitle, parseKey, shiftMonth, weekdayLetters } from '../game/calendar.ts'
+import { useEffect, useRef, useState } from 'react'
+import { dayInfo, daysInMonth, dayTitle, keyOf, monthGrid, monthNames, monthSummary, monthTitle, parseKey, shiftMonth, weekdayLetters } from '../game/calendar.ts'
 import { removeExam } from '../game/external.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { addExam, daysUntil, whenLabel } from '../game/study.ts'
@@ -24,6 +24,12 @@ export function CalendarPanel({ onAddClass }: { onAddClass?: () => void }) {
     return { year, month }
   })
   const [picked, setPicked] = useState(today)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const grid = useRef<HTMLDivElement>(null)
+  const touch = useRef<{ x: number; y: number } | null>(null)
+  const wheelAt = useRef(0)
+  /** After a key moved the selection, keep the keyboard on the new day. */
+  const refocus = useRef(false)
   const weeks = monthGrid(shown.year, shown.month, WEEK_START)
   const sum = monthSummary(game, shown.year, shown.month)
   const onThisMonth = parseKey(today).year === shown.year && parseKey(today).month === shown.month
@@ -44,6 +50,60 @@ export function CalendarPanel({ onAddClass }: { onAddClass?: () => void }) {
     setShown({ year, month })
     setPicked(today)
   }
+  useEffect(() => {
+    if (!refocus.current) return
+    refocus.current = false
+    grid.current?.querySelector<HTMLElement>('.cal-day.on')?.focus()
+  }, [picked, shown])
+
+  // a swipe across the grid turns the page (a vertical one still scrolls)
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]
+    touch.current = { x: t.clientX, y: t.clientY }
+  }
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!touch.current) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - touch.current.x
+    const dy = t.clientY - touch.current.y
+    touch.current = null
+    if (Math.abs(dx) > 40 && Math.abs(dx) > 1.5 * Math.abs(dy)) go(dx < 0 ? 1 : -1)
+  }
+  // two fingers sideways on a trackpad, too
+  const onWheel = (e: React.WheelEvent) => {
+    if (Math.abs(e.deltaX) < 24 || Math.abs(e.deltaX) < Math.abs(e.deltaY)) return
+    const t = performance.now()
+    if (t - wheelAt.current < 500) return
+    wheelAt.current = t
+    go(e.deltaX > 0 ? 1 : -1)
+  }
+  // arrow keys walk the days, page up/down the months (with shift, the years), home is today
+  const onKey = (e: React.KeyboardEvent) => {
+    const tag = (e.target as HTMLElement).tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return
+    let by = 0
+    if (e.key === 'ArrowLeft') by = -1
+    else if (e.key === 'ArrowRight') by = 1
+    else if (e.key === 'ArrowUp') by = -7
+    else if (e.key === 'ArrowDown') by = 7
+    else if (e.key === 'PageUp' || e.key === 'PageDown') {
+      // the same day a month (or a year) along, so the keyboard stays on the page
+      e.preventDefault()
+      const { year, month, day } = parseKey(picked)
+      const t = shiftMonth(year, month, (e.key === 'PageUp' ? -1 : 1) * (e.shiftKey ? 12 : 1))
+      refocus.current = true
+      return pick(keyOf(t.year, t.month, Math.min(day, daysInMonth(t.year, t.month))), false)
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      refocus.current = true
+      return backToToday()
+    } else return
+    e.preventDefault()
+    const { year, month, day } = parseKey(picked)
+    const d = new Date(year, month, day + by)
+    refocus.current = true
+    pick(dayKey(d.getTime()), d.getFullYear() === shown.year && d.getMonth() === shown.month)
+  }
 
   const summary = [
     sum.minutes ? `${formatMinutes(sum.minutes)} over ${sum.studyDays} ${sum.studyDays === 1 ? 'day' : 'days'}` : '',
@@ -53,17 +113,48 @@ export function CalendarPanel({ onAddClass }: { onAddClass?: () => void }) {
 
   return (
     <>
-      <section className="px-box card cal">
+      <section className="px-box card cal" onKeyDown={onKey}>
         <div className="cal-head">
           <button className="btn btn-small" onClick={() => go(-1)} aria-label="previous month">
             ‹
           </button>
-          <h2 aria-live="polite">{monthTitle(shown.year, shown.month)}</h2>
+          <h2 aria-live="polite">
+            <button className={`cal-title ${pickerOpen ? 'open' : ''}`} aria-expanded={pickerOpen} onClick={() => setPickerOpen(!pickerOpen)}>
+              {monthTitle(shown.year, shown.month)} <span aria-hidden="true">▾</span>
+            </button>
+          </h2>
           <button className="btn btn-small" onClick={() => go(1)} aria-label="next month">
             ›
           </button>
         </div>
-        <div className="cal-grid" role="grid" aria-label={monthTitle(shown.year, shown.month)}>
+        {pickerOpen && (
+          <div className="cal-picker">
+            <div className="cal-head">
+              <button className="btn btn-small" onClick={() => setShown((m) => ({ ...m, year: m.year - 1 }))} aria-label="previous year">
+                ‹
+              </button>
+              <b>{shown.year}</b>
+              <button className="btn btn-small" onClick={() => setShown((m) => ({ ...m, year: m.year + 1 }))} aria-label="next year">
+                ›
+              </button>
+            </div>
+            <div className="cal-months">
+              {monthNames().map((name, i) => (
+                <button
+                  key={i}
+                  className={`chip-btn ${i === shown.month ? 'on' : ''}`}
+                  onClick={() => {
+                    setShown((m) => ({ ...m, month: i }))
+                    setPickerOpen(false)
+                  }}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div ref={grid} className="cal-grid" role="grid" aria-label={monthTitle(shown.year, shown.month)} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onWheel={onWheel}>
           {weekdayLetters(WEEK_START).map((w, i) => (
             <span key={i} className="cal-dow" role="columnheader">
               {w}
@@ -86,6 +177,7 @@ export function CalendarPanel({ onAddClass }: { onAddClass?: () => void }) {
                 role="gridcell"
                 aria-selected={picked === d.key}
                 aria-label={`${dayTitle(d.key)}${marks.length ? ': ' + marks.join(', ') : ''}`}
+                tabIndex={picked === d.key ? 0 : -1}
                 className={`cal-day ${d.inMonth ? '' : 'out'} ${d.key === today ? 'today' : ''} ${picked === d.key ? 'on' : ''} ${past ? 'past' : ''}`}
                 onClick={() => pick(d.key, d.inMonth)}
               >

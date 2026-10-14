@@ -2844,11 +2844,56 @@ label.check > span.cal-name {
   text-align: center;
   font-size: 20px;
 }
+.cal-head b {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-pixel);
+  font-size: 18px;
+}
+.cal-title {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.cal-title span {
+  display: inline-block;
+  font-size: 14px;
+  color: var(--ink-soft);
+  transition: transform 180ms ease;
+}
+.cal-title.open span {
+  transform: rotate(180deg);
+}
+.cal-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 8px;
+  border-bottom: 2px dashed #ecd7c4;
+}
+.cal-months {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.cal-months .chip-btn {
+  min-width: 0;
+  padding: 6px 2px;
+  font-size: 14px;
+}
+.cal-day:focus-visible {
+  outline: 2px solid var(--pink-deep);
+  outline-offset: -2px;
+}
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
   margin: 2px 0;
+  touch-action: pan-y; /* sideways swipes turn the month */
 }
 .cal-dow {
   text-align: center;

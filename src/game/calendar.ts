@@ -106,6 +106,12 @@ export function weekdayLetters(weekStart = 0, locale?: string): string[] {
   return out
 }
 
+/** The twelve months, short, in her language. */
+export function monthNames(locale?: string): string[] {
+  const fmt = new Intl.DateTimeFormat(locale, { month: 'short' })
+  return Array.from({ length: 12 }, (_, m) => fmt.format(new Date(2023, m, 1)))
+}
+
 /** "October 2026", in her language. */
 export const monthTitle = (year: number, month: number, locale?: string) => new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(year, month, 1))
 
