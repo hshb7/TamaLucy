@@ -317,7 +317,9 @@ connections.
 
 **Switching the sign-ins on.** Both are free and take a few minutes each. The
 "site URL" below is the exact address the web app is served from, with its
-trailing slash (for example `https://you.github.io/TamaLucy/`).
+trailing slash (for example `https://you.github.io/TamaLucy/`). The three
+public client ids live in `.env` at the repo root, so every build picks them up;
+only the Google client secret is kept out of the repo, in Supabase.
 
 - *Google*: at [console.cloud.google.com](https://console.cloud.google.com)
   make a project, enable the **Google Calendar API** (APIs & Services →
@@ -333,8 +335,7 @@ trailing slash (for example `https://you.github.io/TamaLucy/`).
   supabase secrets set GOOGLE_CLIENT_ID=… GOOGLE_CLIENT_SECRET=…
   supabase functions deploy google-auth --no-verify-jwt
   ```
-  and the app is built with `VITE_GOOGLE_CLIENT_ID=…` (or a repository
-  variable of that name for the Pages workflow). Google refuses to sign in
+  and the client id goes into `.env` as `VITE_GOOGLE_CLIENT_ID`. Google refuses to sign in
   inside an app's web view, which is why the apps use the device's calendar
   for Google instead.
 - *Microsoft*: at [entra.microsoft.com](https://entra.microsoft.com) (or the
@@ -343,9 +344,9 @@ trailing slash (for example `https://you.github.io/TamaLucy/`).
   pick **Single-page application** with the site URL. Copy the *Application
   (client) ID*; under API permissions add Microsoft Graph → delegated →
   `Calendars.ReadWrite`. No secret: a single-page registration allows the
-  code-for-tokens step straight from the browser. Build with
-  `VITE_MICROSOFT_CLIENT_ID=…` (or the repository variable). This one works in
-  the apps too, if she'd rather sign in than use the device's calendar.
+  code-for-tokens step straight from the browser. The client id goes into
+  `.env` as `VITE_MICROSOFT_CLIENT_ID`. This one works in the apps too, if she'd
+  rather sign in than use the device's calendar.
 
 ### Canvas
 If her school uses Canvas, assignments with a due date show up under exams and
@@ -412,9 +413,8 @@ To switch the Spotify link on, make a free app at
 *Create app*, any name, *Web API* ticked, and under *Redirect URIs* add the
 exact address the app is served from, with its trailing slash (for example
 `https://you.github.io/TamaLucy/`), plus `tamalucy://app/` for the native apps.
-Copy the *Client ID* (it's public; there's no secret in this flow) and build
-with `VITE_SPOTIFY_CLIENT_ID=…` in the environment, or set a repository
-variable of that name so the GitHub Pages workflow picks it up. A new Spotify
+Copy the *Client ID* (it's public; there's no secret in this flow) into `.env`
+as `VITE_SPOTIFY_CLIENT_ID`. A new Spotify
 app starts in development mode, where only people listed under *User
 Management* can sign in: add her Spotify account's email there. The link and
 the playlist stay on each device.
