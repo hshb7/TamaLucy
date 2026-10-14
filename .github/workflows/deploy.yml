@@ -30,6 +30,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          # optional, public client ids (repo Settings → Secrets and variables → Actions → Variables)
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+          VITE_SPOTIFY_CLIENT_ID: ${{ vars.VITE_SPOTIFY_CLIENT_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

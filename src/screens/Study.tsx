@@ -16,10 +16,11 @@ import { PixelIcon } from '../ui/PixelIcon.tsx'
 import { ReviewCards } from '../ui/ReviewCards.tsx'
 import { CareerPanel } from './Stats.tsx'
 import { BookshelfPanel } from './Bookshelf.tsx'
+import { CalendarPanel } from './Calendar.tsx'
 import { lastCourse } from '../game/shelf.ts'
 import { Header } from './Header.tsx'
 
-export type StudyTab = 'cards' | 'classes' | 'exams' | 'career'
+export type StudyTab = 'cards' | 'classes' | 'exams' | 'calendar' | 'career'
 
 export function StudyScreen({ onBack, initialTab = 'cards', addClass = false, onAddClass }: { onBack: () => void; initialTab?: StudyTab; addClass?: boolean; onAddClass?: () => void }) {
   const [tab, setTab] = useState<StudyTab>(initialTab)
@@ -28,7 +29,7 @@ export function StudyScreen({ onBack, initialTab = 'cards', addClass = false, on
       <Header title="study" onBack={onBack} />
       {/* on the Mac these live in the sidebar instead */}
       <div className="tabs study-tabs" role="tablist">
-        {(['cards', 'classes', 'exams', 'career'] as StudyTab[]).map((t) => (
+        {(['cards', 'classes', 'exams', 'calendar', 'career'] as StudyTab[]).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
             {t === 'cards' ? 'my cards' : t}
           </button>
@@ -37,6 +38,7 @@ export function StudyScreen({ onBack, initialTab = 'cards', addClass = false, on
       {tab === 'cards' && <CardsPanel onAddClass={onAddClass} />}
       {tab === 'classes' && <BookshelfPanel startAdding={addClass && initialTab === 'classes'} />}
       {tab === 'exams' && <ExamsPanel onAddClass={onAddClass} />}
+      {tab === 'calendar' && <CalendarPanel onAddClass={onAddClass} />}
       {tab === 'career' && <CareerPanel />}
     </main>
   )

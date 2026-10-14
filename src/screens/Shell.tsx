@@ -25,6 +25,21 @@ const HOUSE = sprite([
   '............',
 ])
 
+const CALENDAR = sprite([
+  '..o......o..',
+  'oooooooooooo',
+  'oppppppppppo',
+  'oppppppppppo',
+  'oooooooooooo',
+  'occcoccoccco',
+  'occcoccoccco',
+  'ocmmoccoccco',
+  'ocmmoccoccco',
+  'occcoccoccco',
+  'oooooooooooo',
+  '............',
+])
+
 const PHONE = sprite([
   '...oooooo...',
   '...occcco...',
@@ -51,6 +66,7 @@ const GROUPS: Group[] = [
       { view: 'classes', label: 'classes', icon: NEED_ICON_ART.books },
       { view: 'study', label: 'flashcards', icon: NEED_ICON_ART.card },
       { view: 'exams', label: 'exams', icon: NEED_ICON_ART.gavel },
+      { view: 'calendar', label: 'calendar', icon: CALENDAR },
       { view: 'career', label: 'career', icon: ICON_ART.chart },
     ],
   },

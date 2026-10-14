@@ -7,12 +7,13 @@ import { spotifyUri } from '../game/music.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { usesFahrenheit, weatherLine } from '../game/weather.ts'
 import { ago, patchLinks, useLinks } from '../links.ts'
-import { musicAvailable, musicStatus, playNow, playlists } from '../music.ts'
+import { musicAvailable, musicStatus, playNow, playlists, spotifyOnDevice } from '../music.ts'
+import { connectSpotify, disconnectSpotify, hasSpotify, openInSpotify, spotifyConnected, SpotifyError } from '../spotify.ts'
 import { nativePlatform, type CalendarInfo, type MusicStatus, type NotifyStatus, type Player, type Playlist } from '../native.ts'
 import { askToRemind, notifyStatus, remindersAvailable, syncReminders } from '../reminders.ts'
 import { CardHead, Modal, toast } from '../ui/bits.tsx'
 import { findPlace, herePlace, refreshWeather, useWeather, type Place } from '../weather.ts'
-import { cantReach } from '../preview.ts'
+import { cantReach, framed } from '../preview.ts'
 
 const SCHOOLISH = /school|class|law|uni|college|course|study|exam|lecture|semester|term/i
 
@@ -35,7 +36,7 @@ export function CalendarSection() {
         <CardHead title="your calendar" status="iPhone & Mac apps" />
         <p className="muted">
           exams and deadlines straight from your calendar, and finished sessions written back to it. this works in the iPhone and Mac apps (and on the web once a
-          Google Calendar key is set up, see the README).
+          Google Calendar key is set up, see the README). the ones you add yourself are on the calendar page already (study → calendar).
         </p>
       </section>
     )
@@ -394,7 +395,7 @@ export function WeatherSection() {
   )
 }
 
-/** A playlist that starts with the timer (the iPhone and Mac apps). */
+/** Music that starts with the timer: the device's own apps, or her Spotify account anywhere. */
 export function MusicSection() {
   const game = useGame()
   const { music } = useLinks()
@@ -403,6 +404,7 @@ export function MusicSection() {
   const [link, setLink] = useState('')
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState('')
+  const [linked, setLinked] = useState(spotifyConnected())
   const f = game.foxName
   const mac = nativePlatform === 'mac'
   useEffect(() => {
@@ -420,18 +422,35 @@ export function MusicSection() {
         <CardHead title="music with the timer" status="iPhone & Mac apps" />
         <p className="muted">
           in the iPhone and Mac apps, a playlist of yours can start when a focus session starts and pause when it ends (Apple Music on the iPhone; Music or Spotify
-          on the Mac).
+          on the Mac). to link a Spotify account here too, set up a Spotify key (see the README).
         </p>
       </section>
     )
 
+  const label = (p: Player) => (p === 'apple' ? (mac ? 'Music' : 'Apple Music') : 'Spotify')
+  const spot = music.player === 'spotify'
+  /** The Spotify app itself is on this Mac (asked directly; the account is only for listing playlists). */
+  const spotifyApp = spotifyOnDevice()
+
   const loadLists = async () => {
+    if (music.player === 'none') return
     setBusy(true)
     setProblem('')
-    const l = await playlists('apple')
-    setLists(l)
-    if (!l.length) setProblem(mac ? 'no playlists found in the Music app yet.' : 'no playlists found. is TamaLucy allowed to see your music library? (Settings → TamaLucy → Media & Apple Music)')
-    setBusy(false)
+    try {
+      const l = await playlists(music.player)
+      setLists(l)
+      if (!l.length)
+        setProblem(
+          spot ? 'no playlists on your Spotify yet.' : mac ? 'no playlists found in the Music app yet.' : 'no playlists found. is TamaLucy allowed to see your music library? (Settings → TamaLucy → Media & Apple Music)',
+        )
+    } catch (e) {
+      if (e instanceof SpotifyError && e.problem === 'not-linked') {
+        setLinked(false)
+        setProblem('Spotify let go of the link. connect it again?')
+      } else setProblem(cantReach('Spotify', 'couldn’t reach Spotify just now. are you online?'))
+    } finally {
+      setBusy(false)
+    }
   }
   const useLink = () => {
     const uri = spotifyUri(link)
@@ -439,12 +458,38 @@ export function MusicSection() {
     setProblem('')
     patchLinks('music', { playlist: uri, name: uri.replace('spotify:', '').replace(':', ' ') })
     setLink('')
+    setLists(null)
+  }
+  const connect = async () => {
+    if (framed) return setProblem(cantReach('Spotify’s sign-in page', ''))
+    setBusy(true)
+    setProblem('')
+    try {
+      await connectSpotify() // leaves for Spotify; App picks it up when she's back
+    } catch {
+      setProblem('couldn’t open Spotify’s sign-in page just now.')
+      setBusy(false)
+    }
+  }
+  const unlink = () => {
+    disconnectSpotify()
+    setLinked(false)
+    setLists(null)
+    toast('Spotify unlinked')
   }
   const test = async () => {
-    const ok = await playNow()
-    toast(ok ? '♪ playing' : 'hmm, nothing played. is the app installed and signed in?')
+    const r = await playNow()
+    if (r === 'playing') return toast('♪ playing')
+    if (r === 'no-device' || r === 'not-premium') {
+      toast(r === 'no-device' ? 'Spotify isn’t open anywhere right now. opening it for you ♪' : 'Spotify only lets Premium accounts be started from outside. opening it, press play there ♪', 5000)
+      return openInSpotify(music.playlist)
+    }
+    if (r === 'not-linked') {
+      setLinked(false)
+      return toast('Spotify let go of the link. connect it again?')
+    }
+    toast('hmm, nothing played. is the app installed and signed in?')
   }
-  const label = (p: Player) => (p === 'apple' ? (mac ? 'Music' : 'Apple Music') : 'Spotify')
 
   return (
     <section className="px-box card" id="music">
@@ -473,28 +518,39 @@ export function MusicSection() {
           <button className="btn btn-small" disabled={busy} onClick={loadLists}>
             {busy ? 'looking…' : music.name ? 'change playlist' : 'choose a playlist'}
           </button>
-          {lists && lists.length > 0 && (
-            <div className="chips chips-left">
-              {lists.slice(0, 60).map((pl) => (
-                <button
-                  key={pl.id}
-                  className={`chip-btn ${music.playlist === pl.id ? 'on' : ''}`}
-                  onClick={() => {
-                    patchLinks('music', { playlist: pl.id, name: pl.name })
-                    setLists(null)
-                  }}
-                >
-                  {pl.name}
-                  {pl.count ? <small> · {pl.count}</small> : null}
-                </button>
-              ))}
-            </div>
-          )}
         </>
       )}
-      {music.player === 'spotify' && players.includes('spotify') && (
+      {spot && players.includes('spotify') && (
         <>
-          <p>{music.name ? <>playing: <b>{music.name}</b></> : 'paste a Spotify link'}</p>
+          {hasSpotify() && !linked && (
+            <>
+              <p className="muted">
+                {spotifyApp
+                  ? 'link your Spotify account to pick straight from your playlists (or paste a link below).'
+                  : `link your Spotify account and ${f} starts your playlist wherever Spotify is open: this ${mac ? 'Mac' : 'phone'}, your laptop, a speaker.`}
+              </p>
+              <button className="btn" disabled={busy} onClick={connect}>
+                {busy ? 'opening Spotify…' : 'connect Spotify'}
+              </button>
+            </>
+          )}
+          {linked && (
+            <p>
+              linked to <b>{music.account || 'your Spotify'}</b> ✓{' '}
+              <button className="link inline" onClick={unlink}>
+                unlink
+              </button>
+            </p>
+          )}
+          {linked && !music.premium && !spotifyApp && (
+            <p className="muted">on Spotify free, {f} can’t press play from here: the playlist opens in Spotify and you press play.</p>
+          )}
+          <p>{music.name ? <>playlist: <b>{music.name}</b></> : linked ? 'pick a playlist' : 'paste a Spotify link'}</p>
+          {linked && (
+            <button className="btn btn-small" disabled={busy} onClick={loadLists}>
+              {busy ? 'looking…' : music.name ? 'change playlist' : 'choose a playlist'}
+            </button>
+          )}
           <form
             className="row"
             onSubmit={(e) => {
@@ -502,13 +558,30 @@ export function MusicSection() {
               useLink()
             }}
           >
-            <input value={link} placeholder="https://open.spotify.com/playlist/…" aria-label="spotify link" onChange={(e) => setLink(e.target.value)} />
+            <input value={link} placeholder={linked ? 'or paste a link…' : 'https://open.spotify.com/playlist/…'} aria-label="spotify link" onChange={(e) => setLink(e.target.value)} />
             <button className="btn btn-small" type="submit" disabled={!link.trim()}>
               use it
             </button>
           </form>
-          <p className="muted">in Spotify: ··· → Share → Copy link to playlist.</p>
+          {!linked && <p className="muted">in Spotify: ··· → Share → Copy link to playlist.</p>}
         </>
+      )}
+      {lists && lists.length > 0 && (
+        <div className="chips chips-left">
+          {lists.slice(0, 60).map((pl) => (
+            <button
+              key={pl.id}
+              className={`chip-btn ${music.playlist === pl.id ? 'on' : ''}`}
+              onClick={() => {
+                patchLinks('music', { playlist: pl.id, name: pl.name })
+                setLists(null)
+              }}
+            >
+              {pl.name}
+              {pl.count ? <small> · {pl.count}</small> : null}
+            </button>
+          ))}
+        </div>
       )}
       {music.player !== 'none' && music.playlist && (
         <>

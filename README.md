@@ -57,6 +57,7 @@ home screen, works offline, and needs no app store.
 - **Two career tracks for the fox:** *law* (Pre-Law Pup → 1L → … → Supreme Court Justice, with the law decor, law jokes, the law library and courthouse adventures) or *school* (Curious Kit → Freshman → … → Dean, with a trophy and a globe instead of the gavel and scales, and no law jokes). Same hours, same rungs.
 - **Quiz decks are opt-in.** Her own cards always come first; the built-in Legal Latin deck is a toggle in settings. She can also paste a whole list of cards at once (one per line, "front — back").
 - **Settings → my studies** changes any of it later: what she's studying, the track, the shelves, the decks.
+- **A calendar page** (*study → calendar*): the month with every exam and deadline on its day, the days she studied, and a tap on any day to add the next one.
 
 **Law school edition** (the *law* track)
 - **Career ladder:** every hour of focus moves the fox up: Pre-Law Pup, 1L, 2L, 3L, Law Graduate, Passed the Bar, Associate, Senior Associate, Partner, Judge, Supreme Court Justice. Each promotion gets a celebration and unlocks something (grad cap, tie, judge wig, diploma, gavel, scales of justice, wallpapers). On the *school* track the same rungs are Freshman to Dean.
@@ -260,6 +261,15 @@ calendar, Canvas), *focus* (leaving the app, distracting apps, breaks, music,
 notifications) and *account* (mailbox code, backups). Each card shows whether
 it's on, says what it needs, and works without the others.
 
+### The calendar page
+*Study → calendar* (its own entry in the Mac sidebar) is the month at a glance:
+a pink square on a day is an exam, a yellow one something due, a green line
+underneath a day she studied (longer for longer), and her birthday gets a
+lavender one. Tapping a day shows what's on it, with the class's colour and
+where it came from (typed, her calendar, Canvas), lets her take it off, and adds
+an exam or a deadline to that day without typing a date. A line under the grid
+sums up the month: hours over how many days, exams, deadlines.
+
 ### Your calendar
 Exams and deadlines come straight from the calendars she picks: anything with
 "exam", "final", "quiz", "due", "memo", "problem set"… in its name lands under
@@ -313,11 +323,35 @@ the real weather: rain, snow, fog, the odd storm. The forecast comes from
 coordinates are kept, and they sync with her fox so every device agrees.
 
 ### Music with the timer
-In the iPhone app, one of her Apple Music playlists starts when a focus session
-starts and pauses when time's up (it asks for *Media & Apple Music* access once).
-In the Mac app it's the Music app or Spotify, whichever she has, asked through
-AppleScript: macOS asks once whether TamaLucy may control the app. Spotify can't
-list playlists, so she pastes a link. The choice stays on each device.
+A playlist of hers starts when a focus session starts and pauses when time's
+up. Three ways in, and the card in *settings → focus* shows whichever apply:
+
+- **Spotify, linked to her account** (*connect Spotify*): works in the web app,
+  the iPhone app and the Mac app alike. She signs in at Spotify once, picks
+  from her own playlists, and the fox starts it on whatever device Spotify is
+  open on (the phone in her pocket, the laptop, a speaker), through Spotify's
+  Web API. Starting playback from outside needs Spotify Premium; on a free
+  account the *play it now* button opens the playlist in Spotify for her to
+  press play. Nothing opens another app while a session runs (she might be in
+  strict mode), it just says the playlist didn't start.
+- **Apple Music, in the iPhone app**: one of her library playlists (it asks for
+  *Media & Apple Music* access once).
+- **The Music app or the Spotify app, in the Mac app**, asked through
+  AppleScript: macOS asks once whether TamaLucy may control the app. With the
+  Spotify app on the Mac, a linked account is only used to list her playlists;
+  the app itself is asked to play, so it launches if it's closed.
+
+To switch the Spotify link on, make a free app at
+[developer.spotify.com/dashboard](https://developer.spotify.com/dashboard):
+*Create app*, any name, *Web API* ticked, and under *Redirect URIs* add the
+exact address the app is served from, with its trailing slash (for example
+`https://you.github.io/TamaLucy/`), plus `tamalucy://app/` for the native apps.
+Copy the *Client ID* (it's public; there's no secret in this flow) and build
+with `VITE_SPOTIFY_CLIENT_ID=…` in the environment, or set a repository
+variable of that name so the GitHub Pages workflow picks it up. A new Spotify
+app starts in development mode, where only people listed under *User
+Management* can sign in: add her Spotify account's email there. The link and
+the playlist stay on each device.
 
 ### Notifications
 The iPhone and Mac apps can let her know when the fox misses her (after two
@@ -352,7 +386,7 @@ src/
   gift.ts            ← personalise here
   art/               pixel art as code: fox, clothes, items, room (+ day/night)
   game/              state + save migration, needs & offline simulation, sessions,
-                     rewards, law career, flashcards, text content, tests
+                     rewards, law career, flashcards, the calendar month, text content, tests
   ui/                canvas renderer, the room (camera, pie menus), the fox's
                      free-will brain (brain.ts), shared widgets
   screens/           onboarding, home, focus, rewards, break, closet, album, stats, settings
@@ -366,7 +400,8 @@ src/
   canvas.ts          her school's Canvas: due dates and courses, through the relay
   buddy.ts           the study buddy: cards from notes, questions, answers checked
   weather.ts         the real weather at the window (Open-Meteo)
-  music.ts           the playlist that starts with the timer
+  music.ts           the playlist that starts with the timer (the device's apps, or her Spotify account)
+  spotify.ts         her Spotify account, linked with PKCE: playlists, play and pause wherever Spotify is open
   reminders.ts       hands the fox's reminder plan to the phone or the Mac
 scripts/
   make-icons.ts      renders the app icons from the fox sprite (npm run icons)

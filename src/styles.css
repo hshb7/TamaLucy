@@ -2831,3 +2831,159 @@ label.check > span.cal-name {
   background: var(--card);
   box-shadow: var(--outline);
 }
+
+/* ── calendar ─────────────────────────────────────────────────────────────── */
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cal-head h2 {
+  flex: 1;
+  text-align: center;
+  font-size: 20px;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin: 2px 0;
+}
+.cal-dow {
+  text-align: center;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  color: var(--ink-soft);
+  padding-bottom: 2px;
+}
+.cal-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 46px;
+  padding: 5px 2px 7px;
+  border: 0;
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px #f1e0cf;
+}
+.cal-day.out {
+  color: #cdb7a9;
+  background: transparent;
+  box-shadow: none;
+}
+.cal-day.out .mk,
+.cal-day.out .cal-study {
+  opacity: 0.45;
+}
+.cal-day.past:not(.out) {
+  background: #fff7ef;
+}
+.cal-day.today {
+  box-shadow: inset 0 0 0 2px var(--pink-deep);
+  font-weight: 700;
+}
+.cal-day.on {
+  background: var(--pink-light);
+  box-shadow: var(--outline);
+  z-index: 1;
+}
+.cal-num {
+  font-variant-numeric: tabular-nums;
+}
+.cal-marks {
+  display: flex;
+  gap: 3px;
+  min-height: 7px;
+}
+.mk {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgba(91, 58, 49, 0.35);
+}
+.mk-exam {
+  background: var(--pink-deep);
+}
+.mk-due {
+  background: var(--butter-deep);
+}
+.mk-bday {
+  background: var(--lav);
+}
+.cal-study {
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  transform: translateX(-50%);
+  height: 3px;
+  background: var(--sage-deep);
+}
+.cal-study.legend {
+  position: static;
+  display: inline-block;
+  width: 16px;
+  transform: none;
+  vertical-align: middle;
+}
+.cal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.cal-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.cal-legend .mk {
+  margin-left: 6px;
+}
+.cal-legend .mk:first-child {
+  margin-left: 0;
+}
+.cal-line {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cal-exam {
+  gap: 10px;
+}
+.cal-kind {
+  flex: none;
+  width: 10px;
+  height: 26px;
+  background: var(--pink-deep);
+  box-shadow: inset 0 0 0 1px rgba(91, 58, 49, 0.35);
+}
+.cal-kind.due {
+  background: var(--butter-deep);
+}
+.cal-add {
+  gap: 8px;
+}
+.cal-add .chips {
+  margin-bottom: 2px;
+}
+/* five study tabs on a phone: a little smaller so "calendar" fits */
+.study-tabs {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.study-tabs button {
+  font-size: 13px;
+  padding: 7px 0;
+}

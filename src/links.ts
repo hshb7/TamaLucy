@@ -26,6 +26,10 @@ export interface Links {
     autoplay: boolean
     /** Pause it when the session ends. */
     pauseAtEnd: boolean
+    /** Her Spotify display name, once the account is linked ('' = not linked). */
+    account: string
+    /** Spotify Premium can be started from outside; free can't (the playlist opens in Spotify instead). */
+    premium: boolean
   }
   canvas: {
     /** e.g. https://canvas.myschool.edu */
@@ -43,7 +47,7 @@ const KEY = 'tamalucy:links'
 
 const DEFAULTS: Links = {
   calendar: { on: false, calendars: [], logSessions: false, logCalendar: '', lastSync: 0 },
-  music: { player: 'none', playlist: '', name: '', autoplay: true, pauseAtEnd: true },
+  music: { player: 'none', playlist: '', name: '', autoplay: true, pauseAtEnd: true, account: '', premium: true },
   canvas: { base: '', token: '', user: '', lastSync: 0 },
   reminders: { on: false, ...DEFAULT_REMINDERS },
 }

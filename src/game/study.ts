@@ -133,11 +133,18 @@ export function dueCards(s: GameState, now: number, group?: CardGroup): StudyCar
 
 // ─── exams ──────────────────────────────────────────────────────────────────
 
-export function addExam(s: GameState, exam: { name: string; date: string; subject?: string; courseId?: string }, now: number): GameState {
+export function addExam(s: GameState, exam: { name: string; date: string; subject?: string; courseId?: string; kind?: Exam['kind'] }, now: number): GameState {
   const name = exam.name.trim()
   if (!name || !/^\d{4}-\d{2}-\d{2}$/.test(exam.date)) return s
   const course = s.courses.find((x) => x.id === exam.courseId)
-  const e: Exam = { id: uid(now, s.exams.length), name, date: exam.date, ...(course && { courseId: course.id }), subject: course?.name ?? exam.subject ?? '' }
+  const e: Exam = {
+    id: uid(now, s.exams.length),
+    name,
+    date: exam.date,
+    ...(course && { courseId: course.id }),
+    subject: course?.name ?? exam.subject ?? '',
+    ...(exam.kind === 'due' && { kind: 'due' as const }),
+  }
   return { ...s, exams: [...s.exams, e].sort((a, b) => a.date.localeCompare(b.date)) }
 }
 

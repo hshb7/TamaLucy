@@ -29,10 +29,11 @@ import { isNativeApp, native, nativePlatform, onNative } from './native.ts'
 import { logSession, syncCalendarIfStale } from './calendar.ts'
 import { syncCanvasIfStale } from './canvas.ts'
 import { pauseAfterSession, playForSession } from './music.ts'
+import { finishSpotifyLogin } from './spotify.ts'
 import { startReminderSync } from './reminders.ts'
 import { refreshWeather } from './weather.ts'
 
-export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'study' | 'classes' | 'career' | 'exams' | 'settings' | 'widget'
+export type View = 'home' | 'break' | 'wardrobe' | 'decor' | 'album' | 'study' | 'classes' | 'career' | 'exams' | 'calendar' | 'settings' | 'widget'
 
 export default function App() {
   const game = useGame()
@@ -82,17 +83,23 @@ export default function App() {
   const lastStart = useRef(0)
   useEffect(() => {
     if (!isNativeApp) return
-    if (ses) {
-      native.focusStarted({ startedAt: ses.startedAt, endsAt: ses.endsAt, label: ses.label, fox: game.foxName })
-      // a brand-new session (not a paused one resuming): her music starts with the timer
-      if (ses.startedAt !== lastStart.current) void playForSession()
-      lastStart.current = ses.startedAt
-    } else if (hadSession.current) {
-      native.focusEnded(getGame().pending ? 'done' : 'gaveUp')
-      void pauseAfterSession()
-    }
-    hadSession.current = !!ses
+    if (ses) native.focusStarted({ startedAt: ses.startedAt, endsAt: ses.endsAt, label: ses.label, fox: game.foxName })
+    else if (hadSession.current) native.focusEnded(getGame().pending ? 'done' : 'gaveUp')
   }, [sesKey]) // only when the session itself starts, moves or ends
+
+  // Her music starts with the timer and pauses when it ends (any device, if she set that up)
+  useEffect(() => {
+    if (ses) {
+      // a brand-new session (not a paused one resuming)
+      if (ses.startedAt !== lastStart.current)
+        void playForSession().then((r) => {
+          if (r === 'no-device') toast('Spotify isn’t open anywhere, so the playlist didn’t start. press play yourself ♪', 5000)
+          else if (r === 'not-premium') toast('Spotify only lets Premium accounts be started from outside. press play in Spotify ♪', 5000)
+        })
+      lastStart.current = ses.startedAt
+    } else if (hadSession.current) void pauseAfterSession()
+    hadSession.current = !!ses
+  }, [sesKey])
 
   // The weather at the window: fresh every so often, for the place she set
   const { lat, lon } = game.weather
@@ -173,6 +180,13 @@ export default function App() {
     syncCalendarIfStale()
     syncCanvasIfStale()
     startReminderSync()
+    // back from Spotify's sign-in page: straight to the music card
+    void finishSpotifyLogin().then((r) => {
+      if (!r) return
+      setView('settings')
+      setSettingsTab('focus')
+      toast(r === 'linked' ? 'Spotify linked ✓ now pick a playlist' : 'hmm, Spotify didn’t let us in. try again?')
+    })
     const link = takeMailLink()
     if (link)
       connectMailbox(link).then(
@@ -253,7 +267,7 @@ export default function App() {
   else if (view === 'decor') screen = <DecorScreen onBack={() => setView('home')} onWidget={() => setView('widget')} />
   else if (view === 'widget') screen = <WidgetStudio onBack={() => setView('home')} />
   else if (view === 'album') screen = <Album onBack={() => setView('home')} />
-  else if (view === 'study' || view === 'classes' || view === 'career' || view === 'exams')
+  else if (view === 'study' || view === 'classes' || view === 'career' || view === 'exams' || view === 'calendar')
     // keyed so the Mac sidebar can switch its tabs
     screen = <StudyScreen key={view} onBack={() => setView('home')} initialTab={view === 'study' ? 'cards' : view} addClass={addClass} onAddClass={() => openShelf(true)} />
   else if (view === 'settings')
