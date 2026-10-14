@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { setGame, useGame } from '../game/store.ts'
 import { checkMail, connectMailbox, mailProblem } from '../mail.ts'
-import { toast } from '../ui/bits.tsx'
+import { CardHead, toast } from '../ui/bits.tsx'
 import { resetSync, syncNow, useSyncStatus } from '../sync.ts'
 
 /** Embedded previews (iframes) usually block network requests, so no mail gets through. */
@@ -56,7 +56,7 @@ export function MailboxSection() {
 
   return (
     <section className="px-box card mailbox">
-      <h2>mailbox &amp; sync</h2>
+      <CardHead title="mailbox & sync" status={game.mailbox ? 'connected ✓' : 'not connected'} on={!!game.mailbox} />
       {game.mailbox ? (
         <>
           <p>

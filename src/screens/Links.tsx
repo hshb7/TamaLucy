@@ -10,7 +10,7 @@ import { ago, patchLinks, useLinks } from '../links.ts'
 import { musicAvailable, musicStatus, playNow, playlists } from '../music.ts'
 import { nativePlatform, type CalendarInfo, type MusicStatus, type NotifyStatus, type Player, type Playlist } from '../native.ts'
 import { askToRemind, notifyStatus, remindersAvailable, syncReminders } from '../reminders.ts'
-import { Modal, toast } from '../ui/bits.tsx'
+import { CardHead, Modal, toast } from '../ui/bits.tsx'
 import { findPlace, herePlace, refreshWeather, useWeather, type Place } from '../weather.ts'
 
 const SCHOOLISH = /school|class|law|uni|college|course|study|exam|lecture|semester|term/i
@@ -31,7 +31,7 @@ export function CalendarSection() {
   if (!way)
     return (
       <section className="px-box card" id="calendar">
-        <h2>your calendar</h2>
+        <CardHead title="your calendar" status="iPhone & Mac apps" />
         <p className="muted">
           exams and deadlines straight from your calendar, and finished sessions written back to it. this works in the iPhone and Mac apps (and on the web once a
           Google Calendar key is set up, see the README).
@@ -80,12 +80,12 @@ export function CalendarSection() {
 
   return (
     <section className="px-box card" id="calendar">
-      <h2>your calendar</h2>
+      <CardHead title="your calendar" status={calendar.on ? 'on ✓' : 'off'} on={calendar.on} />
       {!calendar.on ? (
         <>
           <p className="muted">
-            exams and deadlines come straight from your calendar (anything with “exam”, “final”, “quiz”, “due”, “memo”… in its name), so you never type a date twice.
-            {way === 'device' ? ' it stays on this device.' : ' sign in with Google once per session.'}
+            anything in your calendar named like an exam or a deadline (“exam”, “final”, “quiz”, “due”, “memo”…) shows up under exams, so you never type a date
+            twice.{way === 'device' ? ' nothing leaves this device.' : ' sign in with Google once per session.'}
           </p>
           <button className="btn" disabled={busy} onClick={connect}>
             {busy ? 'connecting…' : 'connect my calendar'}
@@ -105,7 +105,7 @@ export function CalendarSection() {
                 {cals.map((c) => (
                   <label key={c.id} className="check">
                     <input type="checkbox" checked={calendar.calendars.includes(c.id)} onChange={(e) => toggle(c.id, e.target.checked)} />
-                    <span>
+                    <span className="cal-name">
                       {c.color && <span className="cal-dot" style={{ background: c.color }} />}
                       {c.title}
                     </span>
@@ -202,7 +202,7 @@ export function CanvasSection() {
 
   return (
     <section className="px-box card" id="canvas">
-      <h2>Canvas</h2>
+      <CardHead title="Canvas" status={connected ? 'connected ✓' : 'off'} on={connected} />
       {connected ? (
         <>
           <p>
@@ -298,7 +298,7 @@ export function BuddySection({ onStudy }: { onStudy?: () => void }) {
   const f = game.foxName
   return (
     <section className="px-box card" id="buddy">
-      <h2>study buddy ✨</h2>
+      <CardHead title="study buddy ✨" status={game.mailbox ? 'ready ✓' : 'needs your mailbox'} on={!!game.mailbox} />
       <p className="muted">
         paste your notes and {f} turns them into flashcards. or let {f} ask you questions about a class and check your answers. it lives under study → my cards.
       </p>
@@ -355,7 +355,7 @@ export function WeatherSection() {
   const fresh = w && Math.abs(w.lat - game.weather.lat) < 0.01 && Math.abs(w.lon - game.weather.lon) < 0.01
   return (
     <section className="px-box card" id="weather">
-      <h2>weather at the window</h2>
+      <CardHead title="weather at the window" status={on ? 'on ✓' : 'off'} on={on} />
       {on && (
         <p>
           {game.weather.place} ✓ <span className="muted">· {fresh ? weatherLine(w.kind, w.temp, usesFahrenheit(navigator.language)) : 'checking the sky…'}</span>
@@ -416,7 +416,7 @@ export function MusicSection() {
   if (!musicAvailable())
     return (
       <section className="px-box card" id="music">
-        <h2>music with the timer</h2>
+        <CardHead title="music with the timer" status="iPhone & Mac apps" />
         <p className="muted">
           in the iPhone and Mac apps, a playlist of yours can start when a focus session starts and pause when it ends (Apple Music on the iPhone; Music or Spotify
           on the Mac).
@@ -447,7 +447,7 @@ export function MusicSection() {
 
   return (
     <section className="px-box card" id="music">
-      <h2>music with the timer</h2>
+      <CardHead title="music with the timer" status={music.player !== 'none' && music.playlist ? 'on ✓' : 'off'} on={music.player !== 'none' && !!music.playlist} />
       <p className="muted">
         {!status
           ? 'looking for your music apps…'
@@ -557,7 +557,7 @@ export function RemindersSection() {
 
   return (
     <section className="px-box card" id="reminders">
-      <h2>notifications</h2>
+      <CardHead title="notifications" status={on ? 'on ✓' : 'off'} on={on} />
       {status?.state === 'denied' ? (
         <p className="muted">notifications are off for TamaLucy. turn them on in Settings → Notifications → TamaLucy and come back here.</p>
       ) : !on ? (

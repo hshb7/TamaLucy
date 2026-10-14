@@ -21,6 +21,16 @@ function MeterIcon({ icon }: { icon: string }) {
   return <PixelIcon sprite={s} scale={2} />
 }
 
+/** A card's title with, on the right, whether the thing is on. */
+export function CardHead({ title, status, on }: { title: ReactNode; status?: string; on?: boolean }) {
+  return (
+    <div className="card-head">
+      <h2>{title}</h2>
+      {status && <span className={`status ${on ? 'on' : ''}`}>{status}</span>}
+    </div>
+  )
+}
+
 export function Modal({ children, onClose, className = '' }: { children: ReactNode; onClose?: () => void; className?: string }) {
   useEffect(() => {
     if (!onClose) return

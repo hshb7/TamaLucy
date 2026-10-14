@@ -254,8 +254,11 @@ out of the repository and share them only with her.
 
 ## Connections 🔌
 
-Everything here is optional and lives in *Settings*. Each one says what it needs
-and works without the others.
+Everything here is optional and lives in *Settings*, which has four tabs: the
+fox (names, care, weather, widget), *study* (what she studies, the buddy, her
+calendar, Canvas), *focus* (leaving the app, distracting apps, breaks, music,
+notifications) and *account* (mailbox code, backups). Each card shows whether
+it's on, says what it needs, and works without the others.
 
 ### Your calendar
 Exams and deadlines come straight from the calendars she picks: anything with
