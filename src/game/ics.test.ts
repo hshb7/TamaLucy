@@ -117,10 +117,10 @@ describe('a whole feed', () => {
     expect(cal.name).toBe("Lucy's school")
     const lectures = cal.events.filter((e) => e.id === 'lec-1')
     expect(lectures.filter((e) => day(e.start) === '2026-10-12')).toHaveLength(0) // EXDATE
-    const moved = lectures.filter((e) => day(e.start) === '2026-10-14')
+    const moved = lectures.filter((e) => e.title === 'Evidence lecture (moved)')
     expect(moved).toHaveLength(1)
-    expect(moved[0].title).toBe('Evidence lecture (moved)')
-    expect(new Date(moved[0].start).getUTCHours()).toBe(18) // 14:00 New York
+    expect(moved[0].start).toBe(Date.UTC(2026, 9, 14, 18)) // 14:00 New York, wherever she is
+    expect(lectures.filter((e) => e.start === Date.UTC(2026, 9, 14, 14))).toHaveLength(0) // the 10:00 it replaced is gone
     expect(lectures.every((e) => e.recurring)).toBe(true)
     expect(lectures.filter((e) => day(e.start) === '2026-10-05')[0].end - lectures[0].start).toBe(90 * 60_000)
     expect(lectures.length).toBe(20) // Oct 5 → Dec 14, Mon+Wed (UNTIL is midnight before the last Wednesday), minus the skipped one; the moved one still counts
