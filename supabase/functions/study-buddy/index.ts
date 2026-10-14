@@ -20,6 +20,25 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const MODEL = Deno.env.get('BUDDY_MODEL') ?? 'claude-opus-5-5'
 const LIMIT = Number(Deno.env.get('BUDDY_DAILY_LIMIT') ?? 80)
 const MAX_NOTES = 12_000
+/** Attached pages (a PDF, photos of notes): how many, and how much base64 in all. */
+const MAX_FILES = 6
+const MAX_FILE_B64 = 10_000_000
+const MAX_TOTAL_B64 = 14_000_000
+const MEDIA = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+
+interface Attachment {
+  media: string
+  data: string
+}
+
+/** The PDF and photo blocks she attached, in the shape the API wants. */
+function attachments(files: Attachment[]): Anthropic.Beta.BetaContentBlockParam[] {
+  return files.map((f) =>
+    f.media === 'application/pdf'
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.data } }
+      : { type: 'image', source: { type: 'base64', media_type: f.media as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: f.data } },
+  )
+}
 
 type Task = 'cards' | 'ask' | 'check'
 
@@ -59,7 +78,10 @@ function prompt(task: Task, b: Record<string, unknown>): string {
   const subject = str(b.subject, 60) || 'their studies'
   if (task === 'cards') {
     const count = Math.min(30, Math.max(3, Number(b.count) || 15))
-    return `Make up to ${count} flashcards for the class "${subject}" from these notes. Each card: a short front (a term, a rule, a case, a question) and a back that answers it in one to three sentences. Use only what the notes say; skip anything trivial or repeated. Your name is ${fox}.\n\n<notes>\n${str(b.notes, MAX_NOTES)}\n</notes>`
+    const notes = str(b.notes, MAX_NOTES)
+    const pages = Array.isArray(b.files) && b.files.length > 0
+    const from = pages && notes ? 'the attached pages and the notes below' : pages ? 'the attached pages (read them carefully; they may be photos of handwritten notes)' : 'the notes below'
+    return `Make up to ${count} flashcards for the class "${subject}" from ${from}. Each card: a short front (a term, a rule, a case, a question) and a back that answers it in one to three sentences. Use only what the notes say; skip anything trivial or repeated. Your name is ${fox}.${notes ? `\n\n<notes>\n${notes}\n</notes>` : ''}`
   }
   if (task === 'ask') {
     const cards = (Array.isArray(b.cards) ? b.cards : []).slice(0, 40).map((c: Record<string, unknown>) => `- ${str(c.front, 120)}: ${str(c.back, 400)}`).join('\n')
@@ -86,7 +108,19 @@ Deno.serve(async (req) => {
   const code = str(body.code, 80)
   const task = body.task as Task
   if (!code || !(task in SCHEMAS)) return json({ error: 'bad-request' }, 400)
-  if (task === 'cards' && (typeof body.notes !== 'string' || body.notes.length > MAX_NOTES || body.notes.trim().length < 20)) return json({ error: 'too-long' }, 400)
+  let files: Attachment[] = []
+  if (task === 'cards') {
+    const raw = Array.isArray(body.files) ? (body.files as unknown[]) : []
+    if (raw.length > MAX_FILES) return json({ error: 'too-long' }, 400)
+    for (const f of raw) {
+      const a = f as Partial<Attachment> | null
+      if (!a || typeof a.media !== 'string' || !MEDIA.has(a.media) || typeof a.data !== 'string' || !a.data || a.data.length > MAX_FILE_B64 || /[^A-Za-z0-9+/=]/.test(a.data)) return json({ error: 'bad-file' }, 400)
+      files.push({ media: a.media, data: a.data })
+    }
+    if (files.reduce((n, f) => n + f.data.length, 0) > MAX_TOTAL_B64) return json({ error: 'too-long' }, 400)
+    const notes = typeof body.notes === 'string' ? body.notes : ''
+    if (notes.length > MAX_NOTES || (!files.length && notes.trim().length < 20)) return json({ error: 'too-long' }, 400)
+  }
 
   // her mailbox code is the login; the cap is per mailbox per day
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -103,7 +137,7 @@ Deno.serve(async (req) => {
       fallbacks: 'default',
       system: SYSTEM,
       output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMAS[task] } },
-      messages: [{ role: 'user', content: prompt(task, body) }],
+      messages: [{ role: 'user', content: [...attachments(files), { type: 'text', text: prompt(task, body) }] }],
     })
     if (res.stop_reason === 'refusal') return json({ error: 'refused' }, 422)
     const text = res.content.find((b) => b.type === 'text')?.text ?? ''

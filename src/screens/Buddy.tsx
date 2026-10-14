@@ -1,7 +1,8 @@
 // The study buddy: flashcards from her notes, and the fox asking questions.
 import { useRef, useState } from 'react'
 import { sfx } from '../audio.ts'
-import { askQuestion, buddyProblem, checkAnswer, makeCards, MAX_NOTES, type DraftCard, type Question, type Verdict } from '../buddy.ts'
+import { askQuestion, buddyProblem, checkAnswer, makeCards, MAX_NOTES, type Attachment, type DraftCard, type Question, type Verdict } from '../buddy.ts'
+import { MAX_FILES, appendNotes, importNotesFile, importProblem } from '../notesImport.ts'
 import { finishQuiz } from '../game/logic.ts'
 import { lastCourse } from '../game/shelf.ts'
 import { setGame, useGame } from '../game/store.ts'
@@ -22,15 +23,47 @@ export function MakeCards({ courseId, onClose, onAddClass }: { courseId: string;
   const [problem, setProblem] = useState('')
   const [drafts, setDrafts] = useState<DraftCard[] | null>(null)
   const [keep, setKeep] = useState<boolean[]>([])
+  const [files, setFiles] = useState<(Attachment & { pages?: number })[]>([])
+  const [importing, setImporting] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
   const f = game.foxName
   const course = game.courses.find((c) => c.id === picked)
   const subject = course?.name ?? (game.study.program || 'general')
+
+  /** Files she picked or dropped: text goes into the box, pages get attached. */
+  const addFiles = async (list: FileList | File[] | null) => {
+    if (!list?.length) return
+    setImporting(true)
+    setProblem('')
+    const problems: string[] = []
+    let text = notes
+    let attached = [...files]
+    for (const file of Array.from(list)) {
+      try {
+        const got = await importNotesFile(file)
+        if (got.kind === 'text') {
+          const r = appendNotes(text, got.text)
+          text = r.text
+          if (r.cut) problems.push(`${file.name}: took the first ${MAX_NOTES.toLocaleString()} characters, the rest is for another batch.`)
+        } else if (attached.length >= MAX_FILES) problems.push(`${file.name}: that’s enough pages for one batch (${MAX_FILES} files).`)
+        else attached = [...attached, { ...got.attachment, name: file.name, pages: got.pages }]
+      } catch (e) {
+        problems.push(importProblem(e, file.name))
+      }
+    }
+    setNotes(text)
+    setFiles(attached)
+    setProblem(problems.join(' '))
+    setImporting(false)
+    if (fileInput.current) fileInput.current.value = ''
+  }
+  const ready = notes.trim().length >= 20 || files.length > 0
 
   const make = async () => {
     setBusy(true)
     setProblem('')
     try {
-      const cards = await makeCards({ notes, subject, count })
+      const cards = await makeCards({ notes, subject, count, files })
       if (!cards.length) return setProblem(`${f} couldn’t find anything to make cards from. more notes?`)
       setDrafts(cards)
       setKeep(cards.map(() => true))
@@ -54,9 +87,51 @@ export function MakeCards({ courseId, onClose, onAddClass }: { courseId: string;
       <h2>cards from my notes ✨</h2>
       {!drafts ? (
         <>
-          <p className="muted">paste an outline, a case brief, a chapter summary… {f} picks out the terms, rules and questions worth remembering.</p>
+          <p className="muted">paste an outline, a case brief, a chapter summary, or bring in a file. {f} picks out the terms, rules and questions worth remembering.</p>
           <ClassPicker value={picked} onChange={setPicked} onAddClass={onAddClass} />
-          <textarea value={notes} rows={9} maxLength={MAX_NOTES} placeholder="your notes go here" aria-label="your notes" onChange={(e) => setNotes(e.target.value)} />
+          <textarea
+            value={notes}
+            rows={8}
+            maxLength={MAX_NOTES}
+            placeholder="your notes go here (or drop a file on this box)"
+            aria-label="your notes"
+            onChange={(e) => setNotes(e.target.value)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault()
+              void addFiles(e.dataTransfer.files)
+            }}
+          />
+          <div className="row import-row">
+            <button type="button" className="btn btn-small" disabled={importing} onClick={() => fileInput.current?.click()}>
+              {importing ? 'reading…' : 'import a file…'}
+            </button>
+            <span className="muted">txt, docx, pdf, or photos of your notes</span>
+          </div>
+          <input
+            ref={fileInput}
+            type="file"
+            hidden
+            multiple
+            aria-label="import notes"
+            accept=".txt,.md,.markdown,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+            onChange={(e) => void addFiles(e.target.files)}
+          />
+          {files.length > 0 && (
+            <ul className="attachments">
+              {files.map((a, i) => (
+                <li key={i}>
+                  <span>
+                    {a.kind === 'pdf' ? '📄' : '🖼'} {a.name ?? a.kind}
+                    {a.pages ? <small className="muted"> · {a.pages} page{a.pages === 1 ? '' : 's'}</small> : null}
+                  </span>
+                  <button type="button" className="icon-x" aria-label={`remove ${a.name ?? a.kind}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}>
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="field">
             <span>how many?</span>
             <div className="chips chips-left">
@@ -68,14 +143,15 @@ export function MakeCards({ courseId, onClose, onAddClass }: { courseId: string;
             </div>
           </div>
           <p className="muted">
-            {notes.length ? `${notes.length.toLocaleString()} characters` : 'nothing pasted yet'} · {f} reads only what you paste, and keeps none of it.
+            {notes.length ? `${notes.length.toLocaleString()} characters` : 'nothing pasted yet'}
+            {files.length ? ` + ${files.length} file${files.length === 1 ? '' : 's'}` : ''} · {f} reads only what you send, and keeps none of it.
           </p>
           {problem && <p className="error">{problem}</p>}
           <div className="row">
             <button type="button" className="btn" onClick={onClose}>
               cancel
             </button>
-            <button type="button" className="btn btn-pink" disabled={busy || notes.trim().length < 20} onClick={make}>
+            <button type="button" className="btn btn-pink" disabled={busy || importing || !ready} onClick={make}>
               {busy ? `${f} is reading…` : 'make cards'}
             </button>
           </div>

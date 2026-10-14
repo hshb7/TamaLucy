@@ -280,10 +280,13 @@ needs her mailbox code (so it isn't an open proxy). Deploy it with
 `supabase functions deploy canvas-proxy --no-verify-jwt`.
 
 ### Study buddy ✨
-Paste notes, an outline or a case brief and the fox turns them into flashcards
-(*study → my cards → ✨ cards from my notes*); or let it ask questions about a
-class and check her answers (*✨ Mochi asks*), with her own cards as the
-starting point. The thinking is done by Claude, called from the Edge Function
+Paste notes, an outline or a case brief, or bring in a file (*import a file…*,
+or drop one on the box): `.txt` and `.md` go straight in, a Word `.docx` has
+its text pulled out on the device, and a PDF (up to 40 pages) or photos of
+handwritten notes are sent along for the buddy to read. The fox turns it all
+into flashcards (*study → my cards → ✨ cards from my notes*); or let it ask
+questions about a class and check her answers (*✨ Mochi asks*), with her own
+cards as the starting point. The thinking is done by Claude, called from the Edge Function
 [`supabase/functions/study-buddy`](supabase/functions/study-buddy/index.ts), which
 holds the API key, checks her mailbox code, and keeps a daily cap (80 calls per
 mailbox by default; the table and function are in

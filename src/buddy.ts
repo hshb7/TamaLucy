@@ -5,7 +5,7 @@
 import { getGame } from './game/store.ts'
 import { FUNCTIONS_URL, SUPABASE_KEY } from './game/remote.ts'
 
-export type BuddyProblem = 'no-mailbox' | 'offline' | 'not-set-up' | 'limit' | 'refused' | 'too-long' | 'server'
+export type BuddyProblem = 'no-mailbox' | 'offline' | 'not-set-up' | 'limit' | 'refused' | 'too-long' | 'bad-file' | 'server'
 
 export class BuddyError extends Error {
   readonly problem: BuddyProblem
@@ -23,6 +23,7 @@ export function buddyProblem(e: unknown, fox: string): string {
   if (p === 'limit') return `${fox} has done a lot of thinking today. more tomorrow?`
   if (p === 'refused') return `${fox} couldn’t help with that one. try different notes?`
   if (p === 'too-long') return `that’s a lot of notes at once. try a smaller chunk (a few pages at most).`
+  if (p === 'bad-file') return `${fox} couldn’t read one of those files. pdf and photos work; try exporting anything else as pdf.`
   return `${fox} got a bit muddled. try again in a moment?`
 }
 
@@ -50,6 +51,7 @@ async function callBuddy<T>(task: string, body: Record<string, unknown>): Promis
   if (res.status === 429 || err === 'limit') throw new BuddyError('limit')
   if (err === 'refused') throw new BuddyError('refused')
   if (err === 'too-long') throw new BuddyError('too-long')
+  if (err === 'bad-file') throw new BuddyError('bad-file')
   if (err === 'no-mailbox' || err === 'wrong-code') throw new BuddyError('no-mailbox')
   throw new BuddyError('server', String(err ?? res.status))
 }
@@ -59,10 +61,19 @@ export interface DraftCard {
   back: string
 }
 
-/** Flashcards from pasted notes, an outline, a case brief. */
-export async function makeCards(o: { notes: string; subject: string; count: number }): Promise<DraftCard[]> {
+/** A PDF or a photo of her notes, sent along for the buddy to read. */
+export interface Attachment {
+  kind: 'pdf' | 'image'
+  media: 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+  /** base64 */
+  data: string
+  name?: string
+}
+
+/** Flashcards from pasted notes, an outline, a case brief, and/or attached pages. */
+export async function makeCards(o: { notes: string; subject: string; count: number; files?: Attachment[] }): Promise<DraftCard[]> {
   if (o.notes.length > MAX_NOTES) throw new BuddyError('too-long')
-  const r = await callBuddy<{ cards: DraftCard[] }>('cards', o)
+  const r = await callBuddy<{ cards: DraftCard[] }>('cards', { ...o, files: (o.files ?? []).map((f) => ({ kind: f.kind, media: f.media, data: f.data })) })
   return (r.cards ?? []).filter((c) => c.front?.trim() && c.back?.trim()).map((c) => ({ front: c.front.trim().slice(0, 120), back: c.back.trim().slice(0, 400) }))
 }
 
