@@ -19,7 +19,7 @@ export const hasGoogle = () => !!CLIENT_ID
 export const googleConnected = () => !!store.get()?.refresh
 
 /** Leave for Google's sign-in page. */
-export function connectGoogle(): Promise<void> {
+export function connectGoogle(): Promise<AuthReturn | null> {
   return startAuth('google', 'https://accounts.google.com/o/oauth2/v2/auth', {
     client_id: CLIENT_ID,
     scope: SCOPE,

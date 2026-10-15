@@ -205,6 +205,7 @@ targets:
       - path: App/AppSchemeHandler.swift
       - path: Shared/CalendarBridge.swift
       - path: Shared/Reminders.swift
+      - path: Shared/AuthSession.swift
       - path: Shared/Fox.xcassets
       - path: ../dist
         type: folder

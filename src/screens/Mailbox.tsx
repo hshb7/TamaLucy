@@ -1,7 +1,11 @@
 import { useState } from 'react'
+import { claimMailbox, signInWithGoogle, signOut, useAccount } from '../account.ts'
 import { setGame, useGame } from '../game/store.ts'
 import { checkMail, connectMailbox, mailProblem } from '../mail.ts'
+import { cantReach } from '../preview.ts'
+import { runSignIn } from '../signin.ts'
 import { CardHead, toast } from '../ui/bits.tsx'
+import { GoogleLogo } from '../ui/brands.tsx'
 import { resetSync, syncNow, useSyncStatus } from '../sync.ts'
 
 /** Embedded previews (iframes) usually block network requests, so no mail gets through. */
@@ -14,6 +18,41 @@ function ago(t: number) {
   if (min < 60) return `${min} min ago`
   const h = Math.floor(min / 60)
   return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`
+}
+
+/** Her account: sign in once and the fox follows her to any device, no code to type. */
+function AccountBlock() {
+  const game = useGame()
+  const acct = useAccount()
+  const [busy, setBusy] = useState(false)
+  const signIn = async () => {
+    if (framed) return toast(cantReach('Google’s sign-in page', ''), 5000)
+    setBusy(true)
+    try {
+      const res = await runSignIn(signInWithGoogle)
+      if (res) toast(res.message, 6000)
+    } finally {
+      setBusy(false)
+    }
+  }
+  if (acct)
+    return (
+      <p>
+        signed in as <b>{acct.email || acct.name || 'your Google account'}</b> ✓{' '}
+        <span className="muted">· {game.mailbox ? `${game.foxName} follows this account to any device: just sign in there.` : 'connect a mailbox below and it’ll follow this account too.'}</span>{' '}
+        <button className="link inline" onClick={() => void signOut().then(() => toast('signed out on this device'))}>
+          sign out
+        </button>
+      </p>
+    )
+  return (
+    <>
+      <p className="muted">sign in with Google and {game.foxName} follows you to any device: no code to type there.</p>
+      <button className="btn signin" disabled={busy} onClick={signIn}>
+        <GoogleLogo /> {busy ? 'signing in…' : 'sign in with Google'}
+      </button>
+    </>
+  )
 }
 
 /** Settings: connect her mailbox so letters from far away can find her. */
@@ -34,6 +73,8 @@ export function MailboxSection() {
       toast('mailbox connected! letters (and your fox) will find you here ♡')
       void checkMail(0)
       void syncNow()
+      // signed in already: this mailbox is hers now
+      void claimMailbox().catch(() => {})
     } catch (e) {
       setProblem(mailProblem(e))
     } finally {
@@ -56,7 +97,8 @@ export function MailboxSection() {
 
   return (
     <section className="px-box card mailbox">
-      <CardHead title="mailbox & sync" status={game.mailbox ? 'connected ✓' : 'not connected'} on={!!game.mailbox} />
+      <CardHead title="account, mailbox & sync" status={game.mailbox ? 'connected ✓' : 'not connected'} on={!!game.mailbox} />
+      <AccountBlock />
       {game.mailbox ? (
         <>
           <p>

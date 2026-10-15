@@ -20,7 +20,8 @@ import {
   useCalendarEvents,
 } from '../calendar.ts'
 import { useGame } from '../game/store.ts'
-import { googleNeedsMailbox, hasGoogle } from '../google.ts'
+import { connectGoogle, googleNeedsMailbox, hasGoogle } from '../google.ts'
+import { runSignIn } from '../signin.ts'
 import { ago, patchLinks, useLinks } from '../links.ts'
 import { connectMicrosoft, hasMicrosoft } from '../microsoft.ts'
 import { isNativeApp, nativePlatform, type CalendarInfo } from '../native.ts'
@@ -58,8 +59,17 @@ export function DeviceCalendarPanel() {
     setBusy(true)
     setProblem('')
     try {
+      if (way === 'google' && !calendar.on) {
+        // off to Google's page (the web) or into the sign-in sheet (the apps)
+        const res = await runSignIn(connectGoogle)
+        if (res) {
+          toast(res.message, 5000)
+          if (res.ok) setCals(await listCalendars())
+          setBusy(false)
+        }
+        return
+      }
       const a = await connectCalendar()
-      if (way === 'google' && !a.available) return // off to Google's page; App finishes the trip
       if (!a.authorized) {
         setProblem(way === 'device' ? `${f} wasn’t allowed to see your calendar. you can allow it in Settings → Privacy → Calendars.` : 'google didn’t let us in. try again?')
         return
@@ -184,7 +194,12 @@ export function MicrosoftPanel() {
     if (framed) return setProblem(cantReach('Microsoft’s sign-in page', ''))
     setBusy(true)
     try {
-      await connectMicrosoft() // off to Microsoft's page; App finishes the trip
+      const res = await runSignIn(connectMicrosoft) // off to Microsoft's page (the web) or into the sign-in sheet (the apps)
+      if (res) {
+        toast(res.message, 5000)
+        if (res.ok) setCals(await listMicrosoftCalendars())
+        setBusy(false)
+      }
     } catch {
       setProblem('couldn’t open Microsoft’s sign-in page just now.')
       setBusy(false)

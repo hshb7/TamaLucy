@@ -44,7 +44,7 @@ function save(t: Tokens | null) {
 export const spotifyConnected = () => !!tokens?.refresh
 
 /** Leave for Spotify's sign-in page; App finishes the trip when she's back. */
-export function connectSpotify(): Promise<void> {
+export function connectSpotify(): Promise<AuthReturn | null> {
   if (!CLIENT_ID) throw new Error('no spotify client id')
   return startAuth('spotify', `${ACCOUNTS}/authorize`, { client_id: CLIENT_ID, scope: SCOPE })
 }

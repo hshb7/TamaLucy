@@ -27,7 +27,8 @@ final class FocusBridge {
         case "widget.update": return updateWidget(body)
         case "haptic": haptic(body["style"] as? String ?? "light"); return true
         default:
-            // her calendar, her music, the fox's reminders
+            // a sign-in sheet, her calendar, her music, the fox's reminders
+            if let r = await AuthSession.handle(cmd, body) { return r }
             if let r = await CalendarBridge.handle(cmd, body) { return r }
             if let r = await MusicBridge.handle(cmd, body) { return r }
             if let r = await Reminders.handle(cmd, body) { return r }

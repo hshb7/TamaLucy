@@ -2,7 +2,9 @@
 // Microsoft: Authorization Code with PKCE. The app leaves for the provider's
 // page, she taps "allow", and the provider sends her back here with a code.
 // No secret lives in the app; a public client id is all it carries.
-export type OAuthProvider = 'spotify' | 'google' | 'microsoft'
+import { isNativeApp, native } from './native.ts'
+
+export type OAuthProvider = 'spotify' | 'google' | 'microsoft' | 'account'
 
 const TRIP_KEY = 'tamalucy:oauth'
 
@@ -11,6 +13,8 @@ interface Trip {
   verifier: string
   state: string
   at: number
+  /** Supabase's own authorize endpoint: it keeps no state of ours and sends back only ?code. */
+  plain?: boolean
 }
 
 export const b64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
@@ -26,21 +30,32 @@ export async function challenge(verifier: string): Promise<string> {
 /** Where a sign-in page sends her back: this very page. It has to be listed, exactly, in each provider's dashboard. */
 export const returnUrl = () => location.origin + location.pathname.replace(/index\.html$/, '')
 
-/** Leave for the provider's sign-in page; `takeAuthReturn` picks it up when she's back. */
-export async function startAuth(provider: OAuthProvider, authorizeUrl: string, params: Record<string, string>): Promise<void> {
+export interface StartOptions {
+  /** Supabase's authorize endpoint: `redirect_to`, a lowercase method, no state of ours. */
+  plain?: boolean
+}
+
+/**
+ * Off to the provider's sign-in page. On the web this leaves the page and
+ * resolves to null: `takeAuthReturn` picks the trip up when she's back. In the
+ * iPhone and Mac apps the page opens in the system's sign-in sheet and the
+ * answer comes straight back here, so this resolves to it.
+ */
+export async function startAuth(provider: OAuthProvider, authorizeUrl: string, params: Record<string, string>, opts: StartOptions = {}): Promise<AuthReturn | null> {
   const verifier = randomString(48)
   const state = randomString(12)
-  localStorage.setItem(TRIP_KEY, JSON.stringify({ provider, verifier, state, at: Date.now() } satisfies Trip))
+  const trip: Trip = { provider, verifier, state, at: Date.now(), plain: !!opts.plain }
+  const code_challenge = await challenge(verifier)
   const u = new URL(authorizeUrl)
-  u.search = new URLSearchParams({
-    ...params,
-    response_type: 'code',
-    redirect_uri: returnUrl(),
-    state,
-    code_challenge_method: 'S256',
-    code_challenge: await challenge(verifier),
-  }).toString()
+  u.search = new URLSearchParams(
+    opts.plain
+      ? { ...params, redirect_to: returnUrl(), code_challenge, code_challenge_method: 's256' }
+      : { ...params, response_type: 'code', redirect_uri: returnUrl(), state, code_challenge_method: 'S256', code_challenge },
+  ).toString()
+  if (isNativeApp) return fromCallback(await native.authOpen(u.toString()), trip)
+  localStorage.setItem(TRIP_KEY, JSON.stringify(trip))
   location.assign(u.toString())
+  return null
 }
 
 export interface AuthReturn {
@@ -48,6 +63,21 @@ export interface AuthReturn {
   /** The code to trade for tokens, or null when she said no (or something went wrong). */
   code: string | null
   verifier: string
+}
+
+/** What a callback URL (tamalucy://app/?code=…&state=…) brought back, checked against the trip. */
+function fromCallback(url: string, trip: Trip): AuthReturn {
+  let code: string | null = null
+  let state: string | null = null
+  try {
+    const u = new URL(url)
+    code = u.searchParams.get('code')
+    state = u.searchParams.get('state')
+  } catch {
+    // she closed the sheet
+  }
+  const ok = !!code && (trip.plain || state === trip.state)
+  return { provider: trip.provider, code: ok ? code : null, verifier: trip.verifier }
 }
 
 /** On load: if a sign-in page just sent her back, what it brought (and the address bar is tidy again). */
@@ -63,7 +93,8 @@ export function takeAuthReturn(): AuthReturn | null {
   if (!raw) return null
   const trip = JSON.parse(raw) as Trip
   const fresh = Date.now() - trip.at < 30 * 60_000
-  return { provider: trip.provider, code: code && state === trip.state && fresh ? code : null, verifier: trip.verifier }
+  const ok = !!code && fresh && (trip.plain || state === trip.state)
+  return { provider: trip.provider, code: ok ? code : null, verifier: trip.verifier }
 }
 
 // ── Tokens, kept on this device ──

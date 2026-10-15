@@ -76,7 +76,8 @@ final class FocusCenter: NSObject, NSMenuDelegate {
         case "blocking.choose": return chooseApps()
         case "haptic": return true // trackpads only buzz under a finger; nothing to do
         default:
-            // her calendar, Music or Spotify, the fox's reminders
+            // a sign-in sheet, her calendar, Music or Spotify, the fox's reminders
+            if let r = await AuthSession.handle(cmd, body) { return r }
             if let r = await CalendarBridge.handle(cmd, body) { return r }
             if let r = MacMusic.handle(cmd, body) { return r }
             if let r = await Reminders.handle(cmd, body) { return r }

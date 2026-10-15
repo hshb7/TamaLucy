@@ -8,6 +8,7 @@ import { usesFahrenheit, weatherLine } from '../game/weather.ts'
 import { ago, patchLinks, useLinks } from '../links.ts'
 import { musicAvailable, musicStatus, playNow, playlists, spotifyOnDevice } from '../music.ts'
 import { connectSpotify, disconnectSpotify, hasSpotify, openInSpotify, spotifyConnected, SpotifyError } from '../spotify.ts'
+import { runSignIn } from '../signin.ts'
 import { nativePlatform, type MusicStatus, type NotifyStatus, type Player, type Playlist } from '../native.ts'
 import { askToRemind, notifyStatus, remindersAvailable, syncReminders } from '../reminders.ts'
 import { CardHead, Modal, toast } from '../ui/bits.tsx'
@@ -344,7 +345,12 @@ export function MusicSection() {
     setBusy(true)
     setProblem('')
     try {
-      await connectSpotify() // leaves for Spotify; App picks it up when she's back
+      const res = await runSignIn(connectSpotify) // leaves for Spotify (the web) or opens the sign-in sheet (the apps)
+      if (res) {
+        toast(res.message, 5000)
+        setLinked(spotifyConnected())
+        setBusy(false)
+      }
     } catch {
       setProblem('couldn’t open Spotify’s sign-in page just now.')
       setBusy(false)

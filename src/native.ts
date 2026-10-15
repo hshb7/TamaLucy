@@ -50,7 +50,7 @@ export function onNative(event: 'broke', fn: () => void) {
   }
 }
 
-function call<T>(cmd: string, args: Record<string, unknown> = {}, fallback: T): Promise<T> {
+function call<T>(cmd: string, args: Record<string, unknown> = {}, fallback: T, patience = 60_000): Promise<T> {
   const h = handler()
   if (!h) return Promise.resolve(fallback)
   const id = nextId++
@@ -59,7 +59,7 @@ function call<T>(cmd: string, args: Record<string, unknown> = {}, fallback: T): 
     // a native side that never answers shouldn't hang the game
     setTimeout(() => {
       if (waiting.delete(id)) resolve(fallback)
-    }, 60_000)
+    }, patience)
     h.postMessage({ id, cmd, ...args })
   })
 }
@@ -137,6 +137,10 @@ const NO_MUSIC: MusicStatus = { available: false, players: [], authorized: false
 const NO_NOTIFY: NotifyStatus = { available: false, state: 'notasked' }
 
 export const native = {
+  /** Open a sign-in page in the system's sheet; resolves to the callback URL (tamalucy://app/?code=…), or '' if she closed it. */
+  authOpen(url: string) {
+    return call<string>('auth.open', { url }, '', 10 * 60_000)
+  },
   /**
    * A focus session is running (or its end time moved): show it in the
    * Dynamic Island, block her chosen apps until it ends, and schedule the

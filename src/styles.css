@@ -3224,3 +3224,18 @@ label.check > span.cal-name {
 .guide .cal-device > h3 {
   display: none;
 }
+
+/* "sign in with Google" */
+.btn.signin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.btn.signin svg {
+  width: 22px;
+  height: 22px;
+}
+.onboarding .or {
+  margin: 10px 0 0;
+}

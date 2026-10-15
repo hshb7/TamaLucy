@@ -188,6 +188,12 @@ export default function App() {
         if (r.provider === 'spotify') {
           setView('settings')
           setSettingsTab('focus')
+        } else if (r.provider === 'account') {
+          // onboarding shows itself while there's no fox; otherwise the account card
+          if (getGame().onboarded) {
+            setView('settings')
+            setSettingsTab('account')
+          }
         } else setView('calendar')
         toast(r.message, 5000)
       })

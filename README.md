@@ -165,7 +165,30 @@ built with Xcode and your Apple Developer account:
 Either way it's the same fox everywhere, website or app.
 
 ### One fox, every device
+**Sign in.** On any device, the first screen (and *settings → account*) has
+*sign in with Google*. On the device that already has her fox, signing in
+attaches the fox to her Google account; on a new device, signing in brings the
+fox over with everything: her classes, letters, exams, acorns, the lot. No
+code to type. The iPhone and Mac apps open the sign-in in the system's sheet
+(Google won't sign in inside an app's own web view), the web app goes to
+Google and comes back.
 
+Underneath, the account is bound to her mailbox (below): the sign-in fetches
+the mailbox code for the device, and the code does what it always did. The
+code remains the fallback, *or use my mailbox code*, for a device without an
+account, and `#mail=<code>` links still work.
+
+To switch the sign-in on, in the Supabase dashboard: *Authentication →
+Providers → Google*: enable it and paste the Google OAuth client id and secret
+(the same client as the calendar sign-in; add the callback URL shown there,
+`https://<project>.supabase.co/auth/v1/callback`, to that client's authorised
+redirect URIs in the Google Cloud console). Then *Authentication → URL
+configuration*: Site URL = the site URL, and under Redirect URLs the site URL
+and `tamalucy://app/`. The migration
+`supabase/migrations/20261015000000_accounts.sql` holds the binding table and
+the functions (`tl_claim_mailbox`, `tl_my_mailbox`).
+
+**The mailbox code, the manual way.** 
 Her mailbox code is her login. The fox lives in the cloud (the same small Supabase
 database as the letters), so signing in on a device is like logging into an account:
 her fox, its needs, acorns, clothes, letters, flashcards, classes, exams and stats are the same
@@ -457,6 +480,7 @@ src/
                      free-will brain (brain.ts), shared widgets
   screens/           onboarding, home, focus, rewards, break, closet, album, stats, settings
   write/             the post office (#write): writing and scheduling letters
+  account.ts         sign in with Google (Supabase Auth), bound to her mailbox: the fox follows her
   mail.ts            checks her mailbox and announces new letters
   sync.ts            one fox on every device: cloud save, sign-in, merging
   notify.ts          the end-of-session notification (Mac)

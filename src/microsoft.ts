@@ -17,7 +17,7 @@ const store = tokenStore('tamalucy:microsoft')
 export const hasMicrosoft = () => !!CLIENT_ID
 export const microsoftConnected = () => !!store.get()?.refresh
 
-export function connectMicrosoft(): Promise<void> {
+export function connectMicrosoft(): Promise<AuthReturn | null> {
   return startAuth('microsoft', `${AUTH}/authorize`, { client_id: CLIENT_ID, scope: SCOPE, response_mode: 'query', prompt: 'select_account' })
 }
 

@@ -6,8 +6,13 @@ import { getGame, setGame, useGame } from '../game/store.ts'
 import { MAX_SHELVES, STUDY_PRESETS, applyPreset, setRungs, shelvesFromNames, tagFor, type StudyPreset } from '../game/studySetup.ts'
 import { ladder } from '../game/career.ts'
 import { RungsFields } from './Rungs.tsx'
+import { signInWithGoogle } from '../account.ts'
 import { connectMailbox, mailProblem } from '../mail.ts'
+import { cantReach, framed } from '../preview.ts'
+import { runSignIn } from '../signin.ts'
 import { syncNow } from '../sync.ts'
+import { toast } from '../ui/bits.tsx'
+import { GoogleLogo } from '../ui/brands.tsx'
 import { FoxPortrait } from '../ui/FoxPortrait.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
 
@@ -154,8 +159,21 @@ export function Onboarding() {
   const game = useGame()
   const [step, setStep] = useState(0)
   const [joining, setJoining] = useState(false)
+  const [signing, setSigning] = useState(false)
   const [fox, setFox] = useState(game.foxName)
   const [me, setMe] = useState(game.owner)
+
+  /** "I already have my fox": sign in, and it comes here with everything. */
+  const signIn = async () => {
+    if (framed) return toast(cantReach('Google’s sign-in page', ''), 5000)
+    setSigning(true)
+    try {
+      const res = await runSignIn(signInWithGoogle)
+      if (res) toast(res.message, 6000)
+    } finally {
+      setSigning(false)
+    }
+  }
 
   const next = () => {
     sfx.tap()
@@ -178,8 +196,12 @@ export function Onboarding() {
         <button className="btn btn-big btn-pink" onClick={next}>
           hi little fox!
         </button>
+        <p className="muted center or">already have your fox on another device?</p>
+        <button className="btn btn-big signin" disabled={signing} onClick={signIn}>
+          <GoogleLogo /> {signing ? 'signing in…' : 'sign in with Google'}
+        </button>
         <button className="link" onClick={() => setJoining(true)}>
-          i already have my fox on another device →
+          or use my mailbox code →
         </button>
       </main>
     )
