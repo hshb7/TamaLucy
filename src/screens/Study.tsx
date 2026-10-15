@@ -22,11 +22,27 @@ import { Header } from './Header.tsx'
 
 export type StudyTab = 'cards' | 'classes' | 'exams' | 'calendar' | 'career'
 
-export function StudyScreen({ onBack, initialTab = 'cards', addClass = false, onAddClass }: { onBack: () => void; initialTab?: StudyTab; addClass?: boolean; onAddClass?: () => void }) {
+/** What each section is called at the top of the page (the Mac sidebar says "flashcards"; the phone's tab says "my cards"). */
+const TITLES: Record<StudyTab, string> = { cards: 'my cards', classes: 'classes', exams: 'exams', calendar: 'calendar', career: 'career' }
+
+export function StudyScreen({
+  onBack,
+  initialTab = 'cards',
+  addClass = false,
+  onAddClass,
+  showTabs = true,
+}: {
+  onBack: () => void
+  initialTab?: StudyTab
+  addClass?: boolean
+  onAddClass?: () => void
+  /** The phone shows the tabs here; the Mac has them in its sidebar. */
+  showTabs?: boolean
+}) {
   const [tab, setTab] = useState<StudyTab>(initialTab)
   return (
     <main className="screen">
-      <Header title="study" onBack={onBack} />
+      <Header title={!showTabs && tab === 'cards' ? 'flashcards' : TITLES[tab]} onBack={onBack} />
       {/* on the Mac these live in the sidebar instead */}
       <div className="tabs study-tabs" role="tablist">
         {(['cards', 'classes', 'exams', 'calendar', 'career'] as StudyTab[]).map((t) => (
