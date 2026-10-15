@@ -209,7 +209,7 @@ export const settingsTabs = (fox: string): { id: SettingsTab; label: string; blu
   { id: 'fox', label: fox.toLowerCase(), blurb: `names, how much looking after ${fox} needs, the weather outside, your widget` },
   { id: 'study', label: 'study', blurb: 'what you study, the study buddy, exams and deadlines from your calendar and Canvas' },
   { id: 'focus', label: 'focus', blurb: 'leaving the app, distracting apps, breaks, music and reminders' },
-  { id: 'account', label: 'account', blurb: 'your mailbox code (it’s your sign-in), backups, installing' },
+  { id: 'account', label: 'account', blurb: 'sign in so your fox follows you, your mailbox, backups, installing' },
 ]
 
 interface SettingsProps {

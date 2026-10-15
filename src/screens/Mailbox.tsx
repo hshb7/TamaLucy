@@ -117,7 +117,7 @@ export function MailboxSection() {
                     : ''}
           </p>
           <p className="muted">
-            open the app on your iPhone or Mac and connect the same code there: it&rsquo;s the same {game.foxName} everywhere.
+            on your iPhone or Mac, sign in with Google (or type this same code) and it&rsquo;s the same {game.foxName} everywhere.
           </p>
           <div className="row">
             <button className="btn" disabled={busy} onClick={look}>
