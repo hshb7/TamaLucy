@@ -9,6 +9,7 @@ import { FoxPortrait } from '../ui/FoxPortrait.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
 import type { View } from '../App.tsx'
 import { settingsTabs, type SettingsTab } from './Settings.tsx'
+import { SignOutButton } from './SignOut.tsx'
 
 const HOUSE = sprite([
   '.....oo.....',
@@ -183,6 +184,7 @@ export function DesktopShell({ view, go, onFocus, settingsTab, onSettingsTab, ch
               <PixelIcon sprite={ICON_ART.acorn} scale={2} /> focus with {game.foxName}
             </button>
           )}
+          {game.mailbox && <SignOutButton className="link side-signout" label="sign out" />}
         </div>
       </aside>
       <div className="shell-main">{children}</div>

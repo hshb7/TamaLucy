@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { claimMailbox, signInWithGoogle, signOut, signOutDevice, useAccount, writerKey } from '../account.ts'
+import { claimMailbox, signInWithGoogle, signOut, useAccount, writerKey } from '../account.ts'
+import { SignOutButton } from './SignOut.tsx'
 import { useGame } from '../game/store.ts'
 import { checkMail, connectMailbox, mailProblem } from '../mail.ts'
 import { cantReach } from '../preview.ts'
@@ -66,7 +67,6 @@ export function MailboxSection() {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState('')
-  const [forget, setForget] = useState(false)
   const sync = useSyncStatus()
 
   const connect = async () => {
@@ -104,6 +104,7 @@ export function MailboxSection() {
     <section className="px-box card mailbox">
       <CardHead title="account, mailbox & sync" status={game.mailbox ? 'connected ✓' : 'not connected'} on={!!game.mailbox} />
       <AccountBlock />
+      {game.mailbox && <SignOutButton className="btn" label="sign out" />}
       {game.mailbox ? (
         <>
           <p>
@@ -137,34 +138,7 @@ export function MailboxSection() {
               {busy ? 'looking…' : 'check now'}
             </button>
           </div>
-          {!forget ? (
-            <button className="link" onClick={() => setForget(true)}>
-              sign out of this device…
-            </button>
-          ) : (
-            <p className="muted">
-              sign out here? {game.foxName} is saved in the cloud and comes back the moment you sign in again, here or anywhere. this device goes back to the
-              first screen.{' '}
-              <button
-                className="link inline"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true)
-                  try {
-                    await signOutDevice()
-                    toast('signed out. see you soon ♡')
-                  } finally {
-                    setBusy(false)
-                  }
-                }}
-              >
-                {busy ? 'saving…' : 'yes, sign out'}
-              </button>{' '}
-              <button className="link inline" onClick={() => setForget(false)}>
-                no
-              </button>
-            </p>
-          )}
+
         </>
       ) : (
         <form
