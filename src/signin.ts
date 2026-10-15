@@ -2,7 +2,7 @@
 // say how it went. App calls this once on load when the address bar carries
 // a code.
 import { afterCalendarSignIn, setPendingLink } from './calendar.ts'
-import { finishGoogleLogin } from './google.ts'
+import { finishGoogleLogin, googleProblem } from './google.ts'
 import { finishMicrosoftLogin } from './microsoft.ts'
 import type { AuthReturn, OAuthProvider } from './oauth.ts'
 import { finishSpotifyLogin } from './spotify.ts'
@@ -19,8 +19,13 @@ export async function finishSignIn(r: AuthReturn): Promise<SignInResult> {
     return { provider: r.provider, ok, message: ok ? 'Spotify linked ✓ now pick a playlist' : 'hmm, Spotify didn’t let us in. try again?' }
   }
   const name = r.provider === 'google' ? 'Google Calendar' : 'Outlook'
-  const ok = r.provider === 'google' ? await finishGoogleLogin(r) : await finishMicrosoftLogin(r)
-  if (!ok) return { provider: r.provider, ok: false, message: `hmm, ${name} didn’t let us in. try again?` }
+  if (r.provider === 'google') {
+    try {
+      await finishGoogleLogin(r)
+    } catch (e) {
+      return { provider: r.provider, ok: false, message: googleProblem(e) }
+    }
+  } else if (!(await finishMicrosoftLogin(r))) return { provider: r.provider, ok: false, message: `hmm, ${name} didn’t let us in. try again?` }
   setPendingLink(r.provider === 'google' ? 'google' : 'outlook')
   try {
     const n = await afterCalendarSignIn(r.provider)

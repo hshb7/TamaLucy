@@ -29,27 +29,57 @@ export function connectGoogle(): Promise<void> {
   })
 }
 
-/** The token step, through google-auth (which holds the client secret and needs her mailbox code). */
-async function exchange(body: Record<string, string>): Promise<TokenReply | null> {
-  const code = getGame().mailbox
-  if (!code) return null
-  const res = await fetch(`${FUNCTIONS_URL}/google-auth`, {
-    method: 'POST',
-    headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, ...body }),
-    signal: AbortSignal.timeout(20_000),
-  })
-  const j = (await res.json().catch(() => null)) as (TokenReply & { error?: string }) | null
-  return res.ok && j?.access_token ? j : null
+export type GoogleProblem = 'no-mailbox' | 'not-set-up' | 'refused' | 'offline' | 'limit' | 'server' | 'declined'
+
+export class GoogleError extends Error {
+  readonly problem: GoogleProblem
+  constructor(problem: GoogleProblem) {
+    super(problem)
+    this.problem = problem
+  }
 }
 
-/** Back from Google: trade the code for tokens. */
-export async function finishGoogleLogin(r: AuthReturn): Promise<boolean> {
-  if (!r.code) return false
+/** Without a mailbox the token step can't run (the relay is keyed to it), so there's no point leaving for Google. */
+export const googleNeedsMailbox = () => !getGame().mailbox
+
+/** The token step, through google-auth (which holds the client secret and needs her mailbox code). */
+async function exchange(body: Record<string, string>): Promise<TokenReply> {
+  const code = getGame().mailbox
+  if (!code) throw new GoogleError('no-mailbox')
+  let res: Response
+  try {
+    res = await fetch(`${FUNCTIONS_URL}/google-auth`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, ...body }),
+      signal: AbortSignal.timeout(20_000),
+    })
+  } catch {
+    throw new GoogleError('offline')
+  }
+  const j = (await res.json().catch(() => null)) as (TokenReply & { error?: string }) | null
+  if (res.ok && j?.access_token) return j
+  const e = j?.error
+  throw new GoogleError(e === 'no-mailbox' ? 'no-mailbox' : e === 'not-set-up' ? 'not-set-up' : e === 'refused' ? 'refused' : e === 'limit' ? 'limit' : 'server')
+}
+
+/** What to tell her when Google's sign-in didn't stick. */
+export function googleProblem(e: unknown): string {
+  const p = e instanceof GoogleError ? e.problem : 'server'
+  if (p === 'declined') return 'Google didn’t send us back with a sign-in. try again?'
+  if (p === 'no-mailbox') return 'connect your mailbox first (settings → account): it’s what lets the sign-in relay know it’s you. then sign in with Google again.'
+  if (p === 'not-set-up') return 'the Google sign-in isn’t switched on at the relay yet (the giver sets its key).'
+  if (p === 'refused') return 'Google refused the sign-in at the last step. this usually means the site address isn’t listed exactly as a redirect in the Google Cloud console. try once more?'
+  if (p === 'limit') return 'that’s a lot of sign-ins for one day. try again tomorrow?'
+  if (p === 'offline') return 'couldn’t reach the relay just now. are you online?'
+  return 'the relay had a problem finishing the sign-in. try again in a bit?'
+}
+
+/** Back from Google: trade the code for tokens. Throws a GoogleError saying why not. */
+export async function finishGoogleLogin(r: AuthReturn): Promise<void> {
+  if (!r.code) throw new GoogleError('declined')
   const reply = await exchange({ grant: 'code', auth_code: r.code, verifier: r.verifier, redirect_uri: location.origin + location.pathname.replace(/index\.html$/, '') })
-  if (!reply) return false
   store.set(tokensFrom(reply))
-  return true
 }
 
 export function googleForget() {
@@ -60,8 +90,14 @@ async function token(): Promise<string | null> {
   const t = store.get()
   if (!t) return null
   if (t.exp > Date.now() + 30_000) return t.access
-  const reply = await exchange({ grant: 'refresh', refresh_token: t.refresh })
-  if (!reply) return null
+  let reply: TokenReply
+  try {
+    reply = await exchange({ grant: 'refresh', refresh_token: t.refresh })
+  } catch (e) {
+    // she took the app's access away in her Google account: start over next time
+    if (e instanceof GoogleError && e.problem === 'refused') store.set(null)
+    return null
+  }
   store.set(tokensFrom(reply, t.refresh))
   return reply.access_token
 }

@@ -20,7 +20,7 @@ import {
   useCalendarEvents,
 } from '../calendar.ts'
 import { useGame } from '../game/store.ts'
-import { hasGoogle } from '../google.ts'
+import { googleNeedsMailbox, hasGoogle } from '../google.ts'
 import { ago, patchLinks, useLinks } from '../links.ts'
 import { connectMicrosoft, hasMicrosoft } from '../microsoft.ts'
 import { isNativeApp, nativePlatform, type CalendarInfo } from '../native.ts'
@@ -54,6 +54,7 @@ export function DeviceCalendarPanel() {
 
   const connect = async () => {
     if (way === 'google' && framed) return setProblem(cantReach('Google’s sign-in page', ''))
+    if (way === 'google' && googleNeedsMailbox()) return setProblem('connect your mailbox first (settings → account): it’s what lets the sign-in relay know it’s you.')
     setBusy(true)
     setProblem('')
     try {
