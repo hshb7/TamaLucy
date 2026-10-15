@@ -5,8 +5,9 @@ import { useGame } from '../game/store.ts'
 import { checkMail, connectMailbox, mailProblem } from '../mail.ts'
 import { cantReach } from '../preview.ts'
 import { runSignIn } from '../signin.ts'
-import { CardHead, toast } from '../ui/bits.tsx'
+import { CardHead, Modal, toast } from '../ui/bits.tsx'
 import { GoogleLogo } from '../ui/brands.tsx'
+import { EmailAuth } from './EmailAuth.tsx'
 import { syncNow, useSyncStatus } from '../sync.ts'
 
 /** Embedded previews (iframes) usually block network requests, so no mail gets through. */
@@ -26,6 +27,7 @@ function AccountBlock() {
   const game = useGame()
   const acct = useAccount()
   const [busy, setBusy] = useState(false)
+  const [email, setEmail] = useState(false)
   const signIn = async () => {
     if (framed) return toast(cantReach('Google’s sign-in page', ''), 5000)
     setBusy(true)
@@ -53,10 +55,24 @@ function AccountBlock() {
     )
   return (
     <>
-      <p className="muted">sign in with Google and {game.foxName} follows you to any device: no code to type there.</p>
+      <p className="muted">sign in and {game.foxName} follows you to any device: no code to type there.</p>
       <button className="btn signin" disabled={busy} onClick={signIn}>
         <GoogleLogo /> {busy ? 'signing in…' : 'sign in with Google'}
       </button>
+      <button className="link" onClick={() => setEmail(true)}>
+        or with email →
+      </button>
+      {email && (
+        <Modal onClose={() => setEmail(false)} className="sheet">
+          <h2>sign in with email</h2>
+          <EmailAuth
+            onDone={(r) => {
+              setEmail(false)
+              toast(r.message, 6000)
+            }}
+          />
+        </Modal>
+      )}
     </>
   )
 }

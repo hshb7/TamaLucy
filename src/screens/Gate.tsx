@@ -6,12 +6,13 @@ import { signInWithGoogle } from '../account.ts'
 import { DEBUG } from '../debug.ts'
 import { GIFT } from '../gift.ts'
 import { cantReach, framed } from '../preview.ts'
-import { runSignIn } from '../signin.ts'
+import { runSignIn, type SignInResult } from '../signin.ts'
 import { toast } from '../ui/bits.tsx'
 import { GoogleLogo } from '../ui/brands.tsx'
 import { FoxPortrait } from '../ui/FoxPortrait.tsx'
+import { EmailAuth } from './EmailAuth.tsx'
 
-export function Gate({ onCode, onGuest }: { onCode: () => void; onGuest: () => void }) {
+export function Gate({ onCode, onGuest, onSignedIn }: { onCode: () => void; onGuest: () => void; onSignedIn: (r: SignInResult) => void }) {
   const [busy, setBusy] = useState(false)
   const signIn = async () => {
     if (framed) return toast(cantReach('Google’s sign-in page', ''), 5000)
@@ -31,6 +32,10 @@ export function Gate({ onCode, onGuest }: { onCode: () => void; onGuest: () => v
       <button className="btn btn-big signin" disabled={busy} onClick={signIn}>
         <GoogleLogo /> {busy ? 'signing in…' : 'sign in with Google'}
       </button>
+      <p className="or-line">
+        <span>or with email</span>
+      </p>
+      <EmailAuth onDone={onSignedIn} />
       <button className="link" onClick={onCode}>
         i have a mailbox code →
       </button>

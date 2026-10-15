@@ -6,7 +6,9 @@ import { getGame, setGame, useGame } from './game/store.ts'
 import { Toasts, toast } from './ui/bits.tsx'
 import { Onboarding } from './screens/Onboarding.tsx'
 import { Gate } from './screens/Gate.tsx'
-import { isGuest, setGuest, useAccount } from './account.ts'
+import { NewPassword } from './screens/EmailAuth.tsx'
+import { isGuest, setGuest, takeEmailLink, useAccount } from './account.ts'
+import { completeAccountSignIn, type SignInResult } from './signin.ts'
 import { Home } from './screens/Home.tsx'
 import { FocusSetup } from './screens/FocusSetup.tsx'
 import { FocusScreen } from './screens/Focus.tsx'
@@ -50,6 +52,22 @@ export default function App() {
   const account = useAccount()
   const [guest, setGuestState] = useState(isGuest)
   const [codeDoor, setCodeDoor] = useState(false)
+  const [newPassword, setNewPassword] = useState(false)
+  /** A sign-in just finished (Google's return, an email form, a link from an email): go where it belongs. */
+  const afterSignIn = (r: SignInResult) => {
+    if (r.provider === 'spotify') {
+      setView('settings')
+      setSettingsTab('focus')
+    } else if (r.provider === 'account') {
+      // a fox that just arrived: straight to the room. otherwise the account card (onboarding shows itself while there's no fox)
+      if (r.fetched) setView('home')
+      else if (getGame().onboarded) {
+        setView('settings')
+        setSettingsTab('account')
+      }
+    } else setView('calendar')
+    toast(r.message, 5000)
+  }
   const [failedAway, setFailedAway] = useState<number | null>(null)
   const [failedBlocked, setFailedBlocked] = useState(false)
   const [reward, setReward] = useState<RewardResult | null>(null)
@@ -189,21 +207,13 @@ export default function App() {
     startReminderSync()
     // back from a sign-in page (Spotify, Google, Microsoft): finish the trip and go where it belongs
     const back = takeAuthReturn()
-    if (back)
-      void finishSignIn(back).then((r) => {
-        if (r.provider === 'spotify') {
-          setView('settings')
-          setSettingsTab('focus')
-        } else if (r.provider === 'account') {
-          // a fox that just arrived: straight to the room. otherwise the account card (onboarding shows itself while there's no fox)
-          if (r.fetched) setView('home')
-          else if (getGame().onboarded) {
-            setView('settings')
-            setSettingsTab('account')
-          }
-        } else setView('calendar')
-        toast(r.message, 5000)
-      })
+    if (back) void finishSignIn(back).then(afterSignIn)
+    // a confirmation or reset link from an email: signed in by it
+    void takeEmailLink().then((kind) => {
+      if (!kind) return
+      if (kind === 'recovery') setNewPassword(true)
+      else void completeAccountSignIn().then(afterSignIn)
+    })
     const link = takeMailLink()
     if (link)
       connectMailbox(link).then(
@@ -266,7 +276,16 @@ export default function App() {
   }
 
   let screen
-  if (!game.onboarded && !account && !game.mailbox && !guest && !codeDoor)
+  if (newPassword)
+    screen = (
+      <NewPassword
+        onDone={(r) => {
+          setNewPassword(false)
+          afterSignIn(r)
+        }}
+      />
+    )
+  else if (!game.onboarded && !account && !game.mailbox && !guest && !codeDoor)
     screen = (
       <Gate
         onCode={() => setCodeDoor(true)}
@@ -274,6 +293,7 @@ export default function App() {
           setGuest(true)
           setGuestState(true)
         }}
+        onSignedIn={afterSignIn}
       />
     )
   else if (!game.onboarded) screen = <Onboarding key={codeDoor ? 'code' : 'intro'} startJoining={codeDoor && !game.mailbox} />

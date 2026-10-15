@@ -3251,3 +3251,44 @@ label.check > span.cal-name {
 .gate .title {
   font-size: 34px;
 }
+
+/* the email door */
+.or-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.or-line::before,
+.or-line::after {
+  content: '';
+  flex: 1;
+  border-top: 2px dashed #ecd7c4;
+}
+.email-auth {
+  width: 100%;
+  gap: 8px;
+}
+.email-auth .note {
+  margin: 0;
+  padding: 8px 10px;
+  background: #fff7d6;
+  box-shadow: var(--outline);
+  font-size: 14px;
+}
+.email-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 12px;
+}
+.email-links .link {
+  font-size: 14px;
+  padding: 4px 2px;
+}
+.gate .email-auth .btn-big {
+  margin-top: 2px;
+}

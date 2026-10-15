@@ -166,16 +166,29 @@ Either way it's the same fox everywhere, website or app.
 
 ### One fox, every device
 **The front door is a sign-in.** The first screen on any device is *sign in
-with Google* (with *i have a mailbox code* underneath, for the gift's own
-link). A first sign-in makes the account a mailbox on the spot and walks into
-the intro: meet the fox, name it, say what you're studying. A returning
-sign-in skips all that and brings the fox over with everything: classes,
-letters, exams, acorns, the lot. *Settings → account* has the same sign-in
-for a device that got its fox by code, so the fox is attached to the account
-from then on, and a *sign out* button (also at the foot of the Mac sidebar)
-that saves the fox to the cloud and leaves the device blank. The iPhone and
-Mac apps open the sign-in in the system's sheet (Google won't sign in inside
-an app's own web view); the web app goes to Google and comes back.
+with Google*, and under it an email and password: *sign in*, *new here?
+create an account*, *forgot your password?* (with *i have a mailbox code*
+further down, for the gift's own link). A first sign-in, either way, makes
+the account a mailbox on the spot and walks into the intro: meet the fox,
+name it, say what you're studying. A returning sign-in skips all that and
+brings the fox over with everything: classes, letters, exams, acorns, the
+lot. *Settings → account* has the same sign-ins for a device that got its
+fox by code, so the fox is attached to the account from then on, and a
+*sign out* button (also at the foot of the Mac sidebar) that saves the fox
+to the cloud and leaves the device blank. The iPhone and Mac apps open the
+Google sign-in in the system's sheet (Google won't sign in inside an app's
+own web view); the web app goes to Google and comes back. The email form
+works the same everywhere.
+
+**Email accounts.** *Create an account* takes an email and a password (8
+characters or more). If the Supabase project asks new accounts to confirm
+their email (it does by default), she gets a link; opening it brings her to
+the web app signed in, and the intro starts there. *Forgot your password?*
+emails a reset link that lands on a *new password* screen, then carries on
+as a sign-in. Both links open the web app; in the iPhone or Mac app the
+form says to come back and sign in with the password once the link's been
+opened. The app says plainly what went wrong: a wrong password, an email
+that's already got an account, an unconfirmed one, too many tries.
 
 A fox that already lives on a device with no mailbox gets one the moment its
 person signs in, and is saved under the account from then on. The writer key
@@ -188,8 +201,12 @@ the mailbox code for the device, and the code does what it always did. The
 code remains the fallback, *i have a mailbox code*, for a device without an
 account, and `#mail=<code>` links still work.
 
-To switch the sign-in on, in the Supabase dashboard: *Authentication →
-Providers → Google*: enable it and paste the Google OAuth client id and secret
+To switch the sign-ins on, in the Supabase dashboard: *Authentication →
+Providers → Email* is on from the start (*Confirm email* is a choice there:
+off, and a new account is signed in straight away). Supabase's own mailer
+sends only a few emails an hour, which is plenty for one person; for more,
+set an SMTP server under *Project settings → Authentication*. *Authentication
+→ Providers → Google*: enable it and paste the Google OAuth client id and secret
 (the same client as the calendar sign-in; add the callback URL shown there,
 `https://<project>.supabase.co/auth/v1/callback`, to that client's authorised
 redirect URIs in the Google Cloud console). Then *Authentication → URL
@@ -491,7 +508,7 @@ src/
                      free-will brain (brain.ts), shared widgets
   screens/           onboarding, home, focus, rewards, break, closet, album, stats, settings
   write/             the post office (#write): writing and scheduling letters
-  account.ts         sign in with Google (Supabase Auth), bound to her mailbox: the fox follows her
+  account.ts         sign in with Google or an email and password (Supabase Auth), bound to her mailbox: the fox follows her
   mail.ts            checks her mailbox and announces new letters
   sync.ts            one fox on every device: cloud save, sign-in, merging
   notify.ts          the end-of-session notification (Mac)

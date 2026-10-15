@@ -25,28 +25,33 @@ export async function runSignIn(start: () => Promise<AuthReturn | null>): Promis
   return r ? finishSignIn(r) : null
 }
 
+/** The account is signed in (Google, email, a link from an email): find or make her fox's mailbox and say what happened. */
+export async function completeAccountSignIn(): Promise<SignInResult> {
+  try {
+    const o = await attachAccount()
+    return {
+      provider: 'account',
+      ok: true,
+      fetched: o === 'fetched',
+      fresh: o === 'new',
+      message:
+        o === 'fetched'
+          ? 'welcome back! your fox is here ✓'
+          : o === 'claimed'
+            ? 'signed in ✓ your fox now follows you to any device: just sign in there.'
+            : o === 'connected'
+              ? 'signed in ✓ your mailbox is connected, but no fox is saved in it yet. set one up here and it’ll be on your other devices too.'
+              : 'signed in ✓ now, meet your fox',
+    }
+  } catch {
+    return { provider: 'account', ok: true, message: cantReach('the post office', 'signed in ✓ but couldn’t reach the post office to find your fox. try again in a bit?') }
+  }
+}
+
 export async function finishSignIn(r: AuthReturn): Promise<SignInResult> {
   if (r.provider === 'account') {
     if (!(await finishAccountLogin(r))) return { provider: r.provider, ok: false, message: 'hmm, the sign-in didn’t go through. try again?' }
-    try {
-      const o = await attachAccount()
-      return {
-        provider: r.provider,
-        ok: true,
-        fetched: o === 'fetched',
-        fresh: o === 'new',
-        message:
-          o === 'fetched'
-            ? 'welcome back! your fox is here ✓'
-            : o === 'claimed'
-              ? 'signed in ✓ your fox now follows you to any device: just sign in there.'
-              : o === 'connected'
-                ? 'signed in ✓ your mailbox is connected, but no fox is saved in it yet. set one up here and it’ll be on your other devices too.'
-                : 'signed in ✓ now, meet your fox',
-      }
-    } catch {
-      return { provider: r.provider, ok: true, message: cantReach('the post office', 'signed in ✓ but couldn’t reach the post office to find your fox. try again in a bit?') }
-    }
+    return completeAccountSignIn()
   }
   if (r.provider === 'spotify') {
     const ok = (await finishSpotifyLogin(r)) === 'linked'

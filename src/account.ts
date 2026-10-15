@@ -69,6 +69,127 @@ export class AccountError extends Error {
   }
 }
 
+// ── Email and password, for anyone without a Google account ──
+export type EmailAuthProblem = 'wrong' | 'unconfirmed' | 'exists' | 'weak' | 'invalid-email' | 'rate' | 'offline' | 'server'
+export class EmailAuthError extends Error {
+  readonly problem: EmailAuthProblem
+  constructor(problem: EmailAuthProblem) {
+    super(problem)
+    this.problem = problem
+  }
+}
+
+/** What to tell her when an email sign-in or sign-up didn't go through. */
+export function emailProblem(e: unknown): string {
+  const p = e instanceof EmailAuthError ? e.problem : 'server'
+  if (p === 'wrong') return 'that email and password don’t match.'
+  if (p === 'unconfirmed') return 'check your email first: there’s a confirmation link waiting. then sign in here.'
+  if (p === 'exists') return 'there’s already an account with that email. sign in instead?'
+  if (p === 'weak') return 'pick a longer password (8 characters or more).'
+  if (p === 'invalid-email') return 'that doesn’t look like an email address.'
+  if (p === 'rate') return 'too many tries in a row. give it a minute?'
+  if (p === 'offline') return 'couldn’t reach the sign-in just now. are you online?'
+  return 'the sign-in had a problem. try again in a bit?'
+}
+
+async function authPost<T>(path: string, body: Record<string, unknown>, bearer?: string, method = 'POST'): Promise<{ ok: boolean; status: number; json: T | null }> {
+  let res: Response
+  try {
+    res = await fetch(`${AUTH}${path}`, {
+      method,
+      headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json', ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}) },
+      ...(method === 'GET' ? {} : { body: JSON.stringify(body) }),
+      signal: AbortSignal.timeout(20_000),
+    })
+  } catch {
+    throw new EmailAuthError('offline')
+  }
+  return { ok: res.ok, status: res.status, json: (await res.json().catch(() => null)) as T | null }
+}
+
+function problemFrom(status: number, json: { msg?: string; message?: string; error_description?: string; error_code?: string; code?: string } | null): EmailAuthProblem {
+  const text = `${json?.error_code ?? json?.code ?? ''} ${json?.msg ?? json?.message ?? json?.error_description ?? ''}`.toLowerCase()
+  if (status === 429 || /rate/.test(text)) return 'rate'
+  if (/not confirmed|email_not_confirmed/.test(text)) return 'unconfirmed'
+  if (/already|exists|user_already/.test(text)) return 'exists'
+  if (/password.*(short|weak|at least)|weak_password|password should/.test(text)) return 'weak'
+  if (/invalid.*email|email_address_invalid|validate email/.test(text)) return 'invalid-email'
+  if (/invalid.*credentials|invalid_grant|invalid login/.test(text) || status === 400 || status === 401) return 'wrong'
+  return 'server'
+}
+
+function remember(s: Session) {
+  store.set(tokensFrom(s))
+  const m = s.user?.user_metadata ?? {}
+  setUser({ email: s.user?.email ?? '', name: m.full_name ?? m.name ?? '', picture: m.avatar_url ?? m.picture ?? '' })
+}
+
+/** Sign in with an email and password. Throws an EmailAuthError saying why not. */
+export async function signInWithEmail(email: string, password: string): Promise<void> {
+  const r = await authPost<Session>('/token?grant_type=password', { email: email.trim(), password })
+  if (!r.ok || !r.json?.access_token) throw new EmailAuthError(problemFrom(r.status, r.json as never))
+  remember(r.json)
+}
+
+/**
+ * Make an account. Resolves to 'signed-in' when the project lets new accounts
+ * straight in, or 'confirm' when a confirmation link was emailed first (the
+ * link brings her back signed in: see takeEmailLink).
+ */
+export async function registerWithEmail(email: string, password: string): Promise<'signed-in' | 'confirm'> {
+  if (password.length < 8) throw new EmailAuthError('weak')
+  const r = await authPost<Session & { id?: string; identities?: unknown[] }>('/signup', { email: email.trim(), password, data: {}, options: { email_redirect_to: siteUrl() } })
+  if (!r.ok) throw new EmailAuthError(problemFrom(r.status, r.json as never))
+  if (r.json?.access_token) {
+    remember(r.json)
+    return 'signed-in'
+  }
+  // an existing, confirmed address comes back as a user with no identities (Supabase doesn't say outright)
+  if (r.json && Array.isArray(r.json.identities) && r.json.identities.length === 0) throw new EmailAuthError('exists')
+  return 'confirm'
+}
+
+/** Email a password-reset link that comes back here. */
+export async function sendPasswordReset(email: string): Promise<void> {
+  const r = await authPost('/recover', { email: email.trim(), redirect_to: siteUrl() })
+  if (!r.ok) throw new EmailAuthError(problemFrom(r.status, r.json as never))
+}
+
+/** A new password, for the account signed in right now (after a reset link). */
+export async function setPassword(password: string): Promise<void> {
+  if (password.length < 8) throw new EmailAuthError('weak')
+  const t = await token()
+  if (!t) throw new EmailAuthError('wrong')
+  const r = await authPost('/user', { password }, t, 'PUT')
+  if (!r.ok) throw new EmailAuthError(problemFrom(r.status, r.json as never))
+}
+
+const siteUrl = () => location.origin + location.pathname.replace(/index\.html$/, '')
+
+export type EmailLink = 'signup' | 'recovery' | 'magiclink' | 'invite' | 'email_change' | 'other'
+
+/**
+ * On load: a confirmation or reset link from an email brings tokens in the
+ * address bar's hash. Keep the session, tidy the bar, say which kind it was.
+ */
+export async function takeEmailLink(): Promise<EmailLink | null> {
+  if (typeof location === 'undefined' || !location.hash.includes('access_token=')) return null
+  const h = new URLSearchParams(location.hash.slice(1))
+  const access = h.get('access_token')
+  const refresh = h.get('refresh_token') ?? ''
+  const type = (h.get('type') ?? 'other') as EmailLink
+  history.replaceState(null, '', siteUrl())
+  if (!access) return null
+  store.set({ access, refresh, exp: Date.now() + Number(h.get('expires_in') ?? 3600) * 1000 })
+  try {
+    const me = await authPost<{ email?: string; user_metadata?: { full_name?: string; name?: string } }>('/user', {}, access, 'GET')
+    setUser({ email: me.json?.email ?? '', name: me.json?.user_metadata?.full_name ?? me.json?.user_metadata?.name ?? '', picture: '' })
+  } catch {
+    setUser({ email: '', name: '', picture: '' })
+  }
+  return type
+}
+
 /** Off to Google, through Supabase; App (or the sheet, in the apps) finishes the trip. */
 export function signInWithGoogle(): Promise<AuthReturn | null> {
   return startAuth('account', `${AUTH}/authorize`, { provider: 'google' }, { plain: true })
