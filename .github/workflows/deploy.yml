@@ -1,13 +1,12 @@
-# Publishes the app to GitHub Pages.
-# One-time setup: repo Settings → Pages → Source: "GitHub Actions".
-# Then run it from the Actions tab ("Run workflow"), or uncomment `push` below
-# to redeploy automatically whenever main changes.
+# Publishes the app to GitHub Pages on every push to the main line (and on
+# demand from the Actions tab). One-time setup: repo Settings → Pages →
+# Source: "GitHub Actions".
 name: Deploy to GitHub Pages
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [main]
+  push:
+    branches: [main, claude/eager-ptolemy-678isn]
 
 permissions:
   contents: read
