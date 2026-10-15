@@ -173,10 +173,21 @@ code to type. The iPhone and Mac apps open the sign-in in the system's sheet
 (Google won't sign in inside an app's own web view), the web app goes to
 Google and comes back.
 
+Someone signing in for the first time, with nothing behind the account yet,
+gets asked whether this is their first fox: *start my fox* makes them a
+mailbox on the spot (bound to the account, with a writer key shown under
+*settings → account* for whoever will write them letters) and walks into the
+usual first-time steps; *i already have a fox on another device* takes the
+code instead and binds that mailbox to the account. A fox that already lives
+on a device with no mailbox gets one the moment its person signs in, and is
+saved under the account from then on.
+
 Underneath, the account is bound to her mailbox (below): the sign-in fetches
 the mailbox code for the device, and the code does what it always did. The
 code remains the fallback, *or use my mailbox code*, for a device without an
-account, and `#mail=<code>` links still work.
+account, and `#mail=<code>` links still work. *Sign out of this device* (same
+card) saves the fox to the cloud, leaves the device blank, and the next
+sign-in brings it back.
 
 To switch the sign-in on, in the Supabase dashboard: *Authentication →
 Providers → Google*: enable it and paste the Google OAuth client id and secret
@@ -186,7 +197,8 @@ redirect URIs in the Google Cloud console). Then *Authentication → URL
 configuration*: Site URL = the site URL, and under Redirect URLs the site URL
 and `tamalucy://app/`. The migration
 `supabase/migrations/20261015000000_accounts.sql` holds the binding table and
-the functions (`tl_claim_mailbox`, `tl_my_mailbox`).
+the functions (`tl_claim_mailbox`, `tl_my_mailbox`); `…_fresh_mailbox.sql`
+adds `tl_claim_new_mailbox`, the mailbox made on the spot.
 
 **The mailbox code, the manual way.** 
 Her mailbox code is her login. The fox lives in the cloud (the same small Supabase

@@ -144,7 +144,50 @@ async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T
   return (await res.json()) as T
 }
 
-export type AttachOutcome = 'claimed' | 'fetched' | 'connected' | 'empty'
+export type AttachOutcome = 'claimed' | 'fetched' | 'connected' | 'new'
+
+// ── A first sign-in with nothing behind it yet: the first screen asks whether this is her first fox ──
+let fresh = false
+const freshWatchers = new Set<() => void>()
+export function setFreshSignIn(v: boolean) {
+  fresh = v
+  freshWatchers.forEach((fn) => fn())
+}
+export function useFreshSignIn(): boolean {
+  return useSyncExternalStore(
+    (fn) => {
+      freshWatchers.add(fn)
+      return () => freshWatchers.delete(fn)
+    },
+    () => fresh,
+    () => fresh,
+  )
+}
+
+const WRITER_KEY = 'tamalucy:writer-key'
+/** The key whoever writes her letters needs (only a mailbox made here has one to show). */
+export function writerKey(): string {
+  try {
+    return localStorage.getItem(WRITER_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+/** First time here: a mailbox of her own, made on the spot and bound to the account. */
+export async function startFreshMailbox(): Promise<boolean> {
+  const r = await rpc<{ code?: string; writer?: string }>('tl_claim_new_mailbox')
+  if (!r?.code || !(await connectMailbox(r.code))) return false
+  if (r.writer) {
+    try {
+      localStorage.setItem(WRITER_KEY, r.writer)
+    } catch {
+      // fine
+    }
+  }
+  setFreshSignIn(false)
+  return true
+}
 
 /**
  * Right after signing in: a device that has her mailbox attaches it to the
@@ -158,7 +201,18 @@ export async function attachAccount(): Promise<AttachOutcome> {
     return 'claimed'
   }
   const code = await rpc<string | null>('tl_my_mailbox')
-  if (!code || !(await connectMailbox(code))) return 'empty'
+  if (!code) {
+    // nothing behind this account yet
+    if (getGame().onboarded) {
+      // a fox lives here already: give it a mailbox and save it under the account
+      if (!(await startFreshMailbox())) throw new AccountError('server')
+      await syncNow()
+      return 'claimed'
+    }
+    setFreshSignIn(true)
+    return 'new'
+  }
+  if (!(await connectMailbox(code))) throw new AccountError('server')
   await syncNow()
   // the mailbox is hers now; whether a fox came down with it is another matter
   return getGame().onboarded ? 'fetched' : 'connected'
@@ -196,9 +250,11 @@ export async function signOutDevice(): Promise<void> {
   clearCalendarEvents()
   resetLinks()
   resetSync()
+  setFreshSignIn(false)
   try {
     localStorage.removeItem('tamalucy:weather')
     localStorage.removeItem('tamalucy:oauth')
+    localStorage.removeItem(WRITER_KEY)
   } catch {
     // fine
   }

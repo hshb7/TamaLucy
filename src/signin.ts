@@ -15,6 +15,8 @@ export interface SignInResult {
   message: string
   /** A fox came down from the cloud with this sign-in. */
   fetched?: boolean
+  /** Nothing behind this account yet: the first screen asks what to do. */
+  fresh?: boolean
 }
 
 /** A sign-in button: on the web this leaves the page (App finishes the trip); in the apps it finishes right here. */
@@ -32,6 +34,7 @@ export async function finishSignIn(r: AuthReturn): Promise<SignInResult> {
         provider: r.provider,
         ok: true,
         fetched: o === 'fetched',
+        fresh: o === 'new',
         message:
           o === 'fetched'
             ? 'welcome back! your fox is here ✓'
@@ -39,7 +42,7 @@ export async function finishSignIn(r: AuthReturn): Promise<SignInResult> {
               ? 'signed in ✓ your fox now follows you to any device: just sign in there.'
               : o === 'connected'
                 ? 'signed in ✓ your mailbox is connected, but no fox is saved in it yet. set one up here and it’ll be on your other devices too.'
-                : 'signed in ✓ but no fox is saved under this account yet. set one up here, or sign in on the device that has your fox.',
+                : 'signed in ✓',
       }
     } catch {
       return { provider: r.provider, ok: true, message: cantReach('the post office', 'signed in ✓ but couldn’t reach the post office to find your fox. try again in a bit?') }

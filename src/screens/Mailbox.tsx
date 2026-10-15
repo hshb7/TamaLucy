@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { claimMailbox, signInWithGoogle, signOut, signOutDevice, useAccount } from '../account.ts'
+import { claimMailbox, signInWithGoogle, signOut, signOutDevice, useAccount, writerKey } from '../account.ts'
 import { useGame } from '../game/store.ts'
 import { checkMail, connectMailbox, mailProblem } from '../mail.ts'
 import { cantReach } from '../preview.ts'
@@ -124,6 +124,14 @@ export function MailboxSection() {
           <p className="muted">
             on your iPhone or Mac, sign in with Google (or type this same code) and it&rsquo;s the same {game.foxName} everywhere.
           </p>
+          {writerKey() && (
+            <p className="muted">
+              someone writing you letters? give them this writer key, once: <code className="backup-code">{writerKey()}</code>{' '}
+              <button className="link inline" onClick={() => void navigator.clipboard?.writeText(writerKey()).then(() => toast('copied ✓'))}>
+                copy
+              </button>
+            </p>
+          )}
           <div className="row">
             <button className="btn" disabled={busy} onClick={look}>
               {busy ? 'looking…' : 'check now'}
