@@ -523,16 +523,19 @@ export function AddressForm({ hint, onLinked }: { hint: string; onLinked?: () =>
 }
 
 /** What's linked already: calendars by address (switch off, unlink) and the device's own or Google. */
-export function LinkedList({ onManage }: { onManage?: (p: Provider) => void }) {
+export function LinkedList({ onManage, open = null }: { onManage?: (p: Provider) => void; open?: Provider | null }) {
   const { calendar } = useLinks()
   const events = useCalendarEvents()
   const way = calendarWay()
   const count = (id: string) => events.filter((e) => e.calendar === id).length
   const ms = calendar.microsoft
-  if (!calendar.on && !ms.on && !calendar.feeds.length) return null
+  // the one whose guide is open below isn't listed twice
+  const showDevice = calendar.on && !!way && open !== 'device' && !(way === 'google' && open === 'google')
+  const showMs = ms.on && open !== 'outlook'
+  if (!showDevice && !showMs && !calendar.feeds.length) return null
   return (
     <ul className="feed-list">
-      {ms.on && (
+      {showMs && (
         <li className="feed-row">
           <span className="cal-name linked-device">
             <OutlookLogo />
@@ -549,7 +552,7 @@ export function LinkedList({ onManage }: { onManage?: (p: Provider) => void }) {
           )}
         </li>
       )}
-      {calendar.on && way && (
+      {showDevice && way && (
         <li className="feed-row">
           <span className="cal-name linked-device">
             {way === 'device' ? <DeviceCalendarLogo day={new Date().getDate()} /> : <GoogleLogo />}
@@ -600,7 +603,7 @@ export function CalendarLinker({ compact = false, initial = null }: { compact?: 
   const [provider, setProvider] = useState<Provider | null>(initial)
   return (
     <div className="linker">
-      <LinkedList onManage={setProvider} />
+      <LinkedList onManage={setProvider} open={provider} />
       {provider ? <ProviderGuide provider={provider} onBack={() => setProvider(null)} onLinked={() => setProvider(null)} /> : <>{!compact && <h3>link a calendar</h3>}<ProviderTiles onPick={setProvider} /></>}
     </div>
   )
