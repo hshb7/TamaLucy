@@ -165,29 +165,28 @@ built with Xcode and your Apple Developer account:
 Either way it's the same fox everywhere, website or app.
 
 ### One fox, every device
-**Sign in.** On any device, the first screen (and *settings → account*) has
-*sign in with Google*. On the device that already has her fox, signing in
-attaches the fox to her Google account; on a new device, signing in brings the
-fox over with everything: her classes, letters, exams, acorns, the lot. No
-code to type. The iPhone and Mac apps open the sign-in in the system's sheet
-(Google won't sign in inside an app's own web view), the web app goes to
-Google and comes back.
+**The front door is a sign-in.** The first screen on any device is *sign in
+with Google* (with *i have a mailbox code* underneath, for the gift's own
+link). A first sign-in makes the account a mailbox on the spot and walks into
+the intro: meet the fox, name it, say what you're studying. A returning
+sign-in skips all that and brings the fox over with everything: classes,
+letters, exams, acorns, the lot. *Settings → account* has the same sign-in
+for a device that got its fox by code, so the fox is attached to the account
+from then on, and a *sign out* button (also at the foot of the Mac sidebar)
+that saves the fox to the cloud and leaves the device blank. The iPhone and
+Mac apps open the sign-in in the system's sheet (Google won't sign in inside
+an app's own web view); the web app goes to Google and comes back.
 
-Someone signing in for the first time, with nothing behind the account yet,
-gets asked whether this is their first fox: *start my fox* makes them a
-mailbox on the spot (bound to the account, with a writer key shown under
-*settings → account* for whoever will write them letters) and walks into the
-usual first-time steps; *i already have a fox on another device* takes the
-code instead and binds that mailbox to the account. A fox that already lives
-on a device with no mailbox gets one the moment its person signs in, and is
-saved under the account from then on.
+A fox that already lives on a device with no mailbox gets one the moment its
+person signs in, and is saved under the account from then on. The writer key
+for a mailbox made this way sits under *settings → account*, for whoever will
+write the letters. The preview (and `?debug`) can get past the door with
+*just looking, no account*.
 
 Underneath, the account is bound to her mailbox (below): the sign-in fetches
 the mailbox code for the device, and the code does what it always did. The
-code remains the fallback, *or use my mailbox code*, for a device without an
-account, and `#mail=<code>` links still work. *Sign out of this device* (same
-card) saves the fox to the cloud, leaves the device blank, and the next
-sign-in brings it back.
+code remains the fallback, *i have a mailbox code*, for a device without an
+account, and `#mail=<code>` links still work.
 
 To switch the sign-in on, in the Supabase dashboard: *Authentication →
 Providers → Google*: enable it and paste the Google OAuth client id and secret

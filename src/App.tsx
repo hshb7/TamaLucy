@@ -5,6 +5,8 @@ import { pendingBook } from './game/shelf.ts'
 import { getGame, setGame, useGame } from './game/store.ts'
 import { Toasts, toast } from './ui/bits.tsx'
 import { Onboarding } from './screens/Onboarding.tsx'
+import { Gate } from './screens/Gate.tsx'
+import { isGuest, setGuest, useAccount } from './account.ts'
 import { Home } from './screens/Home.tsx'
 import { FocusSetup } from './screens/FocusSetup.tsx'
 import { FocusScreen } from './screens/Focus.tsx'
@@ -44,6 +46,10 @@ export default function App() {
   const [addClass, setAddClass] = useState(false)
   /** Which settings section is open (a save that hasn't said what she studies starts on that one). */
   const [settingsTab, setSettingsTab] = useState<SettingsTab>(() => (getGame().study.asked ? 'fox' : 'study'))
+  /** The front door: an account, a mailbox code, or (the preview) just looking. */
+  const account = useAccount()
+  const [guest, setGuestState] = useState(isGuest)
+  const [codeDoor, setCodeDoor] = useState(false)
   const [failedAway, setFailedAway] = useState<number | null>(null)
   const [failedBlocked, setFailedBlocked] = useState(false)
   const [reward, setReward] = useState<RewardResult | null>(null)
@@ -260,7 +266,17 @@ export default function App() {
   }
 
   let screen
-  if (!game.onboarded) screen = <Onboarding />
+  if (!game.onboarded && !account && !game.mailbox && !guest && !codeDoor)
+    screen = (
+      <Gate
+        onCode={() => setCodeDoor(true)}
+        onGuest={() => {
+          setGuest(true)
+          setGuestState(true)
+        }}
+      />
+    )
+  else if (!game.onboarded) screen = <Onboarding key={codeDoor ? 'code' : 'intro'} startJoining={codeDoor && !game.mailbox} />
   else if (game.session) screen = <FocusScreen />
   else if (game.pending || reward)
     screen = (

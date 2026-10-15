@@ -42,7 +42,7 @@ export async function finishSignIn(r: AuthReturn): Promise<SignInResult> {
               ? 'signed in ✓ your fox now follows you to any device: just sign in there.'
               : o === 'connected'
                 ? 'signed in ✓ your mailbox is connected, but no fox is saved in it yet. set one up here and it’ll be on your other devices too.'
-                : 'signed in ✓',
+                : 'signed in ✓ now, meet your fox',
       }
     } catch {
       return { provider: r.provider, ok: true, message: cantReach('the post office', 'signed in ✓ but couldn’t reach the post office to find your fox. try again in a bit?') }

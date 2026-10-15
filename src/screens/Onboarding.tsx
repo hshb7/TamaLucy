@@ -6,13 +6,9 @@ import { getGame, setGame, useGame } from '../game/store.ts'
 import { MAX_SHELVES, STUDY_PRESETS, applyPreset, setRungs, shelvesFromNames, tagFor, type StudyPreset } from '../game/studySetup.ts'
 import { ladder } from '../game/career.ts'
 import { RungsFields } from './Rungs.tsx'
-import { claimMailbox, setFreshSignIn, signInWithGoogle, startFreshMailbox, useAccount, useFreshSignIn } from '../account.ts'
+import { claimMailbox } from '../account.ts'
 import { connectMailbox, mailProblem } from '../mail.ts'
-import { cantReach, framed } from '../preview.ts'
-import { runSignIn } from '../signin.ts'
 import { syncNow } from '../sync.ts'
-import { toast } from '../ui/bits.tsx'
-import { GoogleLogo } from '../ui/brands.tsx'
 import { FoxPortrait } from '../ui/FoxPortrait.tsx'
 import { PixelIcon } from '../ui/PixelIcon.tsx'
 
@@ -29,7 +25,6 @@ function Join({ onBack, onNew }: { onBack: () => void; onNew: () => void }) {
       await syncNow()
       // signed in already: from now on the account alone brings this fox anywhere
       void claimMailbox().catch(() => {})
-      setFreshSignIn(false)
       // if a fox came down from the cloud, onboarding is over and this screen goes away
       if (!getGame().onboarded) {
         setProblem('connected! there’s no fox saved there yet, so let’s set one up here. it’ll show up on your other device too.')
@@ -158,57 +153,13 @@ function StudySetup({ fox, onDone }: { fox: string; onDone: (preset: StudyPreset
   )
 }
 
-/** Signed in with an account that has nothing behind it yet: her first fox, or one that lives elsewhere? */
-function FreshStart({ name, onStart, onHave }: { name: string; onStart: () => Promise<void>; onHave: () => void }) {
-  const [busy, setBusy] = useState(false)
-  const first = name.split(/[\s@]/)[0]
-  return (
-    <main className="screen onboarding">
-      <FoxPortrait equipped={{}} face="happy" hearts className="portrait-xl" />
-      <h1 className="title">hi{first ? `, ${first}` : ''}! first time here?</h1>
-      <p className="muted center">you’re signed in, and there’s no fox under this account yet. let’s fix that.</p>
-      <button
-        className="btn btn-big btn-pink"
-        disabled={busy}
-        onClick={async () => {
-          setBusy(true)
-          try {
-            await onStart()
-          } finally {
-            setBusy(false)
-          }
-        }}
-      >
-        {busy ? 'getting things ready…' : 'start my fox →'}
-      </button>
-      <button className="link" onClick={onHave}>
-        i already have a fox on another device →
-      </button>
-    </main>
-  )
-}
-
-export function Onboarding() {
+/** The intro, after the first sign-in: meet the fox, name it, say what you're studying. */
+export function Onboarding({ startJoining = false }: { startJoining?: boolean }) {
   const game = useGame()
-  const fresh = useFreshSignIn()
-  const acct = useAccount()
   const [step, setStep] = useState(0)
-  const [joining, setJoining] = useState(false)
-  const [signing, setSigning] = useState(false)
+  const [joining, setJoining] = useState(startJoining)
   const [fox, setFox] = useState(game.foxName)
   const [me, setMe] = useState(game.owner)
-
-  /** "I already have my fox": sign in, and it comes here with everything. */
-  const signIn = async () => {
-    if (framed) return toast(cantReach('Google’s sign-in page', ''), 5000)
-    setSigning(true)
-    try {
-      const res = await runSignIn(signInWithGoogle)
-      if (res) toast(res.message, 6000)
-    } finally {
-      setSigning(false)
-    }
-  }
 
   const next = () => {
     sfx.tap()
@@ -216,20 +167,6 @@ export function Onboarding() {
   }
 
   if (joining) return <Join onBack={() => setJoining(false)} onNew={() => (setJoining(false), setStep(1))} />
-
-  if (fresh && step === 0)
-    return (
-      <FreshStart
-        name={acct?.name || acct?.email || ''}
-        onStart={async () => {
-          if (await startFreshMailbox()) {
-            sfx.tap()
-            setStep(1)
-          } else toast('couldn’t set up your mailbox just now. are you online?', 5000)
-        }}
-        onHave={() => setJoining(true)}
-      />
-    )
 
   if (step === 0)
     return (
@@ -245,12 +182,8 @@ export function Onboarding() {
         <button className="btn btn-big btn-pink" onClick={next}>
           hi little fox!
         </button>
-        <p className="muted center or">already have your fox on another device?</p>
-        <button className="btn btn-big signin" disabled={signing} onClick={signIn}>
-          <GoogleLogo /> {signing ? 'signing in…' : 'sign in with Google'}
-        </button>
         <button className="link" onClick={() => setJoining(true)}>
-          or use my mailbox code →
+          i already have a fox on another device →
         </button>
       </main>
     )
