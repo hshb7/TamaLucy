@@ -109,6 +109,11 @@ export function setLinks(next: Links | ((l: Links) => Links)) {
 }
 
 /** Change one connection. */
+/** Every per-device link, forgotten (signing out of the device). */
+export function resetLinks() {
+  setLinks({ ...DEFAULTS })
+}
+
 export function patchLinks<K extends keyof Links>(key: K, patch: Partial<Links[K]>) {
   setLinks((l) => ({ ...l, [key]: { ...l[key], ...patch } }))
 }

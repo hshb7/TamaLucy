@@ -13,6 +13,8 @@ export interface SignInResult {
   provider: OAuthProvider
   ok: boolean
   message: string
+  /** A fox came down from the cloud with this sign-in. */
+  fetched?: boolean
 }
 
 /** A sign-in button: on the web this leaves the page (App finishes the trip); in the apps it finishes right here. */
@@ -29,6 +31,7 @@ export async function finishSignIn(r: AuthReturn): Promise<SignInResult> {
       return {
         provider: r.provider,
         ok: true,
+        fetched: o === 'fetched',
         message:
           o === 'fetched'
             ? 'welcome back! your fox is here ✓'

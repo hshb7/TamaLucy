@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { claimMailbox, signInWithGoogle, signOut, useAccount } from '../account.ts'
-import { setGame, useGame } from '../game/store.ts'
+import { claimMailbox, signInWithGoogle, signOut, signOutDevice, useAccount } from '../account.ts'
+import { useGame } from '../game/store.ts'
 import { checkMail, connectMailbox, mailProblem } from '../mail.ts'
 import { cantReach } from '../preview.ts'
 import { runSignIn } from '../signin.ts'
 import { CardHead, toast } from '../ui/bits.tsx'
 import { GoogleLogo } from '../ui/brands.tsx'
-import { resetSync, syncNow, useSyncStatus } from '../sync.ts'
+import { syncNow, useSyncStatus } from '../sync.ts'
 
 /** Embedded previews (iframes) usually block network requests, so no mail gets through. */
 const framed = typeof window !== 'undefined' && window.self !== window.top
@@ -39,10 +39,15 @@ function AccountBlock() {
     return (
       <p>
         signed in as <b>{acct.email || acct.name || 'your Google account'}</b> ✓{' '}
-        <span className="muted">· {game.mailbox ? `${game.foxName} follows this account to any device: just sign in there.` : 'connect a mailbox below and it’ll follow this account too.'}</span>{' '}
-        <button className="link inline" onClick={() => void signOut().then(() => toast('signed out on this device'))}>
-          sign out
-        </button>
+        <span className="muted">· {game.mailbox ? `${game.foxName} follows this account to any device: just sign in there.` : 'connect a mailbox below and it’ll follow this account too.'}</span>
+        {!game.mailbox && (
+          <>
+            {' '}
+            <button className="link inline" onClick={() => void signOut().then(() => toast('signed out of Google on this device'))}>
+              sign out
+            </button>
+          </>
+        )}
       </p>
     )
   return (
@@ -126,19 +131,26 @@ export function MailboxSection() {
           </div>
           {!forget ? (
             <button className="link" onClick={() => setForget(true)}>
-              disconnect this mailbox…
+              sign out of this device…
             </button>
           ) : (
             <p className="muted">
-              stop getting letters and syncing here? {game.foxName} and your letters stay on this device.{' '}
+              sign out here? {game.foxName} is saved in the cloud and comes back the moment you sign in again, here or anywhere. this device goes back to the
+              first screen.{' '}
               <button
                 className="link inline"
-                onClick={() => {
-                  setGame((s) => ({ ...s, mailbox: '', lastMailCheck: 0 }))
-                  resetSync()
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true)
+                  try {
+                    await signOutDevice()
+                    toast('signed out. see you soon ♡')
+                  } finally {
+                    setBusy(false)
+                  }
                 }}
               >
-                yes, disconnect
+                {busy ? 'saving…' : 'yes, sign out'}
               </button>{' '}
               <button className="link inline" onClick={() => setForget(false)}>
                 no

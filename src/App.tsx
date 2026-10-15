@@ -189,8 +189,9 @@ export default function App() {
           setView('settings')
           setSettingsTab('focus')
         } else if (r.provider === 'account') {
-          // onboarding shows itself while there's no fox; otherwise the account card
-          if (getGame().onboarded) {
+          // a fox that just arrived: straight to the room. otherwise the account card (onboarding shows itself while there's no fox)
+          if (r.fetched) setView('home')
+          else if (getGame().onboarded) {
             setView('settings')
             setSettingsTab('account')
           }

@@ -5,11 +5,17 @@
 // Nothing here needs a key in the app: Supabase holds the Google client for
 // its own sign-in.
 import { useSyncExternalStore } from 'react'
+import { clearCalendarEvents } from './calendar.ts'
 import { SUPABASE_KEY, SUPABASE_URL } from './game/remote.ts'
-import { getGame } from './game/store.ts'
+import { freshState } from './game/state.ts'
+import { getGame, setGame } from './game/store.ts'
+import { googleForget } from './google.ts'
+import { resetLinks } from './links.ts'
 import { connectMailbox } from './mail.ts'
+import { microsoftForget } from './microsoft.ts'
 import { startAuth, tokenStore, tokensFrom, type AuthReturn, type TokenReply } from './oauth.ts'
-import { syncNow } from './sync.ts'
+import { disconnectSpotify } from './spotify.ts'
+import { resetSync, syncFor, syncNow } from './sync.ts'
 
 const AUTH = `${SUPABASE_URL}/auth/v1`
 const store = tokenStore('tamalucy:account')
@@ -165,7 +171,41 @@ export async function claimMailbox(): Promise<boolean> {
   return true
 }
 
-/** Sign out on this device. The mailbox, the fox and the account's binding all stay. */
+/**
+ * Sign out of this device, like any app: the fox is saved to the cloud first,
+ * then the device is left as blank as a new one, first screen and all. The
+ * fox, the letters and the account's binding are all still there in the cloud
+ * and come back with the next sign-in, here or anywhere.
+ */
+export async function signOutDevice(): Promise<void> {
+  if (getGame().mailbox) {
+    try {
+      await syncFor(8000)
+    } catch {
+      // offline: the cloud has the last sync's copy
+    }
+  }
+  await signOut()
+  try {
+    googleForget()
+    microsoftForget()
+    disconnectSpotify()
+  } catch {
+    // nothing linked
+  }
+  clearCalendarEvents()
+  resetLinks()
+  resetSync()
+  try {
+    localStorage.removeItem('tamalucy:weather')
+    localStorage.removeItem('tamalucy:oauth')
+  } catch {
+    // fine
+  }
+  setGame(freshState(Date.now()))
+}
+
+/** Drop the account on this device only. The mailbox, the fox and the account's binding all stay. */
 export async function signOut(): Promise<void> {
   const t = store.get()
   store.set(null)

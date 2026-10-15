@@ -61,6 +61,8 @@ function writeCache(next: typeof cache) {
   watchers.forEach((fn) => fn())
 }
 export const calendarEvents = () => cache.events
+/** Forget every cached event (signing out of the device). */
+export const clearCalendarEvents = () => writeCache({ at: 0, events: [] })
 export function useCalendarEvents(): CalEvent[] {
   return useSyncExternalStore(
     (fn) => {
