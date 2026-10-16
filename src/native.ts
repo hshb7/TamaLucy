@@ -164,7 +164,7 @@ export const native = {
   chooseBlockedApps() {
     return call<BlockingStatus>('blocking.choose', {}, NONE)
   },
-  /** iPhone: redraw her home screen widget (and the Dynamic Island's fox) with these words and pictures. */
+  /** Redraw her widget (iPhone: home screen + the Dynamic Island's fox; Mac: desktop + the notch island) with these words and pictures. */
   updateWidget(card: WidgetData & WidgetImages) {
     return call<boolean>('widget.update', { card }, false)
   },

@@ -1,8 +1,15 @@
-// Her home screen widget's words and pictures. The web app sends them (see
-// src/game/widget.ts and src/ui/widgetArt.ts) whenever they change; the app keeps
-// them in the App Group so the widget, and the Dynamic Island, can draw them.
+// Her widget's words and pictures. The web app sends them (see src/game/widget.ts
+// and src/ui/widgetArt.ts) whenever they change; the app keeps them in the App
+// Group so the widget (the iPhone's home screen, the Mac's desktop), the Dynamic
+// Island and the Mac's notch island can draw them.
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+typealias PlatformImage = UIImage
+#else
+import AppKit
+typealias PlatformImage = NSImage
+#endif
 
 struct FoxCard: Codable {
     struct Exam: Codable {
@@ -83,14 +90,63 @@ struct FoxCard: Codable {
     }
 }
 
+/// The focus session running right now, as the app wrote it down in the App
+/// Group for the widgets: the home screen / desktop widget counts it down, and
+/// on the iPhone the Screen Time extensions read `endsAt` too (Shared.swift).
+struct FocusNow {
+    var startedAt: Date
+    var endsAt: Date
+    /// What she's working on ("Torts outline"), or empty.
+    var label: String
+    var fox: String
+
+    enum Key {
+        /// Seconds since 1970. The same strings as Shared.Key in Shared.swift.
+        static let endsAt = "focusEndsAt"
+        static let startedAt = "focusStartedAt"
+        static let label = "focusLabel"
+        static let fox = "foxName"
+    }
+
+    var title: String { label.isEmpty ? "studying with \(fox)" : label }
+
+    static func load() -> FocusNow? {
+        let d = FoxCardStore.defaults
+        let ends = d.double(forKey: Key.endsAt)
+        guard ends > 0 else { return nil }
+        let started = d.double(forKey: Key.startedAt)
+        return FocusNow(
+            startedAt: Date(timeIntervalSince1970: started > 0 ? started : ends - 25 * 60),
+            endsAt: Date(timeIntervalSince1970: ends),
+            label: d.string(forKey: Key.label) ?? "",
+            fox: d.string(forKey: Key.fox) ?? "your fox"
+        )
+    }
+
+    func save() {
+        let d = FoxCardStore.defaults
+        d.set(endsAt.timeIntervalSince1970, forKey: Key.endsAt)
+        d.set(startedAt.timeIntervalSince1970, forKey: Key.startedAt)
+        d.set(label, forKey: Key.label)
+        d.set(fox, forKey: Key.fox)
+    }
+
+    static func clear() {
+        let d = FoxCardStore.defaults
+        d.removeObject(forKey: Key.endsAt)
+        d.removeObject(forKey: Key.startedAt)
+        d.removeObject(forKey: Key.label)
+    }
+}
+
 /// Where the card lives: its words in the App Group's defaults, its pictures in the App Group's folder.
 enum FoxCardStore {
     static let appGroup = Bundle.main.object(forInfoDictionaryKey: "TLAppGroup") as? String ?? "group.tamalucy"
-    /// small and medium: the whole widget picture. foxStudy and foxHappy: the fox for the Dynamic Island.
+    /// small and medium: the whole widget picture. foxStudy and foxHappy: the fox for the Dynamic Island and the notch.
     static let images = ["small", "medium", "foxStudy", "foxHappy"]
     private static let key = "foxCard"
 
-    private static var defaults: UserDefaults { UserDefaults(suiteName: appGroup) ?? .standard }
+    static var defaults: UserDefaults { UserDefaults(suiteName: appGroup) ?? .standard }
     private static var folder: URL? { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup) }
 
     static func load() -> FoxCard? {
@@ -113,9 +169,20 @@ enum FoxCardStore {
         return true
     }
 
-    static func image(_ name: String) -> UIImage? {
+    static func image(_ name: String) -> PlatformImage? {
         guard let file = folder?.appendingPathComponent("widget-\(name).png") else { return nil }
-        return UIImage(contentsOfFile: file.path)
+        return PlatformImage(contentsOfFile: file.path)
+    }
+}
+
+extension Image {
+    /// The same picture on an iPhone (UIImage) and a Mac (NSImage).
+    init(platform image: PlatformImage) {
+        #if canImport(UIKit)
+        self.init(uiImage: image)
+        #else
+        self.init(nsImage: image)
+        #endif
     }
 }
 
@@ -139,7 +206,7 @@ extension Color {
 }
 
 extension Font {
-    /// The app's pixel font (bundled with the widget).
+    /// The app's pixel font (bundled with the widgets and the Mac app).
     static func pixel(_ size: CGFloat) -> Font {
         .custom("PixelifySans-SemiBold", size: size)
     }

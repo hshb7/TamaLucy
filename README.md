@@ -66,7 +66,7 @@ home screen, works offline, and needs no app store.
 - **Her own flashcards:** cards for her classes (cases, rules, elements), sorted by subject and reviewed as flip cards. Spaced repetition brings each card back right before she'd forget it: a card she knows comes back in 1, 3, 7, then 21 days, and a missed one comes back right away.
 - **Exam countdowns:** add exams with a date. Home counts down the last week, and on the morning of an exam the fox leaves a good-luck note.
 - **Studying together:** during focus the fox sits at its little desk in study glasses with a casebook, cocoa and a banker's lamp. Optional background sound (rain, fireplace or library hum) is generated in the app, with no audio files.
-- **Her widget, her style:** on her iPhone, a home screen widget with the fox in its outfit in front of her wallpaper or a colour, showing today's focus, a class's hours, days to her next exam, her streak or acorns, and a line she writes herself. She styles it (with live previews) in Settings → *your widget*; the Dynamic Island and lock screen use the same colours and outfit.
+- **Her widget, her style:** on her iPhone's home screen and her Mac's desktop, a widget with the fox in its outfit in front of her wallpaper or a colour, showing today's focus, a class's hours, days to her next exam, her streak or acorns, and a line she writes herself; while she focuses it counts the session down. She styles it (with live previews) in Settings → *your widget*; the Dynamic Island, the lock screen and the Mac's notch island use the same colours and outfit.
 - Law-pun notes from the fox ("IRAC. issue: you're tired..."), a Law Library and Courthouse Steps adventure.
 
 **Kind to a busy student**
@@ -159,8 +159,9 @@ URL. That adds a 6-second focus length and a 12-second break/adventure length
 built with Xcode and your Apple Developer account:
 - **iPhone:** the fox in her Dynamic Island, and her distracting apps locked while she
   focuses (Screen Time).
-- **Mac:** the fox and a countdown in the menu bar, and a fox that pops up over her
-  distracting apps during focus. You send it to her as a normal Mac app.
+- **Mac:** the fox and a countdown at the notch (a Dynamic Island for the Mac: hover
+  it for the details) and in the menu bar, her widget on the desktop, and a fox that pops
+  up over her distracting apps during focus. You send it to her as a normal Mac app.
 
 Either way it's the same fox everywhere, website or app.
 
@@ -529,7 +530,7 @@ scripts/
 supabase/migrations/ the database: letters, the cloud save, daily caps, and the functions that guard them
 supabase/functions/  study-buddy (Claude, behind her mailbox code), canvas-proxy (the Canvas relay),
                      calendar-feed (reads a calendar's address), google-auth (the token step of "sign in with Google")
-ios/                 the native iPhone + Mac apps: Dynamic Island, Screen Time blocking, menu bar fox (see ios/README.md)
+ios/                 the native iPhone + Mac apps: Dynamic Island, Screen Time blocking, the widget, the Mac's notch island + menu bar fox (see ios/README.md)
 ```
 
 The sprites are text grids (one character per pixel, colours in

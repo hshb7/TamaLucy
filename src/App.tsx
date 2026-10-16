@@ -29,7 +29,7 @@ import type { Note } from './game/state.ts'
 import { checkMail, connectMailbox, mailProblem, onNewMail, takeMailLink } from './mail.ts'
 import { startSync, syncFor, syncNow } from './sync.ts'
 import { notify } from './notify.ts'
-import { isNativeApp, native, nativePlatform, onNative } from './native.ts'
+import { isNativeApp, native, onNative } from './native.ts'
 import { logSession, syncCalendarIfStale } from './calendar.ts'
 import { syncCanvasIfStale } from './canvas.ts'
 import { pauseAfterSession, playForSession } from './music.ts'
@@ -138,8 +138,8 @@ export default function App() {
     return () => clearInterval(id)
   }, [lat, lon])
 
-  // The iPhone's home screen widget: send it what to show whenever that changes
-  const widgetKey = nativePlatform === 'ios' && game.onboarded ? JSON.stringify({ ...widgetData(game, Date.now()), savedAt: 0, look: widgetLook(game) }) : ''
+  // Her widget (the iPhone's home screen, the Mac's desktop and notch): send it what to show whenever that changes
+  const widgetKey = isNativeApp && game.onboarded ? JSON.stringify({ ...widgetData(game, Date.now()), savedAt: 0, look: widgetLook(game) }) : ''
   const pictures = useRef<{ look: string; images: ReturnType<typeof widgetImages> } | null>(null)
   useEffect(() => {
     if (!widgetKey) return

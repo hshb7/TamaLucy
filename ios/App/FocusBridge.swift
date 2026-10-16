@@ -48,9 +48,9 @@ final class FocusBridge {
         let fox = body["fox"] as? String ?? "your fox"
         let label = body["label"] as? String ?? ""
 
-        let shared = Shared.defaults
-        shared.set(fox, forKey: Shared.Key.foxName)
-        shared.set(endsAt.timeIntervalSince1970, forKey: Shared.Key.endsAt)
+        // the Screen Time extensions and the home screen widget read the session from the App Group
+        FocusNow(startedAt: startedAt, endsAt: endsAt, label: label, fox: fox).save()
+        WidgetCenter.shared.reloadAllTimelines()
         UIApplication.shared.isIdleTimerDisabled = true
 
         showInDynamicIsland(fox: fox, label: label, startedAt: startedAt, endsAt: endsAt)
@@ -65,7 +65,8 @@ final class FocusBridge {
         store.clearAllSettings()
         DeviceActivityCenter().stopMonitoring([.focus])
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Shared.timesUpNotification])
-        Shared.defaults.removeObject(forKey: Shared.Key.endsAt)
+        FocusNow.clear()
+        WidgetCenter.shared.reloadAllTimelines()
         for activity in Activity<FocusAttributes>.activities {
             let state = FocusAttributes.ContentState(endsAt: activity.content.state.endsAt, done: done)
             // a finished session stays on the lock screen a little while; anything else goes right away

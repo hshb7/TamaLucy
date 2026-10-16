@@ -13,7 +13,8 @@ enum Shared {
         /// The apps she chose to block (FamilyActivitySelection as JSON).
         static let selection = "blockedSelection"
         static let foxName = "foxName"
-        /// When the running session ends (seconds since 1970), or absent.
+        /// When the running session ends (seconds since 1970), or absent. The app writes it
+        /// through FocusNow (FoxCard.swift), which uses these same strings.
         static let endsAt = "focusEndsAt"
         /// When she tapped "use it anyway" on a blocked app (seconds since 1970).
         static let brokeAt = "focusBrokeAt"

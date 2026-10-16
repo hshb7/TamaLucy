@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 import UserNotifications
+import WidgetKit
 
 /// An app she picked as distracting.
 struct WatchedApp: Codable, Hashable {
@@ -10,8 +11,9 @@ struct WatchedApp: Codable, Hashable {
 }
 
 /// Everything the web app asks the Mac to do (see src/native.ts), plus the
-/// menu bar fox. On a Mac she studies in other apps, so nothing is blocked:
-/// the fox only pops up when she opens one of the apps she picked.
+/// menu bar fox, the island at the notch and the desktop widget's data. On a
+/// Mac she studies in other apps, so nothing is blocked: the fox only pops up
+/// when she opens one of the apps she picked.
 @MainActor
 final class FocusCenter: NSObject, NSMenuDelegate {
     static let shared = FocusCenter()
@@ -34,11 +36,17 @@ final class FocusCenter: NSObject, NSMenuDelegate {
     private var grace: Task<Void, Never>?
     private var brokeAt: Date?
     private let panel = DistractionPanel()
+    private let island = NotchIsland()
 
     private let defaults = UserDefaults.standard
     private var keepOnTop: Bool {
         get { defaults.bool(forKey: "keepOnTop") }
         set { defaults.set(newValue, forKey: "keepOnTop") }
+    }
+    /// The fox at the notch (on by default).
+    private var islandOn: Bool {
+        get { defaults.object(forKey: "notchIsland") == nil ? true : defaults.bool(forKey: "notchIsland") }
+        set { defaults.set(newValue, forKey: "notchIsland") }
     }
     private var watched: [WatchedApp] {
         get { defaults.data(forKey: "watchedApps").flatMap { try? JSONDecoder().decode([WatchedApp].self, from: $0) } ?? [] }
@@ -56,6 +64,7 @@ final class FocusCenter: NSObject, NSMenuDelegate {
         menu.delegate = self
         item.menu = menu
         statusItem = item
+        island.setUp(enabled: islandOn) { FocusCenter.shared.openWindow() }
     }
 
     func attach(_ window: NSWindow) {
@@ -74,6 +83,7 @@ final class FocusCenter: NSObject, NSMenuDelegate {
         case "focus.broke": return takeBrokeAt()
         case "blocking.status": return blockingStatus()
         case "blocking.choose": return chooseApps()
+        case "widget.update": return updateWidget(body)
         case "haptic": return true // trackpads only buzz under a finger; nothing to do
         default:
             // a sign-in sheet, her calendar, Music or Spotify, the fox's reminders
@@ -97,6 +107,10 @@ final class FocusCenter: NSObject, NSMenuDelegate {
         guard next.endsAt > .now else { return false }
         if session?.startedAt != next.startedAt { brokeAt = nil }
         session = next
+        // the desktop widget and the island count it down too
+        FocusNow(startedAt: next.startedAt, endsAt: next.endsAt, label: next.label, fox: next.fox).save()
+        WidgetCenter.shared.reloadAllTimelines()
+        island.session(IslandModel.Session(startedAt: next.startedAt, endsAt: next.endsAt, label: next.label, fox: next.fox))
         startTicker()
         startWatching()
         scheduleTimesUp(next)
@@ -107,6 +121,9 @@ final class FocusCenter: NSObject, NSMenuDelegate {
         session = nil
         ticker?.invalidate()
         ticker = nil
+        FocusNow.clear()
+        WidgetCenter.shared.reloadAllTimelines()
+        island.session(nil)
         stopWatching()
         statusItem?.button?.title = ""
         NSApp.dockTile.badgeLabel = nil
@@ -162,6 +179,7 @@ final class FocusCenter: NSObject, NSMenuDelegate {
             // time's up: the web app takes it from here when she comes back
             statusItem?.button?.title = " done!"
             NSApp.dockTile.badgeLabel = "✿"
+            island.timesUp()
             stopWatching()
             ticker?.invalidate()
             ticker = nil
@@ -183,6 +201,9 @@ final class FocusCenter: NSObject, NSMenuDelegate {
         let top = item("Keep Window on Top", #selector(toggleKeepOnTop))
         top.state = keepOnTop ? .on : .off
         menu.addItem(top)
+        let notch = item(island.hasNotch ? "Fox at the Notch" : "Fox at the Top of the Screen", #selector(toggleIsland))
+        notch.state = islandOn ? .on : .off
+        menu.addItem(notch)
         menu.addItem(.separator())
         menu.addItem(item("Quit TamaLucy", #selector(quit), key: "q"))
     }
@@ -208,8 +229,23 @@ final class FocusCenter: NSObject, NSMenuDelegate {
         window?.level = keepOnTop ? .floating : .normal
     }
 
+    @objc private func toggleIsland() {
+        islandOn.toggle()
+        island.enabled = islandOn
+    }
+
     @objc private func quit() {
         NSApp.terminate(nil)
+    }
+
+    // MARK: - her desktop widget
+
+    /// New words or pictures for the widget (her style, today's focus...): keep them, redraw it, and tell the island.
+    private func updateWidget(_ body: [String: Any]) -> Bool {
+        guard let card = body["card"] as? [String: Any], FoxCardStore.save(card) else { return false }
+        WidgetCenter.shared.reloadAllTimelines()
+        island.cardChanged()
+        return true
     }
 
     // MARK: - distracting apps

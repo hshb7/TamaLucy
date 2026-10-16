@@ -34,14 +34,18 @@ function HomeWidget({ game, data, size }: { game: GameState; data: WidgetData; s
   )
 }
 
+/** While she focuses: the Dynamic Island (and the lock screen) on an iPhone, the island at the notch on a Mac. */
 function LiveActivity({ game, data }: { game: GameState; data: WidgetData }) {
   const fox = (p: Painter) => drawWidgetFox(p, game, 'study', 1, 33, 'open')
+  const mac = nativePlatform === 'mac'
   return (
     <div className="live-preview">
-      <div className="island" aria-label="the Dynamic Island">
+      <div className="island" aria-label={mac ? 'the island at the notch' : 'the Dynamic Island'}>
         <PixelCanvas w={44} h={34} draw={fox} fps={2} className="island-fox" />
         <span style={{ color: data.accent }}>24:59</span>
       </div>
+      {mac && <p className="muted center">while you focus, {data.fox} and the countdown sit at the notch. hover for more.</p>}
+      {!mac && (
       <div className="lock-banner" style={{ background: data.card, color: data.ink }} aria-label="the lock screen">
         <PixelCanvas w={44} h={34} draw={fox} fps={2} className="lock-fox" />
         <div className="lock-text">
@@ -52,6 +56,7 @@ function LiveActivity({ game, data }: { game: GameState; data: WidgetData }) {
         </div>
         <span className="lock-time">24:59</span>
       </div>
+      )}
     </div>
   )
 }
@@ -165,17 +170,25 @@ export function WidgetStudio({ onBack }: { onBack: () => void }) {
       </section>
 
       <section className="px-box card">
-        <h2>putting it on your home screen</h2>
+        <h2>{nativePlatform === 'mac' ? 'putting it on your desktop' : 'putting it on your home screen'}</h2>
         {nativePlatform === 'ios' ? (
           <ol className="steps">
             <li>touch and hold an empty spot on your home screen until the apps jiggle</li>
             <li>tap <b>+</b> (top left), search for <b>TamaLucy</b>, pick small or medium, <b>Add Widget</b></li>
             <li>it updates whenever you open the app. the Dynamic Island uses this style too ✿</li>
           </ol>
+        ) : nativePlatform === 'mac' ? (
+          <ol className="steps">
+            <li>right-click an empty spot on your desktop → <b>Edit Widgets…</b></li>
+            <li>
+              search for <b>TamaLucy</b>, drag the small or medium one onto your desktop (or into Notification Center), <b>Done</b>
+            </li>
+            <li>it updates whenever you open the app, and counts your sessions down. the fox at the notch uses this style too ✿</li>
+          </ol>
         ) : (
           <p className="muted">
-            the widget lives on your iPhone, in the TamaLucy app. you can style it from any device: it follows {game.foxName} everywhere, and the iPhone picks
-            it up next time you open the app there.
+            the widget lives in the TamaLucy app on your iPhone (home screen) and Mac (desktop). you can style it from any device: it follows {game.foxName}{' '}
+            everywhere, and the apps pick it up next time you open them.
           </p>
         )}
       </section>

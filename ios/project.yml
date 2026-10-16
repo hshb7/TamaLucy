@@ -6,7 +6,7 @@ name: TamaLucy
 options:
   deploymentTarget:
     iOS: "17.0"
-    macOS: "13.0"
+    macOS: "14.0"
   createIntermediateGroups: true
 settings:
   base:
@@ -193,20 +193,24 @@ targets:
           - group.$(APP_ID)
 
   # ─── the Mac app ──────────────────────────────────────────────────────────
-  # The same web app in a window, the fox + countdown in the menu bar, and a fox
-  # that pops up over her distracting apps during focus. Nothing needs Apple's
-  # approval, so it can go straight to her Mac (see ios/README.md).
+  # The same web app in a window, the fox + countdown in the menu bar and at the
+  # notch, her widget on the desktop, and a fox that pops up over her distracting
+  # apps during focus. Nothing needs Apple's approval, so it can go straight to
+  # her Mac (see ios/README.md).
   TamaLucyMac:
     type: application
     platform: macOS
-    deploymentTarget: "13.0"
+    deploymentTarget: "14.0"
     sources:
       - path: Mac
       - path: App/AppSchemeHandler.swift
       - path: Shared/CalendarBridge.swift
       - path: Shared/Reminders.swift
       - path: Shared/AuthSession.swift
+      - path: Shared/FoxCard.swift
       - path: Shared/Fox.xcassets
+      # the app's pixel font, for the island at the notch
+      - path: Widget/Fonts
       - path: ../dist
         type: folder
         buildPhase: resources
@@ -216,7 +220,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_ID).mac
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_HARDENED_RUNTIME: YES
-        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
     info:
       path: Mac/Info.plist
       properties:
@@ -225,6 +229,10 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.productivity
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        # the App Group the app and its widget share (a Mac's groups start with the Team ID)
+        TLAppGroup: $(TeamIdentifierPrefix)$(APP_ID)
+        # the pixel font sits at the top of Resources
+        ATSApplicationFontsPath: .
         NSCalendarsFullAccessUsageDescription: TamaLucy reads exams and deadlines from the calendars you pick, and can add your finished study sessions to your calendar.
         NSCalendarsUsageDescription: TamaLucy reads exams and deadlines from the calendars you pick, and can add your finished study sessions to your calendar.
         NSAppleEventsUsageDescription: TamaLucy asks Music or Spotify to play your playlist when a focus session starts, and to pause when it ends.
@@ -232,6 +240,9 @@ targets:
       path: Mac/Mac.entitlements
       properties:
         com.apple.security.app-sandbox: true
+        # her widget's words and pictures, shared with the widget
+        com.apple.security.application-groups:
+          - $(TeamIdentifierPrefix)$(APP_ID)
         # letters + syncing her fox
         com.apple.security.network.client: true
         # reading the apps she picks as distracting
@@ -243,6 +254,8 @@ targets:
         com.apple.security.temporary-exception.apple-events:
           - com.apple.Music
           - com.spotify.client
+    dependencies:
+      - target: FoxWidgetMac
     preBuildScripts:
       - name: Check the web app is built
         basedOnDependencyAnalysis: false
@@ -251,3 +264,38 @@ targets:
             echo "error: the web app isn't built yet. Run 'npm install && npm run build' in the repo folder, then build again."
             exit 1
           fi
+
+  # her fox on the Mac's desktop (and in Notification Center): the same widget as the iPhone's
+  FoxWidgetMac:
+    type: app-extension
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: WidgetMac
+      - path: Widget/FoxWidget.swift
+      - path: Widget/Fonts
+      - path: Shared/FoxCard.swift
+      - path: Shared/Fox.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_ID).mac.widget
+        ENABLE_HARDENED_RUNTIME: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+    info:
+      path: WidgetMac/Info.plist
+      properties:
+        CFBundleDisplayName: TamaLucy
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        TLAppGroup: $(TeamIdentifierPrefix)$(APP_ID)
+        ATSApplicationFontsPath: .
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: WidgetMac/WidgetMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        # reads her widget style and pictures, which the app keeps there
+        com.apple.security.application-groups:
+          - $(TeamIdentifierPrefix)$(APP_ID)

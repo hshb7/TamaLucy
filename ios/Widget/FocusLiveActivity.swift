@@ -19,8 +19,8 @@ private struct Style {
     var accent = Color(red: 0.96, green: 0.6, blue: 0.65)
     var accentOnBlack = Color(red: 0.96, green: 0.6, blue: 0.65)
     /// The fox in her outfit, studying and then happy.
-    var study: UIImage?
-    var happy: UIImage?
+    var study: PlatformImage?
+    var happy: PlatformImage?
 
     static func load() -> Style {
         var style = Style(study: FoxCardStore.image("foxStudy"), happy: FoxCardStore.image("foxHappy"))
@@ -122,7 +122,7 @@ private struct Fox: View {
 
     var body: some View {
         let dressed = done ? style.happy : style.study
-        (dressed.map { Image(uiImage: $0) } ?? Image(done ? "FoxHappy" : "FoxStudy"))
+        (dressed.map { Image(platform: $0) } ?? Image(done ? "FoxHappy" : "FoxStudy"))
             .resizable()
             .interpolation(.none)
             .aspectRatio(contentMode: .fit)

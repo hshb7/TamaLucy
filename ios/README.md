@@ -20,7 +20,7 @@ The iPhone app can do the two things a website can't:
   ends the session, and the fox is sad when she comes back. Other apps (her readings,
   notes) keep working.
 
-The widget and the Dynamic Island need iOS 17 or later. Blocking apps uses Apple's Screen Time: she approves it with Face ID, and the app never sees
+The widget and the Dynamic Island need iOS 17 or later; the Mac app, macOS 14 (Sonoma) or later. Blocking apps uses Apple's Screen Time: she approves it with Face ID, and the app never sees
 which apps she uses. Nothing about her phone is sent anywhere.
 
 Everything else (the fox, acorns, letters, syncing) is the web app inside, so it's the
@@ -31,26 +31,36 @@ same fox as on her Mac.
 On a Mac she studies in other apps (Word, PDFs, Westlaw), so nothing gets locked.
 Instead:
 
-- **The fox and a countdown in the menu bar** for the whole session (the Mac's Dynamic
-  Island), plus minutes left on the Dock icon. Click the fox for *Open TamaLucy* and
-  *Keep Window on Top* (a little study buddy in the corner of her screen).
+- **The fox at the notch.** During a focus session a little black island sits either
+  side of the notch, like the iPhone's Dynamic Island: the fox in its outfit on the
+  left, the countdown on the right. Hover it and it opens up: what she's working on, the
+  progress, when it ends, and a button into the app; click it any time to open TamaLucy.
+  When the time's up it opens on its own for a moment and says so. Between sessions it's
+  invisible, and a hover over the notch peeks the fox with today's focus. A Mac without
+  a notch gets the same pill at the top centre of the screen, during sessions only. It can
+  be switched off from the menu bar fox (*Fox at the Notch*).
+- **Her fox on the desktop.** The same widget as the iPhone's (small or medium), on the
+  desktop or in Notification Center: the fox in her style with today's focus, a class,
+  the next exam, her streak or acorns, and her own line. While a session runs it counts
+  it down instead, and says *done!* when the timer's up.
+- **The fox and a countdown in the menu bar** for the whole session, plus minutes left
+  on the Dock icon. Click the fox for *Open TamaLucy*, *Keep Window on Top* (a little
+  study buddy in the corner of her screen) and *Fox at the Notch*.
 - **A fox over her distracting apps.** She picks them once (Settings → *distracting
   apps*). During focus, opening one brings up a floating fox: *back to studying* hides
   the app, *use it anyway* ends the session. Staying in the app for 20 seconds ends it
   too. The app only notices the apps she picked, and only during focus.
 - **"Time's up!" notifications**, even with the window closed: TamaLucy keeps running in
   the menu bar.
-- **Her iPhone widget on the desktop**, if she likes: macOS 14 or later can show iPhone
-  widgets (right-click the desktop → *Edit Widgets*, with the iPhone on the same Apple
-  Account; System Settings → Desktop & Dock → *Use iPhone widgets*).
 
 ## What's in here
 
 ```
 project.yml        the Xcode project, described for XcodeGen (you set APP_ID + team here)
 App/               the iPhone app: a full-screen web view + FocusBridge (Dynamic Island, blocking, haptics)
-Mac/               the Mac app: window, menu bar fox (FocusCenter), the fox over distracting apps
-Widget/            the home screen widget and the Live Activity (Dynamic Island + lock screen)
+Mac/               the Mac app: window, menu bar fox (FocusCenter), the island at the notch, the fox over distracting apps
+Widget/            the home screen / desktop widget and the Live Activity (Dynamic Island + lock screen)
+WidgetMac/         the Mac's widget bundle (the widget itself is shared with the iPhone's)
 Shield/            the fox screen on a blocked app
 ShieldAction/      its buttons ("back to studying" / "use it anyway")
 Monitor/           unlocks her apps when time's up, even if TamaLucy was closed
@@ -101,20 +111,25 @@ change the web app (`npm run build` first).
 
 ## The Mac app
 
-Same project, same `APP_ID` and team (the Mac app's id is `APP_ID.mac`).
+Same project, same `APP_ID` and team (the Mac app's id is `APP_ID.mac`, its widget's
+`APP_ID.mac.widget`; they share an App Group named after your Team ID, which Xcode
+sets up with automatic signing). It needs macOS 14 (Sonoma) or later.
 
 1. **Try it on your Mac:** at the top of Xcode pick the **TamaLucyMac** scheme and
    **My Mac**, then press ▶. Sign in with her code (or set up a test fox), pick a couple
    of distracting apps in Settings and start a focus session: the fox appears in the menu
-   bar, and opening one of those apps brings up the fox.
+   bar and at the notch, and opening one of those apps brings up the fox.
 2. **Give it to her:** with the **TamaLucyMac** scheme selected, Product → **Archive**.
    In the window that opens: **Distribute App** → **Direct Distribution**. Xcode signs it
    with your Developer ID and has Apple notarize it (a few minutes), then **Export** saves
    `TamaLucy.app`. Zip it and AirDrop/send it to her Mac. She drags it into Applications
    and opens it like any app, with no warnings and no App Store needed.
-3. **On her Mac:** open TamaLucy, sign in with her mailbox code (first screen →
-   *"i already have my fox on another device"*), Settings → **distracting apps** →
-   choose apps, and allow notifications when asked.
+3. **On her Mac:** open TamaLucy, sign in (first screen), Settings → **distracting
+   apps** → choose apps, and allow notifications when asked.
+4. **The widget:** right-click the desktop → **Edit Widgets…** → search *TamaLucy* →
+   drag the small or medium one onto the desktop (or into Notification Center) → *Done*.
+   It updates whenever she opens the app. (If it doesn't appear in the list, open
+   TamaLucy once first, or log out and in: macOS lists a new app's widgets lazily.)
 
 To update it later: `npm run build`, Archive and export again, send the new app.
 
