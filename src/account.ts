@@ -70,7 +70,7 @@ export class AccountError extends Error {
 }
 
 // ── Email and password, for anyone without a Google account ──
-export type EmailAuthProblem = 'wrong' | 'unconfirmed' | 'exists' | 'weak' | 'invalid-email' | 'rate' | 'offline' | 'server'
+export type EmailAuthProblem = 'wrong' | 'unconfirmed' | 'exists' | 'weak' | 'invalid-email' | 'rate' | 'mail' | 'offline' | 'server'
 export class EmailAuthError extends Error {
   readonly problem: EmailAuthProblem
   constructor(problem: EmailAuthProblem) {
@@ -88,6 +88,7 @@ export function emailProblem(e: unknown): string {
   if (p === 'weak') return 'pick a longer password (8 characters or more).'
   if (p === 'invalid-email') return 'that doesn’t look like an email address.'
   if (p === 'rate') return 'too many tries in a row. give it a minute?'
+  if (p === 'mail') return 'the app couldn’t send you an email just now. whoever set it up needs to check its mail settings; signing in with Google works meanwhile.'
   if (p === 'offline') return 'couldn’t reach the sign-in just now. are you online?'
   return 'the sign-in had a problem. try again in a bit?'
 }
@@ -110,6 +111,7 @@ async function authPost<T>(path: string, body: Record<string, unknown>, bearer?:
 function problemFrom(status: number, json: { msg?: string; message?: string; error_description?: string; error_code?: string; code?: string } | null): EmailAuthProblem {
   const text = `${json?.error_code ?? json?.code ?? ''} ${json?.msg ?? json?.message ?? json?.error_description ?? ''}`.toLowerCase()
   if (status === 429 || /rate/.test(text)) return 'rate'
+  if (/not authorized|error sending|sending.*(email|mail)|smtp/.test(text)) return 'mail'
   if (/not confirmed|email_not_confirmed/.test(text)) return 'unconfirmed'
   if (/already|exists|user_already/.test(text)) return 'exists'
   if (/password.*(short|weak|at least)|weak_password|password should/.test(text)) return 'weak'
