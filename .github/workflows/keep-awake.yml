@@ -1,0 +1,35 @@
+# Keeps the Supabase project awake. On the free plan Supabase pauses a project
+# after a week without requests, and the fox would then open to a blank
+# sign-in until someone presses Restore in the dashboard. So every two days
+# this asks the database one harmless question, using the same public key
+# the website ships with (src/game/remote.ts). Anonymous readers have no
+# rights, so Postgres answers "permission denied" (its error 42501): that
+# reply is the proof the database woke up and looked. Also runs on demand
+# from the Actions tab.
+#
+# GitHub stops scheduled workflows on repos with no activity for 60 days; a
+# push, or Actions → Keep Supabase awake → Enable workflow, starts it again.
+name: Keep Supabase awake
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 09:17 UTC every other day
+    - cron: '17 9 */2 * *'
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ask the database for nothing in particular
+        run: |
+          url=$(grep -oE "SUPABASE_URL = '[^']+'" src/game/remote.ts | cut -d"'" -f2)
+          key=$(grep -oE "SUPABASE_KEY = '[^']+'" src/game/remote.ts | cut -d"'" -f2)
+          code=$(curl -sS -o /tmp/reply -w '%{http_code}' -H "apikey: $key" "$url/rest/v1/saves?select=*&limit=1")
+          echo "Supabase answered $code: $(cat /tmp/reply)"
+          # 200 (rows) or Postgres's own 42501 (no rights): either way it answered
+          test "$code" = "200" || grep -q '"code":"42501"' /tmp/reply
