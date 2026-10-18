@@ -125,8 +125,14 @@ final class NotchIsland {
     private func hover(_ inside: Bool) {
         hoverTask?.cancel()
         if inside {
-            model.hovering = true
-            layout(animated: true)
+            // only a lingering pointer opens it: a quick pass across the top of
+            // the screen (reaching for the menu bar) leaves it be
+            hoverTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                guard !Task.isCancelled else { return }
+                self?.model.hovering = true
+                self?.layout(animated: true)
+            }
             return
         }
         // a moment's grace, so the mouse can wander down to the button
@@ -194,18 +200,19 @@ final class NotchIsland {
     }
 
     private func makePanel() -> NSPanel {
-        let panel = NSPanel(
+        let panel = IslandPanel(
             contentRect: NSRect(x: 0, y: 0, width: 200, height: 40),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
-        // above the menu bar, on every space, over full-screen apps too; never takes focus
-        panel.level = .statusBar
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false
         panel.isFloatingPanel = true
+        // above the menu bar, on every space, over full-screen apps too; never takes focus
+        // (set after isFloatingPanel, which would otherwise drop it back to the floating level)
+        panel.level = .statusBar
         panel.hidesOnDeactivate = false
         panel.isMovable = false
         panel.isReleasedWhenClosed = false
@@ -223,6 +230,12 @@ final class NotchIsland {
         self.panel = panel
         return panel
     }
+}
+
+/// A panel allowed over the menu bar: AppKit otherwise keeps every window
+/// below it, and the island would sit under the notch instead of beside it.
+private final class IslandPanel: NSPanel {
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
 }
 
 /// Holds the island and watches the mouse. (SwiftUI's own hover tracking wants a
@@ -252,6 +265,8 @@ private struct IslandView: View {
     @ObservedObject var model: IslandModel
 
     private let pink = Color(red: 0.96, green: 0.6, blue: 0.65)
+    /// The island's side margin: the fox, the text and the button all start here.
+    static let margin: CGFloat = 16
 
     /// Her widget's highlight colour, unless it would vanish on black.
     private var accent: Color {
@@ -276,28 +291,29 @@ private struct IslandView: View {
         .onTapGesture { model.open() }
         .animation(.easeInOut(duration: 0.25), value: look)
         .foregroundStyle(.white)
-        .fontDesign(.rounded)
     }
 
     /// The fox on the left of the notch, the countdown (or today's number) on the right.
     private var row: some View {
         let n = model.notch
         let ear = NotchIsland.ear
+        // the fox at the left edge, the number at the right, the notch's width
+        // kept clear between them; opened up, they move out to the panel's edges
+        // so the details below share their margins
         return HStack(spacing: 0) {
             fox
-                .frame(width: ear - 18, height: n.height - 6)
-                .padding(.leading, 9)
-                .padding(.trailing, 9)
-            Color.clear.frame(width: n.width, height: 1)
+                .frame(width: ear - 18, height: n.height - 6, alignment: .leading)
+            Spacer(minLength: n.width)
             headline
                 .font(.pixel(16))
                 .monospacedDigit()
                 .foregroundStyle(accent)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-                .frame(width: ear - 18)
-                .padding(.horizontal, 9)
+                .frame(width: ear - 18, alignment: .trailing)
         }
+        .padding(.horizontal, IslandView.margin)
+        .frame(maxWidth: .infinity)
         .frame(height: n.height + 6)
     }
 
@@ -328,12 +344,14 @@ private struct IslandView: View {
 
     /// Under the row, when it's open.
     private var details: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        // centred under the notch, which is the eye's anchor; the fox and the
+        // number stay out at the sides
+        VStack(alignment: .center, spacing: 10) {
             if let s = model.session {
-                Text(s.title).font(.pixel(16)).lineLimit(1)
+                Text(s.title).font(.pixel(17)).lineLimit(1)
                 if model.done {
                     Text("done! come back for your reward ✿")
-                        .font(.system(size: 12))
+                        .font(.system(size: 12, design: .rounded))
                         .opacity(0.85)
                 } else {
                     ProgressView(timerInterval: s.startedAt...max(s.startedAt.addingTimeInterval(1), s.endsAt), countsDown: false) {
@@ -343,32 +361,51 @@ private struct IslandView: View {
                     }
                     .tint(accent)
                     Text("ends at \(s.endsAt.formatted(date: .omitted, time: .shortened))")
-                        .font(.system(size: 11))
+                        .font(.system(size: 11, design: .rounded))
                         .opacity(0.7)
                 }
             } else if let card = model.card {
                 let stat = card.stat()
-                Text("\(stat.big) \(stat.small)").font(.pixel(16)).lineLimit(1)
+                Text("\(stat.big) \(stat.small)").font(.pixel(17)).lineLimit(1)
                 Text(card.line())
-                    .font(.system(size: 12))
+                    .font(.system(size: 12, design: .rounded))
                     .opacity(0.85)
                     .lineLimit(2)
             } else {
                 Text("your fox is in the app, waiting for a session ✿")
-                    .font(.system(size: 12))
+                    .font(.system(size: 12, design: .rounded))
                     .opacity(0.85)
             }
-            Button(action: model.open) {
-                Text(model.session == nil ? "open TamaLucy · start a session" : "open TamaLucy")
-                    .font(.system(size: 12, weight: .semibold))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
-                    .background(Color.white.opacity(0.14), in: Capsule())
-            }
-            .buttonStyle(.plain)
+            OpenButton(title: model.session == nil ? "open TamaLucy · start a session" : "open TamaLucy", action: model.open)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 18)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.horizontal, IslandView.margin)
+        .padding(.top, 2)
         .padding(.bottom, 14)
+    }
+}
+
+/// The island's one button. A tap gesture rather than a Button: the panel never
+/// becomes key, and a Button in a non-key window swallows its click without
+/// acting. Brightens under the pointer, with a hand cursor, so it reads as clickable.
+private struct OpenButton: View {
+    let title: String
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(Color.white.opacity(hovering ? 0.3 : 0.14), in: Capsule())
+            .contentShape(Capsule())
+            .animation(.easeOut(duration: 0.15), value: hovering)
+            .onHover { inside in
+                hovering = inside
+                if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
+            .onTapGesture(perform: action)
     }
 }
