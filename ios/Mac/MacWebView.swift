@@ -25,6 +25,7 @@ struct MacWebView: NSViewRepresentable {
         }
         context.coordinator.web = web
         web.navigationDelegate = context.coordinator
+        web.uiDelegate = context.coordinator
         FocusCenter.shared.emit = { [weak web] name in
             web?.evaluateJavaScript("window.__tamalucyNative && window.__tamalucyNative.emit('\(name)')", completionHandler: nil)
         }
@@ -34,8 +35,25 @@ struct MacWebView: NSViewRepresentable {
 
     func updateNSView(_ web: WKWebView, context: Context) {}
 
-    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
         weak var web: WKWebView?
+
+        /// "import a file" (her notes for the study buddy): on a Mac a web view only shows the
+        /// file chooser if asked to here, so this opens the Finder sheet and hands the files back.
+        func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {
+            let panel = NSOpenPanel()
+            panel.message = "your notes: txt, docx, pdf, or photos"
+            panel.prompt = "Import"
+            panel.canChooseFiles = true
+            panel.canChooseDirectories = parameters.allowsDirectories
+            panel.allowsMultipleSelection = parameters.allowsMultipleSelection
+            let finish = { (response: NSApplication.ModalResponse) in completionHandler(response == .OK ? panel.urls : nil) }
+            if let window = webView.window {
+                panel.beginSheetModal(for: window, completionHandler: finish)
+            } else {
+                finish(panel.runModal())
+            }
+        }
 
         /// A link she taps (a calendar's settings page, a playlist on Spotify) opens in her browser, not in the fox's window.
         /// Navigations the app makes itself (Spotify's sign-in round trip) stay here.
